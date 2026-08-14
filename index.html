@@ -69,6 +69,10 @@
   .lvlCard.locked { opacity:.45; }
   .lvlCard b { letter-spacing:1px; }
   .lvlCard span { font-size:13px; opacity:.75; }
+  #duckPrev { border:2px solid var(--ink); border-radius:12px; background:#bfe4ea; display:block; margin:0 auto 8px; }
+  .swatches { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; max-width:230px; }
+  .swatches button { width:26px; height:26px; border-radius:50%; border:2px solid var(--ink); cursor:pointer; padding:0; }
+  .swatches button.sel { outline:3px solid var(--rush); }
 </style>
 </head>
 <body>
@@ -95,6 +99,7 @@
       <button data-l="1">1 LAP</button><button data-l="2">2 LAPS</button><button data-l="3">3 LAPS</button>
     </div>
     <div class="go" id="raceBtn">RACE &mdash; press <b>SPACE</b></div>
+    <div class="mini" id="duckBtn">&#129414; your duck</div>
     <div class="mini" id="courseBtn">course: <b>SPILLWAY RUN</b> &mdash; change</div>
     <div class="keys">
       <kbd>W A S D</kbd> or <kbd>&larr;&uarr;&darr;&rarr;</kbd> paddle &mdash; you can't beat the river, only read it<br>
@@ -119,6 +124,18 @@
     <div class="setRow"><span>Steering assist</span><div class="segRow" id="setAssist">
       <button data-v="off">OFF</button><button data-v="on">ON</button></div></div>
     <div class="go" id="settingsClose">DONE &mdash; ESC</div>
+  </div>
+  <div class="panel hidden" id="duckPanel">
+    <h2>YOUR DUCK</h2>
+    <canvas id="duckPrev" width="300" height="200"></canvas>
+    <div class="setRow"><span>Body</span><div class="swatches" id="swBody"></div></div>
+    <div class="setRow"><span>Beak</span><div class="swatches" id="swBeak"></div></div>
+    <div class="setRow"><span>Hat</span><div class="segRow" id="swHat">
+      <button data-v="none">NONE</button><button data-v="tophat">TOP HAT</button><button data-v="cap">CAP</button><button data-v="bow">BOW</button><button data-v="crown">CROWN</button></div></div>
+    <div class="setRow"><span>Weight</span><div class="segRow" id="swWeight">
+      <button data-v="light">LIGHT</button><button data-v="medium">MEDIUM</button><button data-v="heavy">HEAVY</button></div></div>
+    <div class="mini" id="weightBlurb" style="cursor:default; text-decoration:none;"></div>
+    <div class="go" id="duckClose">DONE</div>
   </div>
   <div class="panel hidden" id="levelPanel">
     <h2>COURSES</h2>
@@ -321,33 +338,8 @@ for (let i = 0; i < NSAMP - 8; i++) {
 const FALLS_T0 = _fI0 / NSAMP, FALLS_T1 = (_fI0 + 12) / NSAMP;
 for (let i = Math.max(0, _fI0 - 12); i < Math.min(NSAMP, _fI0 + 40); i++) FOAM[i] = 1;
 
-// ============================================================ FLUME — the physical lap-return lift
-// A wooden flume climbs the east ridge from the runout back to the start pool.
-const FLUME = { pts: [], tan: [], n: 0, step: 0, len: 0, inT: 0.952 };
-{
-  const inI = Math.round(FLUME.inT * NSAMP);
-  const fin = S.pos[inI], start = S.pos[16];
-  const fCurve = new THREE.CatmullRomCurve3([
-    fin.clone(),
-    new THREE.Vector3(fin.x + 14, fin.y + 2.5, fin.z + 20),
-    new THREE.Vector3(44, 36, -500),
-    new THREE.Vector3(54, 50, -380),
-    new THREE.Vector3(52, 61, -260),
-    new THREE.Vector3(46, 68, -150),
-    new THREE.Vector3(32, 66, -60),
-    new THREE.Vector3(16, 62.5, -14),
-    start.clone().add(new THREE.Vector3(1, 0.4, 3)),
-  ], false, 'centripetal', 0.4);
-  FLUME.n = 400;
-  FLUME.pts = fCurve.getSpacedPoints(FLUME.n);
-  for (let i = 0; i < FLUME.n; i++) {
-    FLUME.tan.push(fCurve.getTangentAt(Math.min(0.9999, i / FLUME.n)).normalize());
-    if (i > 0) FLUME.len += FLUME.pts[i].distanceTo(FLUME.pts[i - 1]);
-  }
-  FLUME.tan.push(FLUME.tan[FLUME.n - 1]);
-  FLUME.step = FLUME.len / FLUME.n;
-  FLUME.baseArc = S.dist[inI];
-}
+// the return PORTAL sits at the end of the runout; a twin marks the exit at the gates
+const PORTAL_T = 0.952;
 
 // ============================================================ WATER FIELD
 const _tmpA = new THREE.Vector3(), _tmpB = new THREE.Vector3();
@@ -480,8 +472,18 @@ const DUSK = { top: [.28,.30,.55], hor: [.95,.55,.40], low: [1,.75,.5], sun: 0xf
 
 // ---- persisted settings
 const SETTINGS = Object.assign(
-  { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', fov: 58, assist: false, difficulty: 'medium', laps: 1 },
+  { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', fov: 58, assist: false, difficulty: 'medium', laps: 1,
+    duck: { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium' } },
   JSON.parse(localStorage.getItem('spillway-settings') || '{}'));
+if (!SETTINGS.duck) SETTINGS.duck = { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium' };
+// weight classes: slightly different size / paddle power / mass (knockback given & taken)
+const WEIGHTS = {
+  light:  { scale: 0.85, paddle: 1.12, mass: 0.7,  blurb: 'quick off the mark, easy to toss around' },
+  medium: { scale: 1.0,  paddle: 1.0,  mass: 1.0,  blurb: 'the honest all-rounder' },
+  heavy:  { scale: 1.18, paddle: 0.92, mass: 1.45, blurb: 'slow to wind up, hits like a barge' },
+};
+function playerW() { return WEIGHTS[SETTINGS.duck.weight] || WEIGHTS.medium; }
+function massOf(d) { return d.idx === 0 ? playerW().mass : 1; }
 const BEST = JSON.parse(localStorage.getItem('spillway-best') || '{}');
 G.difficulty = SETTINGS.difficulty;
 function saveSettings() { localStorage.setItem('spillway-settings', JSON.stringify(SETTINGS)); }
@@ -505,9 +507,19 @@ function auInit() {
   AU.amb = ctx.createGain(); AU.amb.gain.value = 0;
   src.connect(lp); lp.connect(AU.amb); AU.amb.connect(AU.sfx);
   src.start();
-  setInterval(musicTick, 380);
+  // music: "Jazz / Pop" by Alex McCulloch (CC0, OpenGameArt) — falls back to procedural plucks
+  AU.track = new Audio('audio/race-theme.mp3');
+  AU.track.loop = true;
+  AU.track.volume = SETTINGS.music * 0.8;
+  AU.track.play().catch(() => { AU.track = null; setInterval(musicTick, 380); });
+  AU.track && AU.track.addEventListener('error', () => { AU.track = null; setInterval(musicTick, 380); });
 }
-function applyVolumes() { if (!AU.ctx) return; AU.sfx.gain.value = SETTINGS.sfx; AU.music.gain.value = SETTINGS.music * 0.5; }
+function applyVolumes() {
+  if (!AU.ctx) return;
+  AU.sfx.gain.value = SETTINGS.sfx;
+  AU.music.gain.value = SETTINGS.music * 0.5;
+  if (AU.track) AU.track.volume = Math.min(1, SETTINGS.music * 0.8);
+}
 const SCALE = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3];
 let melodyIx = 3;
 function musicTick() {
@@ -577,7 +589,7 @@ function doShove(d) {
     const dx = o.p.x - d.p.x, dz = o.p.z - d.p.z;
     const dist = Math.hypot(dx, dz);
     if (dist < 3.4 && dist > 0.01) {
-      const f = 1 - dist / 3.4, mag = 10 * f;
+      const f = 1 - dist / 3.4, mag = 10 * f * massOf(d) / massOf(o);
       o.v.x += (dx / dist) * mag; o.v.z += (dz / dist) * mag;
       o.spinV += (rand() - 0.5) * 16 * f;
       o._sq = Math.max(o._sq || 0, 0.2);
@@ -611,30 +623,6 @@ function step(dt) {
   }
 
   for (const d of ducks) {
-    // ---- riding the flume: carried at fixed pace, no physics, positions frozen
-    if (d.inFlume) {
-      d.flumeS += 11.5 * dt;
-      if (d.flumeS >= FLUME.len) {
-        d.inFlume = false; d.lap++;
-        const si0 = 18;
-        d.si = si0; d.air = false; d.vy = 0;
-        d.p.copy(S.pos[si0]).addScaledVector(S.side[si0], (((d.idx * 7) % 9) - 4) * 0.8);
-        d.y = waterHeightAt(si0);
-        waterVelAt(d.p, si0, _tmpA); d.v.set(_tmpA.x, 0, _tmpA.z);
-        d.heading = Math.atan2(S.tan[si0].x, S.tan[si0].z);
-        splash({ x: d.p.x, y: d.y, z: d.p.z }, 12);
-        if (d.idx === 0) { toast(`LAP ${d.lap + 1}/${G.laps}`, 1400); SFX.beep(true); SFX.splash(); }
-      } else {
-        const fi = Math.min(FLUME.n - 1, Math.floor(d.flumeS / FLUME.step));
-        d.p.x = FLUME.pts[fi].x; d.p.z = FLUME.pts[fi].z;
-        d.y = FLUME.pts[fi].y + 0.45 + Math.sin(G.time * 3 + d.bobPh) * 0.05;
-        d.heading = Math.atan2(FLUME.tan[fi].x, FLUME.tan[fi].z);
-        d.v.set(FLUME.tan[fi].x * 11.5, 0, FLUME.tan[fi].z * 11.5);
-        d.progress = d.lap * COURSE_LEN + FLUME.baseArc
-                   + (d.flumeS / FLUME.len) * (COURSE_LEN - FLUME.baseArc + S.dist[18]);
-      }
-      continue;
-    }
     d.si = nearestSample(d.p, d.si);
     const si = d.si, w = S.w[si];
     const t01 = si / NSAMP;
@@ -656,11 +644,12 @@ function step(dt) {
       d._stroking = m > 0.01;
       if (m > 0.01) {
         const ux = ax / m, uz = az / m;
-        d.v.x += ux * 4.0 * dt; d.v.z += uz * 4.0 * dt;      // steady lean
+        const pw = playerW().paddle;
+        d.v.x += ux * 4.0 * pw * dt; d.v.z += uz * 4.0 * pw * dt;   // steady lean
         d._strokeT = (d._strokeT || 0) - dt;
         if (d._strokeT <= 0) {                                // rhythmic stroke surge
           d._strokeT = 0.32;
-          d.v.x += ux * 1.6; d.v.z += uz * 1.6;
+          d.v.x += ux * 1.6 * pw; d.v.z += uz * 1.6 * pw;
           d._sq = Math.max(d._sq || 0, 0.16);
           splash({ x: d.p.x - ux * 0.5, y: d.y, z: d.p.z - uz * 0.5 }, 1);
         }
@@ -762,8 +751,8 @@ function step(dt) {
           const vn = (o.v.x - d.v.x) * nx + (o.v.z - d.v.z) * nz;
           if (vn < -0.5) {
             const J = Math.min(6, -vn * 0.85);
-            d.v.x -= nx * J; d.v.z -= nz * J;
-            o.v.x += nx * J; o.v.z += nz * J;
+            d.v.x -= nx * J / massOf(d); d.v.z -= nz * J / massOf(d);
+            o.v.x += nx * J / massOf(o); o.v.z += nz * J / massOf(o);
             d.spinV += (rand() - 0.5) * J * 7; o.spinV += (rand() - 0.5) * J * 7;
             if (J > 1.6) splash({ x: (d.p.x + o.p.x) / 2, y: d.y, z: (d.p.z + o.p.z) / 2 }, Math.min(10, Math.round(J * 2)));
             if (J > 2.2 && (d.idx === 0 || o.idx === 0)) { G.camShake = Math.min(0.5, J * 0.09); SFX.thud(J); }
@@ -877,11 +866,19 @@ function step(dt) {
         G.results.push(d);
         if (d.idx === 0) onPlayerFinish();
         else if (G.finishedCount <= 3 && !ducks[0].finished) eventToast(`${d.name} takes P${d.place}!`);
-      } else if (d.lap < G.laps - 1 && t01d >= FLUME.inT) {
-        // into the flume intake — the lift carries you home
-        d.inFlume = true; d.flumeS = 0;
-        splash({ x: d.p.x, y: d.y, z: d.p.z }, 8);
-        if (d.idx === 0) { eventToast('THE FLUME LIFT — catch your breath'); SFX.splash(); }
+      } else if (d.lap < G.laps - 1 && t01d >= PORTAL_T) {
+        // through the portal, back to the gates
+        d.lap++;
+        splash({ x: d.p.x, y: d.y, z: d.p.z }, 12);
+        const si0 = 20 + (d.idx % 8) * 2;
+        d.si = si0; d.air = false; d.vy = 0;
+        d.p.copy(S.pos[si0]).addScaledVector(S.side[si0], (((d.idx * 7) % 9) - 4) * 0.85);
+        d.y = waterHeightAt(si0);
+        waterVelAt(d.p, si0, _tmpA); d.v.set(_tmpA.x, 0, _tmpA.z);
+        d.heading = Math.atan2(S.tan[si0].x, S.tan[si0].z);
+        splash({ x: d.p.x, y: d.y, z: d.p.z }, 10);
+        G.portalPulse = 0.6;
+        if (d.idx === 0) { lapWipe(); snapCam(); toast(`LAP ${d.lap + 1}/${G.laps}`, 1400); SFX.beep(true); SFX.splash(); }
       }
     }
   }
@@ -1321,7 +1318,7 @@ let whirlMesh;
   {
     const bi = Math.round(0.68 * NSAMP);
     const yaw = Math.atan2(S.tan[bi].x, S.tan[bi].z);
-    const wSpan = S.w[bi] * 2 + 4;
+    const wSpan = S.w[bi] * 2 + 9;   // long enough to land on both banks
     const plankM = new THREE.MeshLambertMaterial({ color: 0x8a6a48 });
     const plankM2 = new THREE.MeshLambertMaterial({ color: 0x7a5a3a });
     for (let pk = 0; pk < 7; pk++) {
@@ -1503,84 +1500,47 @@ let millWheel;
   }
 }
 
-// ---------- the flume itself: wooden channel on trestles, big lift wheel at the intake
-let flumeWheel;
+// ---------- the return portals: shimmering rings at the runout and the gates
+let portalIn, portalOut;
 {
-  const woodM = new THREE.MeshLambertMaterial({ color: 0x8a6544 });
-  const woodDkM = new THREE.MeshLambertMaterial({ color: 0x6e4c2e });
-  // U-channel ribbon: floor + two walls
-  const cross = [[-1.6, 1.0], [-1.3, 0], [1.3, 0], [1.6, 1.0]];
-  const pos = [], col = [], idx = [];
-  const cw = new THREE.Color(0x8a6544), cw2 = new THREE.Color(0x76563a);
-  const stepN = 2;
-  const rows = Math.floor(FLUME.n / stepN);
-  for (let r = 0; r <= rows; r++) {
-    const i = Math.min(FLUME.n - 1, r * stepN);
-    const p = FLUME.pts[i], t = FLUME.tan[i];
-    const sx = -t.z, sz = t.x;
-    const sl = Math.hypot(sx, sz) || 1;
-    const shade = r % 2 ? cw : cw2;   // plank striping
-    for (const [o, h] of cross) {
-      pos.push(p.x + (sx / sl) * o, p.y + h, p.z + (sz / sl) * o);
-      col.push(shade.r, shade.g, shade.b);
-    }
-    if (r < rows) {
-      const k = r * 4;
-      for (let c2 = 0; c2 < 3; c2++)
-        idx.push(k + c2, k + c2 + 4, k + c2 + 1, k + c2 + 1, k + c2 + 4, k + c2 + 5);
-    }
+  function makePortal(i) {
+    const grp = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.3, 10, 30),
+      new THREE.MeshBasicMaterial({ color: 0x7ef2e0, transparent: true, opacity: 0.9, depthWrite: false }));
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(3.3, 30),
+      new THREE.MeshBasicMaterial({ color: 0xb2fff2, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false }));
+    grp.add(ring, disc);
+    grp.position.copy(S.pos[i]);
+    grp.position.y = waterHeightAt(i) + 2.4;
+    grp.rotation.y = Math.atan2(S.tan[i].x, S.tan[i].z);
+    scene.add(grp);
+    return grp;
   }
-  const fg = new THREE.BufferGeometry();
-  fg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  fg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  fg.setIndex(idx); fg.computeVertexNormals();
-  const channel = new THREE.Mesh(fg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
-  scene.add(channel);
-  // water stripe inside
-  const wpos = [], widx = [];
-  for (let r = 0; r <= rows; r++) {
-    const i = Math.min(FLUME.n - 1, r * stepN);
-    const p = FLUME.pts[i], t = FLUME.tan[i];
-    const sx = -t.z, sz = t.x, sl = Math.hypot(sx, sz) || 1;
-    wpos.push(p.x - (sx / sl) * 1.1, p.y + 0.3, p.z - (sz / sl) * 1.1,
-              p.x + (sx / sl) * 1.1, p.y + 0.3, p.z + (sz / sl) * 1.1);
-    if (r < rows) { const k = r * 2; widx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); }
+  portalIn = makePortal(Math.round(PORTAL_T * NSAMP) - 6);
+  portalOut = makePortal(26);
+}
+
+// ---------- pedestrians strolling the bridge
+const PEDS = [];
+{
+  const bi = Math.round(0.68 * NSAMP);
+  const half = S.w[bi] + 1.2;
+  const skins = [0xc96f4a, 0x53a6ff, 0x53d769];
+  for (let pd = 0; pd < 3; pd++) {
+    const grp = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.42, 3, 6),
+      new THREE.MeshLambertMaterial({ color: skins[pd] }));
+    body.position.y = 0.52;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 7, 6),
+      new THREE.MeshLambertMaterial({ color: 0xe8c39e }));
+    head.position.y = 1.0;
+    const hatB = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 8),
+      new THREE.MeshLambertMaterial({ color: 0x6e4c2e }));
+    hatB.position.y = 1.1;
+    grp.add(body, head, hatB);
+    scene.add(grp);
+    PEDS.push({ grp, bi, half, u: rand(), dir: rand() < 0.5 ? -1 : 1, speed: randRange(0.04, 0.075), ph: rand() * 6 });
   }
-  const wgm = new THREE.BufferGeometry();
-  wgm.setAttribute('position', new THREE.Float32BufferAttribute(wpos, 3));
-  wgm.setIndex(widx);
-  scene.add(new THREE.Mesh(wgm, new THREE.MeshLambertMaterial({ color: 0x4d9aa8, transparent: true, opacity: 0.85 })));
-  // trestle legs
-  const legG = new THREE.CylinderGeometry(0.16, 0.2, 1, 6);
-  const nLegs = Math.floor(FLUME.n / 16);
-  const legs = new THREE.InstancedMesh(legG, woodDkM, nLegs * 2);
-  const lm = new THREE.Matrix4(), lq = new THREE.Quaternion(), ls = new THREE.Vector3();
-  let li = 0;
-  for (let r = 0; r < nLegs; r++) {
-    const i = r * 16;
-    const p = FLUME.pts[i], t = FLUME.tan[i];
-    const sx = -t.z, sz = t.x, sl = Math.hypot(sx, sz) || 1;
-    const legLen = 9;
-    for (const sgn of [-1, 1]) {
-      lm.compose(_tmpA.set(p.x + (sx / sl) * sgn * 1.2, p.y - legLen / 2, p.z + (sz / sl) * sgn * 1.2),
-        lq, ls.set(1, legLen, 1));
-      legs.setMatrixAt(li++, lm);
-    }
-  }
-  scene.add(legs);
-  // the great lift wheel at the intake
-  flumeWheel = new THREE.Group();
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.3, 8, 20), woodDkM);
-  flumeWheel.add(rim);
-  for (let sp = 0; sp < 6; sp++) {
-    const paddle = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7.4, 1.1), woodM);
-    paddle.rotation.z = sp * Math.PI / 6;
-    flumeWheel.add(paddle);
-  }
-  const wp = FLUME.pts[26], wt = FLUME.tan[26];
-  flumeWheel.position.set(wp.x - wt.z * 2.4, wp.y + 1.5, wp.z + wt.x * 2.4);
-  flumeWheel.rotation.y = Math.atan2(-wt.z, wt.x);
-  scene.add(flumeWheel);
 }
 
 // ---------- wildlife: heron, jumping fish, a bird flock, meadow butterflies
@@ -1719,22 +1679,26 @@ let rainMesh, rainVel = [];
 
 // ---------- ducks (3 instanced meshes: body+head colored, beak, eyes)
 let bodyIM, beakIM, eyeIM;
+var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
 {
   const bodyG = new THREE.SphereGeometry(DUCK_R, 12, 10);
   bodyG.scale(1, 0.78, 1.15);
   const headG = new THREE.SphereGeometry(DUCK_R * 0.62, 10, 8);
   headG.translate(0, DUCK_R * 0.7, DUCK_R * 0.72);
-  const merged = mergeGeoms([bodyG, headG]);
+  const merged = duckBodyG = mergeGeoms([bodyG, headG]);
   bodyIM = new THREE.InstancedMesh(merged, new THREE.MeshLambertMaterial({ color: 0xffffff }), N_DUCKS);
 
-  const beakG = new THREE.ConeGeometry(DUCK_R * 0.22, DUCK_R * 0.55, 6);
+  const beakG = duckBeakG = new THREE.ConeGeometry(DUCK_R * 0.22, DUCK_R * 0.55, 6);
   beakG.rotateX(Math.PI / 2);
   beakG.translate(0, DUCK_R * 0.68, DUCK_R * 1.28);
-  beakIM = new THREE.InstancedMesh(beakG, new THREE.MeshLambertMaterial({ color: 0xff8c1a }), N_DUCKS);
+  beakIM = new THREE.InstancedMesh(beakG, new THREE.MeshLambertMaterial({ color: 0xffffff }), N_DUCKS);
 
   const eL = new THREE.SphereGeometry(DUCK_R * 0.09, 6, 5); eL.translate(-DUCK_R * 0.26, DUCK_R * 0.88, DUCK_R * 1.0);
   const eR = new THREE.SphereGeometry(DUCK_R * 0.09, 6, 5); eR.translate( DUCK_R * 0.26, DUCK_R * 0.88, DUCK_R * 1.0);
-  eyeIM = new THREE.InstancedMesh(mergeGeoms([eL, eR]), new THREE.MeshBasicMaterial({ color: 0x14222a }), N_DUCKS);
+  duckEyeG = mergeGeoms([eL, eR]);
+  eyeIM = new THREE.InstancedMesh(duckEyeG, new THREE.MeshBasicMaterial({ color: 0x14222a }), N_DUCKS);
+  const bkCol = new THREE.Color(0xff8c1a);
+  for (let i = 0; i < N_DUCKS; i++) beakIM.setColorAt(i, bkCol);
 
   const palette = [0xffd23f, 0xff5a5a, 0x53d769, 0x53a6ff, 0xff9ff3, 0xffa14a, 0xa78bfa, 0x4dd6c1, 0xf5f5f0, 0x475569];
   const c = new THREE.Color();
@@ -1765,6 +1729,56 @@ const ring = new THREE.Mesh(new THREE.TorusGeometry(DUCK_R * 1.5, 0.06, 8, 24),
   new THREE.MeshBasicMaterial({ color: 0xfff8e7, transparent: true, opacity: 0.9 }));
 ring.rotation.x = Math.PI / 2;
 scene.add(ring);
+
+// ---------- hats (player customization)
+function makeHat(type) {
+  const g = new THREE.Group();
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  if (type === 'tophat') {
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.16, 0.26, 10), lam(0x22262b));
+    crown.position.y = 0.16;
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.035, 12), lam(0x22262b));
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.165, 0.06, 10), lam(0xd94f30));
+    band.position.y = 0.06;
+    g.add(crown, brim, band);
+  } else if (type === 'cap') {
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x2c62b8));
+    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.03, 0.2), lam(0x244f92));
+    brim.position.set(0, 0.02, 0.22);
+    g.add(dome, brim);
+  } else if (type === 'bow') {
+    const c1 = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.2, 6), lam(0xff5a8a));
+    c1.rotation.z = Math.PI / 2; c1.position.x = -0.11;
+    const c2 = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.2, 6), lam(0xff5a8a));
+    c2.rotation.z = -Math.PI / 2; c2.position.x = 0.11;
+    const knot = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 5), lam(0xe14a76));
+    g.add(c1, c2, knot);
+  } else if (type === 'crown') {
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.12, 8), lam(0xf2c032));
+    for (let sp = 0; sp < 5; sp++) {
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.12, 4), lam(0xf2c032));
+      const a = sp / 5 * Math.PI * 2;
+      spike.position.set(Math.cos(a) * 0.16, 0.11, Math.sin(a) * 0.16);
+      base.add(spike);
+    }
+    g.add(base);
+  }
+  return g;
+}
+const playerHat = new THREE.Group();
+scene.add(playerHat);
+let playerHatType = null;
+function applyDuck() {
+  const dk = SETTINGS.duck;
+  const c = new THREE.Color(dk.color);
+  bodyIM.setColorAt(0, c); bodyIM.instanceColor.needsUpdate = true;
+  beakIM.setColorAt(0, new THREE.Color(dk.beak)); beakIM.instanceColor.needsUpdate = true;
+  if (playerHatType !== dk.hat) {
+    playerHatType = dk.hat;
+    while (playerHat.children.length) playerHat.remove(playerHat.children[0]);
+    if (dk.hat !== 'none') playerHat.add(makeHat(dk.hat));
+  }
+}
 
 // ---------- splash particles
 const SPLASH_N = 400;
@@ -1827,17 +1841,6 @@ const CAMS = { near: [7, 4.2], std: [9, 5.2], far: [12, 6.6] };
 function updateCamera(dt) {
   const d = ducks[0];
   const [camBack, camH] = CAMS[SETTINGS.camDist] || CAMS.std;
-  // riding the flume: glide behind the lift, take in the valley
-  if (d.inFlume) {
-    const fi = Math.min(FLUME.n - 1, Math.floor(d.flumeS / FLUME.step));
-    const ft = FLUME.tan[fi];
-    camState.pos.lerp(_tmpA.set(d.p.x - ft.x * 10, d.y + 6, d.p.z - ft.z * 10), 1 - Math.pow(0.001, dt));
-    const li = Math.min(FLUME.n - 1, fi + 40);
-    camState.look.lerp(_tmpB.copy(FLUME.pts[li]).setY(FLUME.pts[li].y + 1), 1 - Math.pow(0.0005, dt));
-    camera.position.copy(camState.pos);
-    camera.lookAt(camState.look);
-    return;
-  }
   // once you've finished, hold the camera at the finish line instead of drifting into the runout
   const si = Math.min(d.si, Math.round(FINISH_T * NSAMP) + 30);
   const anchor = d.si > si ? S.pos[si] : d.p;
@@ -1898,8 +1901,16 @@ function syncDucks(t) {
     _e.set(rockX, d.heading, rockZ);
     _q.setFromEuler(_e);
     const q2 = d._sq || 0;
-    _s.set(1 + q2 * 0.35, 1 - q2 * 0.55, 1 + q2 * 0.35);
+    const wsc = d.idx === 0 ? playerW().scale : 1;
+    _s.set((1 + q2 * 0.35) * wsc, (1 - q2 * 0.55) * wsc, (1 + q2 * 0.35) * wsc);
     _m4.compose(_tmpA.set(d.p.x, d.y + bob - q2 * 0.15, d.p.z), _q, _s);
+    if (d.idx === 0 && playerHat.children.length) {
+      // hat rides the head: local offset rotated by the duck's orientation
+      playerHat.position.set(d.p.x, d.y + bob - q2 * 0.15, d.p.z)
+        .add(_tmpB.set(0, DUCK_R * 1.14 * wsc, DUCK_R * 0.72 * wsc).applyQuaternion(_q));
+      playerHat.quaternion.copy(_q);
+      playerHat.scale.setScalar(wsc);
+    }
     bodyIM.setMatrixAt(d.idx, _m4); beakIM.setMatrixAt(d.idx, _m4); eyeIM.setMatrixAt(d.idx, _m4);
   }
   _s.set(1, 1, 1);
@@ -2015,6 +2026,7 @@ function prepRace(skipFly) {
   el('screen').classList.add('hidden');
   el('settingsPanel').classList.add('hidden');
   el('levelPanel').classList.add('hidden');
+  el('duckPanel').classList.add('hidden');
   el('results').style.display = 'none';
   el('hudTop').style.display = 'flex';
   el('minimap').style.display = 'block';
@@ -2081,6 +2093,7 @@ addEventListener('keydown', e => {
   if (G.mode === 'title' && (k === '1' || k === '2' || k === '3' || k === '4')) setDiff(['easy', 'medium', 'hard', 'insane'][+k - 1]);
   if (k === 'escape') {
     if (!el('levelPanel').classList.contains('hidden')) { el('levelPanel').classList.add('hidden'); el('title').classList.remove('hidden'); }
+    else if (!el('duckPanel').classList.contains('hidden')) { el('duckPanel').classList.add('hidden'); el('title').classList.remove('hidden'); }
     else if (settingsOpen) closeSettings();
     else if (el('results').style.display === 'block') toTitle();
     else openSettings();
@@ -2142,7 +2155,68 @@ function applyQuality() {
   camera.fov = SETTINGS.fov; camera.updateProjectionMatrix();
   resize();
 }
-refreshSettingsUI(); setDiff(SETTINGS.difficulty); setLaps(SETTINGS.laps); applyQuality();
+// ---- duck customizer
+const DUCK_COLORS = ['#ffd23f', '#ff5a5a', '#53d769', '#53a6ff', '#ff9ff3', '#ffa14a', '#a78bfa', '#4dd6c1', '#f5f5f0', '#475569', '#e14a76', '#8a6544'];
+const BEAK_COLORS = ['#ff8c1a', '#e05252', '#f2c032', '#8a6544'];
+function buildSwatches(host, colors, key) {
+  host.innerHTML = '';
+  for (const cc of colors) {
+    const b = document.createElement('button');
+    b.style.background = cc; b.dataset.c = cc;
+    b.addEventListener('click', () => { SETTINGS.duck[key] = cc; saveSettings(); applyDuck(); refreshDuckUI(); });
+    host.appendChild(b);
+  }
+}
+buildSwatches(el('swBody'), DUCK_COLORS, 'color');
+buildSwatches(el('swBeak'), BEAK_COLORS, 'beak');
+document.querySelectorAll('#swHat button').forEach(b => b.addEventListener('click', () => {
+  SETTINGS.duck.hat = b.dataset.v; saveSettings(); applyDuck(); refreshDuckUI(); }));
+document.querySelectorAll('#swWeight button').forEach(b => b.addEventListener('click', () => {
+  SETTINGS.duck.weight = b.dataset.v; saveSettings(); refreshDuckUI(); }));
+el('duckBtn').addEventListener('click', () => { el('title').classList.add('hidden'); el('duckPanel').classList.remove('hidden'); refreshDuckUI(); });
+el('duckClose').addEventListener('click', () => { el('duckPanel').classList.add('hidden'); el('title').classList.remove('hidden'); });
+function refreshDuckUI() {
+  document.querySelectorAll('#swBody button').forEach(b => b.classList.toggle('sel', b.dataset.c === SETTINGS.duck.color));
+  document.querySelectorAll('#swBeak button').forEach(b => b.classList.toggle('sel', b.dataset.c === SETTINGS.duck.beak));
+  document.querySelectorAll('#swHat button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.duck.hat));
+  document.querySelectorAll('#swWeight button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.duck.weight));
+  el('weightBlurb').textContent = playerW().blurb;
+  syncPreviewDuck();
+}
+// 3D preview: its own tiny renderer on the panel canvas
+const prevRenderer = new THREE.WebGLRenderer({ canvas: el('duckPrev'), antialias: true });
+prevRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+prevRenderer.setSize(300, 200, false);
+const prevScene = new THREE.Scene();
+prevScene.background = new THREE.Color(0xbfe4ea);
+const prevCam = new THREE.PerspectiveCamera(38, 1.5, 0.1, 20);
+prevCam.position.set(1.0, 0.8, 1.7); prevCam.lookAt(0, 0.28, 0);
+prevScene.add(new THREE.HemisphereLight(0xdfeef2, 0x7a9a6a, 1.1));
+const prevSun = new THREE.DirectionalLight(0xfff2d0, 1.2); prevSun.position.set(2, 3, 2);
+prevScene.add(prevSun);
+const prevDuck = new THREE.Group();
+const prevBody = new THREE.Mesh(duckBodyG, new THREE.MeshLambertMaterial({ color: 0xffd23f }));
+const prevBeak = new THREE.Mesh(duckBeakG, new THREE.MeshLambertMaterial({ color: 0xff8c1a }));
+const prevEyes = new THREE.Mesh(duckEyeG, new THREE.MeshBasicMaterial({ color: 0x14222a }));
+const prevHat = new THREE.Group();
+prevDuck.add(prevBody, prevBeak, prevEyes, prevHat);
+prevScene.add(prevDuck);
+const prevPool = new THREE.Mesh(new THREE.CircleGeometry(1.05, 24),
+  new THREE.MeshLambertMaterial({ color: 0x2e7f8c, transparent: true, opacity: 0.85 }));
+prevPool.rotation.x = -Math.PI / 2; prevPool.position.y = -0.28;
+prevScene.add(prevPool);
+function syncPreviewDuck() {
+  prevBody.material.color.set(SETTINGS.duck.color);
+  prevBeak.material.color.set(SETTINGS.duck.beak);
+  while (prevHat.children.length) prevHat.remove(prevHat.children[0]);
+  if (SETTINGS.duck.hat !== 'none') {
+    const h = makeHat(SETTINGS.duck.hat);
+    h.position.set(0, DUCK_R * 1.14, DUCK_R * 0.72);
+    prevHat.add(h);
+  }
+  prevDuck.scale.setScalar(playerW().scale);
+}
+refreshSettingsUI(); setDiff(SETTINGS.difficulty); setLaps(SETTINGS.laps); applyQuality(); applyDuck(); refreshDuckUI();
 
 // ============================================================ MAIN LOOP
 function resize() {
@@ -2172,6 +2246,11 @@ function frame(now) {
   }
   updateSplashes(dt);
   updateWaves(dt);
+  if (!el('duckPanel').classList.contains('hidden')) {
+    prevDuck.rotation.y += dt * 0.9;
+    prevDuck.position.y = Math.sin(now / 500) * 0.03;
+    prevRenderer.render(prevScene, prevCam);
+  }
   if (G.mode === 'title') {
     // sway behind the start pool, always facing downstream (never shows the open course edge)
     const t = now / 1000, sway = Math.sin(t * 0.22) * 0.55;
@@ -2255,7 +2334,24 @@ function frame(now) {
   {
     const t = now / 1000;
     if (millWheel) millWheel.rotation.z = -t * 0.9;
-    if (flumeWheel) flumeWheel.rotation.z = t * 0.7;
+    // portals shimmer; pulse bright when a duck passes through
+    G.portalPulse = Math.max(0, (G.portalPulse || 0) - dt);
+    for (const po of [portalIn, portalOut]) {
+      po.children[0].material.opacity = 0.65 + 0.25 * Math.sin(t * 3) + G.portalPulse;
+      po.children[1].material.opacity = 0.2 + 0.1 * Math.sin(t * 2.2) + G.portalPulse * 0.5;
+      po.children[1].rotation.z = t * 0.6;
+      po.scale.setScalar(1 + Math.sin(t * 2.6) * 0.02 + G.portalPulse * 0.15);
+    }
+    // pedestrians cross the bridge
+    for (const pe of PEDS) {
+      pe.u += pe.dir * pe.speed * dt;
+      if (pe.u > 1) { pe.u = 1; pe.dir = -1; }
+      if (pe.u < 0) { pe.u = 0; pe.dir = 1; }
+      const lat = (pe.u * 2 - 1) * (pe.half - 0.6);
+      pe.grp.position.copy(S.pos[pe.bi]).addScaledVector(S.side[pe.bi], lat);
+      pe.grp.position.y = waterHeightAt(pe.bi) + 3.42 + Math.abs(Math.sin(t * 6 + pe.ph)) * 0.05;
+      pe.grp.rotation.y = Math.atan2(S.side[pe.bi].x * pe.dir, S.side[pe.bi].z * pe.dir);
+    }
     for (const a of ARROWS) a.material.opacity = 0.35 + 0.3 * Math.sin(t * 4 + a.position.z);
     // fish
     for (const f of FISH) {
