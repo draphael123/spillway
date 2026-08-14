@@ -144,9 +144,10 @@
   </div>
   <div class="panel hidden" id="levelPanel">
     <h2>COURSES</h2>
-    <div class="lvlCard sel"><div><b>SPILLWAY RUN</b><br><span>forest &middot; gorge &middot; canyon &middot; meadow</span></div><span id="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard locked"><div><b>MILLRACE</b><br><span>coming soon</span></div><span>&#128274;</span></div>
-    <div class="lvlCard locked"><div><b>FROSTMELT</b><br><span>coming soon</span></div><span>&#128274;</span></div>
+    <div class="lvlCard" data-lvl="spillway"><div><b>SPILLWAY RUN</b><br><span>forest &middot; gorge &middot; canyon &middot; meadow</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="millrace"><div><b>MILLRACE</b><br><span>the working forest &mdash; mind the machines</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard locked"><div><b>UNDERGROVE</b><br><span>coming soon</span></div><span>&#128274;</span></div>
+    <div class="lvlCard locked"><div><b>CANOPY RUN</b><br><span>coming soon</span></div><span>&#128274;</span></div>
     <div class="go" id="levelClose">BACK</div>
   </div>
 </div>
@@ -181,32 +182,67 @@ function vnoise(x, z) {
        + vhash(xi, zi + 1) * (1 - u) * v + vhash(xi + 1, zi + 1) * u * v;
 }
 
-// ============================================================ COURSE
-// The river is a CatmullRom spline downhill. Each control point:
-// x/z plan position, y bed elevation, w half-width, s flow speed multiplier.
-const CTRL = [
-  { x:   0, z:    0, y: 60.0, w: 9,   s: 0.45 },  // start pool behind the dam
-  { x:   2, z:  -30, y: 59.2, w: 8,   s: 0.6  },
-  { x:  14, z:  -62, y: 57.8, w: 7,   s: 1.0  },  // first bend
-  { x:  -6, z: -100, y: 56.0, w: 7,   s: 1.0  },
-  { x: -26, z: -138, y: 53.2, w: 5.5, s: 1.9  },  // RAPIDS 1
-  { x: -12, z: -178, y: 50.0, w: 5,   s: 2.1  },
-  { x:  16, z: -210, y: 47.5, w: 6.5, s: 1.4  },  // rock garden
-  { x:  38, z: -248, y: 46.0, w: 10,  s: 0.5  },  // eddy pool (wide, slow)
-  { x:  30, z: -292, y: 45.0, w: 10,  s: 0.5  },
-  { x:   8, z: -324, y: 43.8, w: 4.2, s: 2.6  },  // the narrows
-  { x:  -8, z: -356, y: 42.6, w: 4.2, s: 2.6  },
-  { x: -14, z: -388, y: 42.0, w: 6,   s: 1.6  },  // lip of the falls
-  { x: -14, z: -394, y: 41.2, w: 6,   s: 2.0  },  // lip
-  { x: -14, z: -401, y: 33.4, w: 6,   s: 1.8  },  // THE FALLS (8u drop)
-  { x: -10, z: -430, y: 32.8, w: 8,   s: 0.9  },  // plunge pool
-  { x:  10, z: -468, y: 30.6, w: 6,   s: 1.8  },  // RAPIDS 2
-  { x:  34, z: -502, y: 28.4, w: 5.5, s: 2.0  },
-  { x:  30, z: -540, y: 27.2, w: 7,   s: 1.2  },
-  { x:  10, z: -575, y: 26.4, w: 9,   s: 0.8  },  // home stretch
-  { x:   6, z: -615, y: 26.0, w: 10,  s: 1.0  },  // finish
-  { x:   4, z: -655, y: 25.8, w: 11,  s: 1.0  },  // runout (keeps pace to the flume intake)
-];
+// ============================================================ LEVELS
+// Each course is data: spline control points (x/z plan, y bed elevation,
+// w half-width, s flow speed multiplier) plus a feature set keyed by id.
+const LEVELS = {
+  spillway: {
+    id: 'spillway', name: 'SPILLWAY RUN', sub: 'forest · gorge · canyon · meadow',
+    ctrl: [
+      { x:   0, z:    0, y: 60.0, w: 9,   s: 0.45 },
+      { x:   2, z:  -30, y: 59.2, w: 8,   s: 0.6  },
+      { x:  14, z:  -62, y: 57.8, w: 7,   s: 1.0  },
+      { x:  -6, z: -100, y: 56.0, w: 7,   s: 1.0  },
+      { x: -26, z: -138, y: 53.2, w: 5.5, s: 1.9  },
+      { x: -12, z: -178, y: 50.0, w: 5,   s: 2.1  },
+      { x:  16, z: -210, y: 47.5, w: 6.5, s: 1.4  },
+      { x:  38, z: -248, y: 46.0, w: 10,  s: 0.5  },
+      { x:  30, z: -292, y: 45.0, w: 10,  s: 0.5  },
+      { x:   8, z: -324, y: 43.8, w: 4.2, s: 2.6  },
+      { x:  -8, z: -356, y: 42.6, w: 4.2, s: 2.6  },
+      { x: -14, z: -388, y: 42.0, w: 6,   s: 1.6  },
+      { x: -14, z: -394, y: 41.2, w: 6,   s: 2.0  },
+      { x: -14, z: -401, y: 33.4, w: 6,   s: 1.8  },
+      { x: -10, z: -430, y: 32.8, w: 8,   s: 0.9  },
+      { x:  10, z: -468, y: 30.6, w: 6,   s: 1.8  },
+      { x:  34, z: -502, y: 28.4, w: 5.5, s: 2.0  },
+      { x:  30, z: -540, y: 27.2, w: 7,   s: 1.2  },
+      { x:  10, z: -575, y: 26.4, w: 9,   s: 0.8  },
+      { x:   6, z: -615, y: 26.0, w: 10,  s: 1.0  },
+      { x:   4, z: -655, y: 25.8, w: 11,  s: 1.0  },
+    ],
+  },
+  millrace: {
+    id: 'millrace', name: 'MILLRACE', sub: 'the working forest — mind the machines',
+    ctrl: [
+      { x:   0, z:    0, y: 60.0, w: 9,   s: 0.5  },  // start pool
+      { x:   6, z:  -35, y: 58.8, w: 7,   s: 0.9  },
+      { x: -18, z:  -70, y: 57.2, w: 6,   s: 1.3  },  // timber zigzag
+      { x:  18, z: -105, y: 55.6, w: 6,   s: 1.3  },
+      { x: -16, z: -140, y: 54.0, w: 6,   s: 1.4  },
+      { x:  -2, z: -165, y: 53.4, w: 7,   s: 1.0  },
+      { x:   2, z: -183, y: 52.6, w: 6,   s: 1.5  },  // weir 1 lip
+      { x:   3, z: -190, y: 49.6, w: 6,   s: 1.6  },  // WEIR 1 (3u step)
+      { x:  -4, z: -225, y: 48.6, w: 5,   s: 1.8  },  // gate alley
+      { x:   6, z: -265, y: 47.2, w: 5.5, s: 1.6  },
+      { x:  26, z: -300, y: 46.0, w: 6,   s: 1.4  },  // boom bend
+      { x:  10, z: -335, y: 44.8, w: 7,   s: 1.2  },
+      { x:  -8, z: -370, y: 43.6, w: 6,   s: 1.5  },  // sawmill straight
+      { x: -14, z: -410, y: 42.8, w: 10,  s: 0.5  },  // millpond
+      { x:  -6, z: -450, y: 42.2, w: 11,  s: 0.45 },
+      { x:   6, z: -478, y: 41.6, w: 5,   s: 1.9  },  // pond exit
+      { x:   9, z: -486, y: 41.0, w: 5,   s: 2.0  },  // weir 2 lip
+      { x:  10, z: -493, y: 36.6, w: 5,   s: 1.9  },  // WEIR 2 (4.4u plunge)
+      { x:  16, z: -525, y: 35.6, w: 6,   s: 1.8  },  // log run
+      { x:   6, z: -560, y: 34.6, w: 5.5, s: 2.0  },
+      { x:  -2, z: -590, y: 33.8, w: 4.2, s: 2.6  },  // penstock chute
+      { x:   2, z: -615, y: 33.2, w: 8,   s: 1.0  },  // finish
+      { x:   4, z: -655, y: 33.0, w: 10,  s: 1.0  },
+    ],
+  },
+};
+const LVL = LEVELS[localStorage.getItem('spillway-level')] || LEVELS.spillway;
+const CTRL = LVL.ctrl;
 const curve = new THREE.CatmullRomCurve3(CTRL.map(p => new THREE.Vector3(p.x, p.y, p.z)), false, 'centripetal', 0.35);
 
 const NSAMP = 1200;
@@ -246,8 +282,9 @@ for (let i = 0; i <= NSAMP; i++) {
   S.slope.push(Math.max(0, dy / ds));
 }
 function sstep(a, b, x) { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
-// biome journey: forest → gorge → canyon → meadow, soft-blended
+// biome journey: forest → gorge → canyon → meadow, soft-blended (Millrace stays forest)
 function zoneW(i) {
+  if (LVL.id !== 'spillway') return [1, 0, 0, 0];
   const t = i / NSAMP;
   const s1 = sstep(0.26, 0.34, t), s2 = sstep(0.58, 0.66, t), s3 = sstep(0.78, 0.86, t);
   return [1 - s1, s1 - s2, s2 - s3, s3];   // [forest, gorge, canyon, meadow]
@@ -273,30 +310,42 @@ function nearestSample(p, hint) {
 
 // ============================================================ FEATURES
 // Eddy: swirling trap in the big pool. Rocks: obstacles that deflect flow.
-const EDDIES = [
+const EDDIES = LVL.id === 'spillway' ? [
   { i: Math.round(0.395 * NSAMP), lat: -5.2, r: 5.5, spin:  1.5, pull: 0.8 },
   { i: Math.round(0.435 * NSAMP), lat:  5.0, r: 5.0, spin: -1.4, pull: 0.8 },
-  { i: Math.round(0.645 * NSAMP), lat:  0.4, r: 5.0, spin:  2.3, pull: 1.9, whirl: true },  // plunge-pool whirlpool
+  { i: Math.round(0.645 * NSAMP), lat:  0.4, r: 5.0, spin:  2.3, pull: 1.9, whirl: true },
+] : [
+  { i: Math.round(0.545 * NSAMP), lat: -2.5, r: 3.2, spin: -1.8, pull: 1.2 },              // waterwheel backwash
+  { i: Math.round(0.635 * NSAMP), lat:  0.0, r: 5.0, spin:  2.2, pull: 1.8, whirl: true }, // millpond whirl
 ];
 EDDIES.forEach(e => { e.pos = S.pos[e.i].clone().addScaledVector(S.side[e.i], e.lat); });
 
 // reed patches: slack water near the banks that kills your speed
 const REEDS = [];
-[[0.155, 1], [0.335, -1], [0.71, 1], [0.895, -1]].forEach(([t, sgn]) => {
+(LVL.id === 'spillway'
+  ? [[0.155, 1], [0.335, -1], [0.71, 1], [0.895, -1]]
+  : [[0.60, 1], [0.655, -1], [0.93, 1]]
+).forEach(([t, sgn]) => {
   const i = Math.round(t * NSAMP);
   REEDS.push({ i, pos: S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 1.6)), r: 2.6 });
 });
 
 // fast chutes (glassy arrowed tongues) and shoals (sandbars / one sticky mud flat)
-const CHUTES = [
+const CHUTES = LVL.id === 'spillway' ? [
   { t0: 0.150, t1: 0.185, latC: -1.5, halfW: 1.6 },
   { t0: 0.455, t1: 0.488, latC:  4.0, halfW: 1.8 },   // hugs the eddy pool — risk for reward
   { t0: 0.820, t1: 0.852, latC:  0.0, halfW: 1.8 },
+] : [
+  { t0: 0.425, t1: 0.455, latC: -1.0, halfW: 1.5 },   // gate-alley exit tongue
+  { t0: 0.895, t1: 0.930, latC:  0.0, halfW: 1.7 },   // the penstock
 ];
-const SHOALS = [
+const SHOALS = LVL.id === 'spillway' ? [
   { t0: 0.210, t1: 0.238, latC: -3.2, halfW: 2.0, mul: 0.35, mud: false },
   { t0: 0.752, t1: 0.778, latC:  2.8, halfW: 2.2, mul: 0.35, mud: false },
-  { t0: 0.872, t1: 0.900, latC: -3.5, halfW: 2.4, mul: 0.22, mud: true },   // mud flat guarding the finish line
+  { t0: 0.872, t1: 0.900, latC: -3.5, halfW: 2.4, mul: 0.22, mud: true },
+] : [
+  { t0: 0.615, t1: 0.650, latC:  3.6, halfW: 2.4, mul: 0.35, mud: false },  // millpond sandbar
+  { t0: 0.845, t1: 0.870, latC: -2.6, halfW: 2.0, mul: 0.25, mud: true },   // mud before the penstock
 ];
 [...CHUTES, ...SHOALS].forEach(z => { z.i0 = Math.round(z.t0 * NSAMP); z.i1 = Math.round(z.t1 * NSAMP); });
 const _zone = { chute: false, mud: false };
@@ -307,14 +356,21 @@ function addRock(t, lat, r) {
   const p = S.pos[i].clone().addScaledVector(S.side[i], lat);
   ROCKS.push({ pos: p, r, i, lat });
 }
-// rock garden
-addRock(0.300, -2.2, 1.3); addRock(0.315, 2.6, 1.1); addRock(0.330, 0.2, 1.5);
-addRock(0.345, -3.0, 1.0); addRock(0.360, 2.0, 1.2);
-// rapids 2 scatter
-addRock(0.735, -1.8, 1.1); addRock(0.755, 2.2, 1.3); addRock(0.775, -0.6, 1.0);
-// bridge pilings — thread the needle
-addRock(0.68, -3, 0.55); addRock(0.68, 0, 0.55); addRock(0.68, 3, 0.55);
-ROCKS.slice(-3).forEach(r => r.type = 'piling');
+if (LVL.id === 'spillway') {
+  // rock garden
+  addRock(0.300, -2.2, 1.3); addRock(0.315, 2.6, 1.1); addRock(0.330, 0.2, 1.5);
+  addRock(0.345, -3.0, 1.0); addRock(0.360, 2.0, 1.2);
+  // rapids 2 scatter
+  addRock(0.735, -1.8, 1.1); addRock(0.755, 2.2, 1.3); addRock(0.775, -0.6, 1.0);
+  // bridge pilings — thread the needle
+  addRock(0.68, -3, 0.55); addRock(0.68, 0, 0.55); addRock(0.68, 3, 0.55);
+  ROCKS.slice(-3).forEach(r => r.type = 'piling');
+} else {
+  // millrace: boulders in the log run, and the sawblade's solid hub
+  addRock(0.775, -1.6, 1.1); addRock(0.805, 1.9, 1.2);
+  addRock(0.565, 0.6, 1.4);
+  ROCKS[ROCKS.length - 1].type = 'saw';
+}
 
 // floating log barriers — angled, partially blocking the channel
 const LOGS = [];
@@ -326,9 +382,68 @@ function addLog(t, lat, len, ang) {
   LOGS.push({ i, c, dir, len, r: 0.55, latC: lat, latHalf: Math.abs(Math.sin(ang)) * len / 2 + 1.0,
     a: c.clone().addScaledVector(dir, -len / 2), b: c.clone().addScaledVector(dir, len / 2) });
 }
-addLog(0.245, 2.2, 7, -1.15);   // downstream tip points at the open left gap
-addLog(0.475, -4.5, 6, 0.35);
-addLog(0.86, 2.5, 8, -1.0);
+if (LVL.id === 'spillway') {
+  addLog(0.245, 2.2, 7, -1.15);   // downstream tip points at the open left gap
+  addLog(0.475, -4.5, 6, 0.35);
+  addLog(0.86, 2.5, 8, -1.0);
+}
+// millrace machinery: gates, booms, saw, and log traffic live in MDYN (updated per tick)
+const MDYN = { gates: [], booms: [], traffic: [], saw: null };
+if (LVL.id === 'millrace') {
+  // sluice gates: alternate halves of the channel, out of phase — read the rhythm
+  for (const [t, side2, phase] of [[0.365, -1, 0], [0.405, 1, Math.PI]]) {
+    addLog(t, 0, 0.1, 1.55);                       // placeholder log entry, endpoints driven each tick
+    const L = LOGS[LOGS.length - 1]; L.dyn = true;
+    MDYN.gates.push({ L, i: Math.round(t * NSAMP), side: side2, phase, period: 6.5, open: 1, wasClosed: false });
+  }
+  // swinging booms: pivot on the bank, sweep the channel
+  for (const [t, sgn, phase] of [[0.465, -1, 0], [0.50, 1, 2.1]]) {
+    addLog(t, 0, 0.1, 0.5);
+    const L = LOGS[LOGS.length - 1]; L.dyn = true;
+    MDYN.booms.push({ L, i: Math.round(t * NSAMP), sgn, phase, speed: 0.55, len: S.w[Math.round(t * NSAMP)] * 1.15 });
+  }
+  // log drive: floating timber that rides the current through the back half
+  for (let k = 0; k < 4; k++) {
+    addLog(0.70, 0, 4, 0.06);
+    const L = LOGS[LOGS.length - 1]; L.dyn = true;
+    MDYN.traffic.push({ L, s: 0.70 + k * 0.055, lat: ((k * 13) % 7) - 3 });
+  }
+  MDYN.saw = { i: Math.round(0.565 * NSAMP), lat: 0.6, r: 2.3 };
+}
+function updateMDYN() {
+  const t = G.time;
+  for (const g2 of MDYN.gates) {
+    g2.open = 0.5 + 0.5 * Math.sin((t / g2.period) * Math.PI * 2 + g2.phase);
+    const closed = g2.open < 0.45;
+    const i = g2.i, w = S.w[i];
+    if (closed) {
+      const aLat = g2.side < 0 ? -w : 0.4, bLat = g2.side < 0 ? -0.4 : w;
+      g2.L.a.copy(S.pos[i]).addScaledVector(S.side[i], aLat);
+      g2.L.b.copy(S.pos[i]).addScaledVector(S.side[i], bLat);
+      g2.L.i = i; g2.L.latC = (aLat + bLat) / 2; g2.L.latHalf = Math.abs(bLat - aLat) / 2 + 0.6;
+    } else {
+      g2.L.a.set(0, -999, 0); g2.L.b.set(0.1, -999, 0); g2.L.latHalf = 0;
+    }
+  }
+  for (const bm of MDYN.booms) {
+    const i = bm.i;
+    const ang = Math.sin(t * bm.speed + bm.phase) * 0.55;
+    const pivot = S.pos[i].clone().addScaledVector(S.side[i], bm.sgn * S.w[i]);
+    const dir = S.tan[i].clone().multiplyScalar(Math.sin(ang)).addScaledVector(S.side[i], -bm.sgn * Math.cos(ang));
+    bm.L.a.copy(pivot); bm.L.b.copy(pivot).addScaledVector(dir, bm.len);
+    bm.L.i = i; bm.L.latC = -bm.sgn * bm.len / 2; bm.L.latHalf = bm.len / 2 + 0.6;
+    bm.dir = dir;
+  }
+  for (const tr of MDYN.traffic) {
+    tr.s += 0.00016 * (0.8 + 0.4 * Math.sin(tr.s * 40));      // ride the current, roughly
+    if (tr.s > 0.945) tr.s = 0.695;
+    const i = Math.round(tr.s * NSAMP);
+    const c = S.pos[i].clone().addScaledVector(S.side[i], tr.lat * Math.min(1, S.w[i] / 5));
+    tr.L.a.copy(c).addScaledVector(S.tan[i], -2); tr.L.b.copy(c).addScaledVector(S.tan[i], 2);
+    tr.L.i = i; tr.L.latC = tr.lat; tr.L.latHalf = 1.2;
+    tr.c = c; tr.tan = S.tan[i];
+  }
+}
 
 // baked foam intensity along the course (rocks, logs, eddies, the falls)
 const FOAM = new Float32Array(NSAMP + 1);
@@ -589,6 +704,7 @@ const SFX = {
     o.connect(bp); bp.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + 0.18);
   },
   beep(hi) { pluck(hi ? 880 : 620, 0.25, AU.sfx, 0.35); },
+  whistle() { pluck(1240, 0.22, AU.sfx, 0.5); setTimeout(() => pluck(990, 0.2, AU.sfx, 0.6), 130); },
   fanfare() { [392, 523, 659, 784].forEach((f, ix) => setTimeout(() => pluck(f, 0.3, AU.sfx, 0.9), ix * 120)); },
 };
 
@@ -631,6 +747,7 @@ function step(dt) {
   if (G.mode === 'race') G.raceT += dt;
   const racing = G.mode === 'race';
 
+  if (LVL.id === 'millrace') updateMDYN();
   // spatial hash for duck-duck collisions (flume riders are out of play)
   hash.clear();
   for (const d of ducks) {
@@ -819,6 +936,21 @@ function step(dt) {
           d.spinV += (rand() - .5) * 12;
           if (vn < -3) { splash({ x: d.p.x, y: d.y, z: d.p.z }, 8); if (d.idx === 0) { G.camShake = 0.3; SFX.thud(-vn); } }
         }
+      }
+    }
+
+    // ---- the sawblade: violent knock if you drift into its arc
+    if (MDYN.saw && Math.abs(MDYN.saw.i - si) < 30) {
+      const sp3 = S.pos[MDYN.saw.i].clone().addScaledVector(S.side[MDYN.saw.i], MDYN.saw.lat);
+      const dx = d.p.x - sp3.x, dz = d.p.z - sp3.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < MDYN.saw.r && dist > 0.01) {
+        const kick = 14 / Math.max(0.7, massOf(d));
+        d.v.x += (dx / dist) * kick; d.v.z += (dz / dist) * kick;
+        d.spinV += (rand() - 0.5) * 30;
+        d._sq = Math.max(d._sq || 0, 0.4);
+        splash({ x: d.p.x, y: d.y, z: d.p.z }, 12);
+        if (d.idx === 0) { G.camShake = 0.5; SFX.thud(6); }
       }
     }
 
@@ -1228,8 +1360,9 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
                  new THREE.InstancedMesh(tierG2, tierM, nT),
                  new THREE.InstancedMesh(tierG3, tierM, nT)];
   for (let k = 0; k < nT; k++) {
-    const forest = k < 140;
-    const i = forest ? Math.floor(rand() * 0.34 * NSAMP)
+    const forest = LVL.id !== 'spillway' ? true : k < 140;
+    const i = LVL.id !== 'spillway' ? Math.floor(rand() * 0.96 * NSAMP)
+            : forest ? Math.floor(rand() * 0.34 * NSAMP)
                      : Math.floor((0.34 + rand() * 0.28) * NSAMP);
     const sgn = (k % 2) * 2 - 1;
     const ob = randRange(3.5, 15);
@@ -1351,6 +1484,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
       0.18*zw[0] + 0.10*zw[1] + 0.40*zw[2] + 0.25*zw[3],
       0.44 + rand() * 0.08));
   }
+  if (LVL.id !== 'spillway') { cacti.count = 0; slabs.count = 0; spires.count = 0; mTrunks.count = 0; mCrowns.count = 0; }
   window.SCATTER = [trunks, crowns, tiers[1], tiers[2], mTrunks, mCrowns, cacti, slabs, spires, bushes, flowers, boulders, reedsIM];
   SCATTER.forEach(im => { im._full = im.count; });
   scene.add(...SCATTER, mountains);
@@ -1378,7 +1512,7 @@ let whirlMesh;
     }
   }
   // bridge over the pilings: planked deck + rails
-  {
+  if (LVL.id === 'spillway') {
     const bi = Math.round(0.68 * NSAMP);
     const yaw = Math.atan2(S.tan[bi].x, S.tan[bi].z);
     const wSpan = S.w[bi] * 2 + 9;   // long enough to land on both banks
@@ -1406,10 +1540,11 @@ let whirlMesh;
       }
     }
   }
-  // floating logs
+  // floating logs (static ones only — machinery draws its own)
   {
     const logM = new THREE.MeshLambertMaterial({ color: 0x6e4c2e });
     for (const L of LOGS) {
+      if (L.dyn) continue;   // machinery draws its own meshes
       const mesh = new THREE.Mesh(new THREE.CylinderGeometry(L.r, L.r, L.len, 8), logM);
       mesh.position.set(L.c.x, waterHeightAt(L.i) + 0.05, L.c.z);
       mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), L.dir);
@@ -1460,9 +1595,54 @@ const ARROWS = [];
   }
 }
 
-// ---------- landmarks: watermill, gorge arch, hoodoos, dock village
+// ---------- landmarks: watermill, gorge arch, hoodoos, dock village (Spillway Run)
 let millWheel;
-{
+if (LVL.id === 'millrace') {
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  // sawmill shed + big waterwheel at the sawmill straight
+  {
+    const mi = Math.round(0.55 * NSAMP), sgn = 1;
+    const gy = waterHeightAt(mi) + bankH(mi, 2.2, sgn);
+    const base = S.pos[mi].clone().addScaledVector(S.side[mi], sgn * (S.w[mi] + 2.6));
+    const shed = new THREE.Mesh(new THREE.BoxGeometry(5, 3.2, 4), lam(0x8a6a48));
+    shed.position.set(base.x, gy + 1.6, base.z); scene.add(shed);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(3.8, 2, 4), lam(0x9c4a35));
+    roof.position.set(base.x, gy + 4.2, base.z); roof.rotation.y = Math.PI / 4; scene.add(roof);
+    millWheel = new THREE.Group();
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.2, 8, 18), lam(0x6e4c2e));
+    millWheel.add(rim);
+    for (let sp = 0; sp < 8; sp++) {
+      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.16, 4.3, 0.35), lam(0x7a5a38));
+      spoke.rotation.z = sp * Math.PI / 8; millWheel.add(spoke);
+    }
+    const wPos = S.pos[mi].clone().addScaledVector(S.side[mi], sgn * (S.w[mi] + 0.2));
+    millWheel.position.set(wPos.x, waterHeightAt(mi) + 1.4, wPos.z);
+    millWheel.rotation.y = Math.atan2(S.side[mi].x, S.side[mi].z);
+    scene.add(millWheel);
+  }
+  // log piles + crates along the banks — a working camp
+  for (let lp = 0; lp < 6; lp++) {
+    const i = Math.round(((lp * 0.15) + 0.08) * NSAMP), sgn = lp % 2 ? 1 : -1;
+    const ob = randRange(1.8, 4);
+    const gy = waterHeightAt(i) + bankH(i, ob, sgn);
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+    const yaw = Math.atan2(S.tan[i].x, S.tan[i].z);
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3 - row; col++) {
+        const log2 = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 3.4, 7), lam(row % 2 ? 0x6e4c2e : 0x7a5a38));
+        log2.position.set(p.x, gy + 0.35 + row * 0.62, p.z);
+        log2.rotation.z = Math.PI / 2; log2.rotation.y = yaw;
+        log2.translateX((col - (2 - row) / 2) * 0.74);
+        scene.add(log2);
+      }
+    }
+    if (lp % 2) {
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.1, 1.1), lam(0x9a7a50));
+      crate.position.set(p.x + 2, gy + 0.55, p.z + 1); crate.rotation.y = rand() * 1.5;
+      scene.add(crate);
+    }
+  }
+} else {
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
   // watermill on the forest's left bank
   {
@@ -1585,7 +1765,7 @@ let portalIn, portalOut;
 
 // ---------- pedestrians strolling the bridge
 const PEDS = [];
-{
+if (LVL.id === 'spillway') {
   const bi = Math.round(0.68 * NSAMP);
   const half = S.w[bi] + 1.2;
   const skins = [0xc96f4a, 0x53a6ff, 0x53d769];
@@ -1725,6 +1905,49 @@ const WISPS = [];
     sp.scale.set(randRange(7, 11), randRange(2, 3.2), 1);
     scene.add(sp);
     WISPS.push({ sp, falls, ph: rand() * 6, baseY: sp.position.y });
+  }
+}
+
+// ---------- millrace machinery meshes (driven by MDYN each frame)
+if (LVL.id === 'millrace') {
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  for (const g2 of MDYN.gates) {
+    const i = g2.i, w = S.w[i];
+    // frame posts on both edges of this gate's half
+    for (const lat of [g2.side < 0 ? -w : 0.2, g2.side < 0 ? -0.2 : w]) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.5, 5, 0.5), lam(0x6e4c2e));
+      post.position.copy(S.pos[i]).addScaledVector(S.side[i], lat);
+      post.position.y = waterHeightAt(i) + 2.2;
+      scene.add(post);
+    }
+    const gate = new THREE.Mesh(new THREE.BoxGeometry(w - 0.4, 2.4, 0.4), lam(0x8a6544));
+    gate.position.copy(S.pos[i]).addScaledVector(S.side[i], g2.side < 0 ? -w / 2 : w / 2);
+    gate.rotation.y = Math.atan2(S.side[i].x, S.side[i].z) + Math.PI / 2;
+    scene.add(gate);
+    g2.mesh = gate; g2.baseY = waterHeightAt(i);
+  }
+  for (const bm of MDYN.booms) {
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, bm.len, 8), lam(0x6e4c2e));
+    scene.add(mesh); bm.mesh = mesh;
+  }
+  for (const tr of MDYN.traffic) {
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 4, 8), lam(0x7a5a38));
+    scene.add(mesh); tr.mesh = mesh;
+  }
+  {
+    const sw = MDYN.saw;
+    const grp = new THREE.Group();
+    const blade = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.3, 0.18, 20),
+      new THREE.MeshLambertMaterial({ color: 0xb8bdc4 }));
+    blade.rotation.z = Math.PI / 2;
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 10), lam(0x5a6068));
+    hub.rotation.z = Math.PI / 2;
+    grp.add(blade, hub);
+    grp.position.copy(S.pos[sw.i]).addScaledVector(S.side[sw.i], sw.lat);
+    grp.position.y = waterHeightAt(sw.i) + 0.9;
+    grp.rotation.y = Math.atan2(S.tan[sw.i].x, S.tan[sw.i].z);
+    scene.add(grp);
+    sw.mesh = blade;
   }
 }
 
@@ -2144,7 +2367,7 @@ function showResults() {
   if (me.finished && me.place > 8) { rows.push('<div style="opacity:.5">…</div>'); rows.push(row(me)); }
   let bestNote = '';
   if (me.finished) {
-    const key = `${G.difficulty}-${G.laps}`;
+    const key = `${LVL.id}-${G.difficulty}-${G.laps}`;
     if (!BEST[key] || me.finishTime < BEST[key]) {
       BEST[key] = me.finishTime;
       localStorage.setItem('spillway-best', JSON.stringify(BEST));
@@ -2301,12 +2524,21 @@ addEventListener('pointerdown', auInit, { once: false });
 el('raceBtn').addEventListener('click', () => prepRace());
 el('againBtn').addEventListener('click', () => prepRace());
 document.querySelectorAll('#lapRow button').forEach(b => b.addEventListener('click', () => setLaps(+b.dataset.l)));
+el('courseBtn').innerHTML = `course: <b>${LVL.name}</b> — change`;
 el('courseBtn').addEventListener('click', () => {
   el('title').classList.add('hidden');
-  const best = BEST[`${SETTINGS.difficulty}-${SETTINGS.laps}`];
-  el('bestLabel').textContent = best ? `best ${fmtTime(best)}` : 'best —';
+  document.querySelectorAll('.lvlCard[data-lvl]').forEach(card => {
+    card.classList.toggle('sel', card.dataset.lvl === LVL.id);
+    const best = BEST[`${card.dataset.lvl}-${SETTINGS.difficulty}-${SETTINGS.laps}`];
+    card.querySelector('.bestLabel').textContent = best ? `best ${fmtTime(best)}` : 'best —';
+  });
   el('levelPanel').classList.remove('hidden');
 });
+document.querySelectorAll('.lvlCard[data-lvl]').forEach(card => card.addEventListener('click', () => {
+  if (card.dataset.lvl === LVL.id) { el('levelPanel').classList.add('hidden'); el('title').classList.remove('hidden'); return; }
+  localStorage.setItem('spillway-level', card.dataset.lvl);
+  location.reload();
+}));
 el('levelClose').addEventListener('click', () => {
   el('levelPanel').classList.add('hidden');
   el('title').classList.remove('hidden');
@@ -2580,6 +2812,29 @@ function frame(now) {
   {
     const t = now / 1000;
     if (millWheel) millWheel.rotation.z = -t * 0.9;
+    // millrace machinery
+    if (LVL.id === 'millrace') {
+      for (const g2 of MDYN.gates) {
+        const closed = g2.open < 0.45;
+        g2.mesh.position.y += ((g2.baseY + (closed ? 1.0 : 3.4)) - g2.mesh.position.y) * Math.min(1, 4 * dt);
+        if (closed !== g2.wasClosed) {
+          g2.wasClosed = closed;
+          if (Math.abs(g2.i - ducks[0].si) < 250) SFX.whistle();
+        }
+      }
+      for (const bm of MDYN.booms) {
+        if (!bm.dir) continue;
+        _tmpA.copy(bm.L.a).add(bm.L.b).multiplyScalar(0.5);
+        bm.mesh.position.set(_tmpA.x, waterHeightAt(bm.i) + 0.15, _tmpA.z);
+        bm.mesh.quaternion.setFromUnitVectors(_tmpB.set(0, 1, 0), bm.dir);
+      }
+      for (const tr of MDYN.traffic) {
+        if (!tr.c) continue;
+        tr.mesh.position.set(tr.c.x, waterHeightAt(tr.L.i) + 0.1, tr.c.z);
+        tr.mesh.quaternion.setFromUnitVectors(_tmpB.set(0, 1, 0), tr.tan);
+      }
+      if (MDYN.saw && MDYN.saw.mesh) MDYN.saw.mesh.rotation.x += dt * 7;
+    }
     // portals shimmer; pulse bright when a duck passes through
     G.portalPulse = Math.max(0, (G.portalPulse || 0) - dt);
     for (const po of [portalIn, portalOut]) {
