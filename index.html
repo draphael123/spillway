@@ -59,6 +59,22 @@
   .go { cursor:pointer; }
   #shovePill { bottom:20px; left:20px; text-align:center; border-width:3px; transition:border-color .2s, opacity .2s; }
   #shovePill.cooling { opacity:.55; border-color:#8aa0a8; }
+  #joy { position:fixed; left:22px; bottom:70px; width:130px; height:130px; border-radius:50%;
+    border:3px solid rgba(255,248,231,.7); background:rgba(14,42,51,.25); touch-action:none; z-index:30; }
+  #joyNub { position:absolute; left:45px; top:45px; width:40px; height:40px; border-radius:50%;
+    background:rgba(255,248,231,.85); border:2px solid var(--ink); }
+  #shoveTouch { position:fixed; right:26px; bottom:86px; width:92px; height:92px; border-radius:50%;
+    background:rgba(255,210,63,.9); border:3px solid var(--ink); display:flex; align-items:center; justify-content:center;
+    font-weight:bold; letter-spacing:1px; touch-action:none; z-index:30; box-shadow:0 4px 0 rgba(14,42,51,.4); }
+  @media (max-width: 860px) {
+    .pill { font-size:14px; padding:4px 10px; }
+    #minimap canvas { width:80px; height:190px; }
+    #hubHead h1 { font-size:34px; letter-spacing:4px; }
+    .hubPane { min-width:0; width:94vw; }
+    #hubTabs button { font-size:13px; padding:8px 12px; }
+    .keys { display:none; }
+  }
+  .lockedOpt { opacity:.45; }
   #tags { position:fixed; inset:0; pointer-events:none; }
   .dtag { position:absolute; transform:translate(-50%, -100%); font-size:12px; font-weight:bold; letter-spacing:.5px;
     background:rgba(255,248,231,.85); border:1.5px solid var(--ink); border-radius:999px; padding:2px 9px;
@@ -87,6 +103,9 @@
   #duckPanel { max-width:min(1020px, 96vw); }
   .hubPane .setRow > span:first-child { font-weight:bold; }
   #duckCols { display:flex; gap:22px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+  .guideCols { display:flex; gap:26px; text-align:left; flex-wrap:wrap; }
+  .guideCols > div { flex:1; min-width:260px; }
+  .guideCols p { font-size:14px; line-height:1.55; margin:4px 0 14px; }
   .dCol { width:290px; }
   .wrapRow { flex-wrap:wrap; justify-content:flex-end; max-width:210px; }
   #duckPrev { border:2px solid var(--ink); border-radius:12px; background:#bfe4ea; display:block; margin:0 auto 8px; }
@@ -115,15 +134,32 @@
     <div class="sub">a rubber duck derby &mdash; eighty ducks, one river, no engines</div>
   </div>
   <div id="hubTabs">
-    <button data-tab="title" class="sel">RACE</button><button data-tab="duckPanel">YOUR DUCK</button><button data-tab="levelPanel">COURSES</button><button data-tab="settingsPanel">SETTINGS</button>
+    <button data-tab="title" class="sel">RACE</button><button data-tab="duckPanel">YOUR DUCK</button><button data-tab="levelPanel">COURSES</button><button data-tab="guidePanel">GUIDE</button><button data-tab="settingsPanel">SETTINGS</button>
+  </div>
+  <div class="panel hubPane hidden" id="guidePanel">
+    <h2>HOW TO RACE</h2>
+    <div class="guideCols">
+      <div>
+        <b>THE RIVER</b>
+        <p>You can't outswim the current — only read it. The middle runs fastest. Dark glassy tongues with chevrons are <b>fast chutes</b>. Pale sandbars and brown mud kill your speed. Reeds are slack water.</p>
+        <b>MOVES</b>
+        <p><kbd>WASD</kbd>/<kbd>&larr;&uarr;&darr;&rarr;</kbd> or stick: rhythmic paddle strokes. <kbd>SHIFT</kbd>/<kbd>A</kbd>: <b>splash shove</b> — slam nearby ducks away (4s cooldown). Weight class changes your size, power, and how hard you hit.</p>
+      </div>
+      <div>
+        <b>HAZARDS</b>
+        <p>Rocks stop you. Logs and booms block lanes — aim for the gap. Eddies and the whirlpool trap drifters. Watch for the lunging pike, the snapping turtle, and each course's machinery. Islands split the river: one lane is fast and mean, one is safe and slow.</p>
+        <b>RACES</b>
+        <p>Multi-lap races return you through the portal. Lap 2 runs <b>high water</b> (faster, shallows drowned); lap 3 opens a <b>flood-gate shortcut</b>. Once a lap the dam releases a <b>surge wave</b> — ride it. Rivals remember: beat your <b style="color:#d94f30">NEMESIS</b>.</p>
+      </div>
+    </div>
   </div>
   <div class="panel hubPane" id="title">
     <div class="setRow"><span>Difficulty</span><div class="segRow" id="diffRow">
       <button data-d="easy">EASY</button><button data-d="medium">MEDIUM</button><button data-d="hard">HARD</button><button data-d="insane">INSANE</button></div></div>
     <div class="setRow"><span>Laps</span><div class="segRow" id="lapRow">
       <button data-l="1">1</button><button data-l="2">2</button><button data-l="3">3</button></div></div>
-    <div class="setRow"><span>Course</span><div class="segRow" id="lvlRow">
-      <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button></div></div>
+    <div class="setRow"><span>Course</span><div class="segRow wrapRow" id="lvlRow" style="max-width:300px">
+      <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button><button data-lvl="undergrove">UNDERGROVE</button><button data-lvl="canopy">CANOPY RUN</button></div></div>
     <div class="go" id="raceBtn">RACE &mdash; press <b>SPACE</b></div>
     <div class="keys">
       <kbd>W A S D</kbd> paddle &middot; <kbd>SHIFT</kbd> shove &middot; controller supported &mdash; you can't beat the river, only read it
@@ -180,13 +216,15 @@
     <h2>COURSES</h2>
     <div class="lvlCard" data-lvl="spillway"><div><b>SPILLWAY RUN</b><br><span>forest &middot; gorge &middot; canyon &middot; meadow</span></div><span class="bestLabel">best &mdash;</span></div>
     <div class="lvlCard" data-lvl="millrace"><div><b>MILLRACE</b><br><span>the working forest &mdash; mind the machines</span></div><span class="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard locked"><div><b>UNDERGROVE</b><br><span>coming soon</span></div><span>&#128274;</span></div>
-    <div class="lvlCard locked"><div><b>CANOPY RUN</b><br><span>coming soon</span></div><span>&#128274;</span></div>
+    <div class="lvlCard" data-lvl="undergrove"><div><b>UNDERGROVE</b><br><span>the drowned-dark forest &mdash; follow the lanterns</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="canopy"><div><b>CANOPY RUN</b><br><span>the flooded forest &mdash; race the treetops</span></div><span class="bestLabel">best &mdash;</span></div>
   </div>
  </div>
 </div>
 <div class="hud" id="tutToast"></div>
 <div id="tags"></div>
+<div id="joy" style="display:none"><div id="joyNub"></div></div>
+<div id="shoveTouch" style="display:none">SHOVE</div>
 <div class="hud pill" id="shovePill" style="display:none">SHOVE<small>SHIFT</small></div>
 <div id="wipe"></div>
 
@@ -275,6 +313,59 @@ const LEVELS = {
       { x:   4, z: -655, y: 33.0, w: 10,  s: 1.0  },
     ],
   },
+  undergrove: {
+    id: 'undergrove', name: 'UNDERGROVE', sub: 'the drowned-dark forest — follow the lanterns',
+    dark: [[0.17, 0.38], [0.54, 0.80]],
+    ctrl: [
+      { x:   0, z:    0, y: 60.0, w: 9,   s: 0.5  },  // twilight start
+      { x:   8, z:  -40, y: 58.6, w: 7,   s: 1.0  },
+      { x:  -8, z:  -85, y: 57.0, w: 6,   s: 1.3  },
+      { x:   6, z: -125, y: 55.2, w: 5,   s: 1.6  },  // into cave 1
+      { x:  -6, z: -165, y: 53.6, w: 4.5, s: 1.8  },  // root tunnel
+      { x:   8, z: -205, y: 52.0, w: 5,   s: 1.7  },
+      { x:  16, z: -245, y: 50.8, w: 8,   s: 0.8  },  // moonlit glen
+      { x:   6, z: -290, y: 49.6, w: 9,   s: 0.7  },
+      { x: -10, z: -330, y: 48.2, w: 5,   s: 1.7  },  // into cave 2
+      { x:  -4, z: -365, y: 47.0, w: 4.5, s: 1.9  },
+      { x:   4, z: -395, y: 46.2, w: 5,   s: 1.8  },  // sinkhole lip
+      { x:   6, z: -402, y: 39.2, w: 5,   s: 1.8  },  // THE SINKHOLE (7u plunge in the dark)
+      { x:  10, z: -435, y: 38.2, w: 7,   s: 1.0  },  // black pool
+      { x:   2, z: -475, y: 37.0, w: 5,   s: 1.8  },
+      { x:  -8, z: -515, y: 35.8, w: 4.5, s: 2.2  },  // glowworm narrows
+      { x:  -4, z: -555, y: 34.8, w: 5,   s: 2.0  },
+      { x:   4, z: -590, y: 34.0, w: 6,   s: 1.5  },  // out into dusk
+      { x:   2, z: -618, y: 33.6, w: 8,   s: 1.0  },  // finish
+      { x:   2, z: -655, y: 33.4, w: 10,  s: 1.0  },
+    ],
+  },
+  canopy: {
+    id: 'canopy', name: 'CANOPY RUN', sub: 'the flooded forest — race the treetops',
+    ctrl: [
+      { x:   0, z:    0, y: 84.0, w: 9,   s: 0.5  },  // treetop pool
+      { x:   6, z:  -38, y: 82.8, w: 7,   s: 1.1  },
+      { x:  -8, z:  -75, y: 81.6, w: 5.5, s: 1.5  },  // bough chute
+      { x:  -2, z:  -98, y: 81.0, w: 5,   s: 1.7  },
+      { x:   2, z: -105, y: 76.6, w: 5,   s: 1.7  },  // DROP 1
+      { x:  10, z: -140, y: 75.4, w: 7,   s: 1.0  },  // branch pool
+      { x:  -6, z: -180, y: 74.0, w: 5,   s: 1.6  },  // moss slalom
+      { x: -12, z: -215, y: 73.0, w: 4.5, s: 1.9  },
+      { x:  -6, z: -238, y: 72.2, w: 5,   s: 1.8  },
+      { x:  -2, z: -245, y: 66.8, w: 5,   s: 1.8  },  // DROP 2
+      { x:   8, z: -280, y: 65.6, w: 7,   s: 1.0  },
+      { x:  18, z: -320, y: 64.2, w: 5.5, s: 1.6  },  // wide bough sweep
+      { x:   8, z: -360, y: 63.0, w: 5,   s: 1.8  },
+      { x:   2, z: -382, y: 62.2, w: 5,   s: 1.9  },
+      { x:   0, z: -390, y: 53.4, w: 5.5, s: 1.8  },  // THE BIG DROP (9u)
+      { x:   6, z: -425, y: 52.2, w: 8,   s: 0.8  },  // mist pool
+      { x:  14, z: -465, y: 51.0, w: 5.5, s: 1.8  },  // rain-gutter run
+      { x:   6, z: -505, y: 49.8, w: 5,   s: 2.0  },
+      { x:  -2, z: -535, y: 49.0, w: 4.5, s: 2.3  },
+      { x:   0, z: -558, y: 48.4, w: 5,   s: 1.9  },
+      { x:   2, z: -565, y: 43.8, w: 5,   s: 1.8  },  // DROP 4 to the forest floor pool
+      { x:   4, z: -600, y: 42.8, w: 8,   s: 1.0  },  // finish
+      { x:   4, z: -650, y: 42.6, w: 10,  s: 1.0  },
+    ],
+  },
 };
 const LVL = LEVELS[localStorage.getItem('spillway-level')] || LEVELS.spillway;
 const CTRL = LVL.ctrl;
@@ -345,43 +436,83 @@ function nearestSample(p, hint) {
 
 // ============================================================ FEATURES
 // Eddy: swirling trap in the big pool. Rocks: obstacles that deflect flow.
-const EDDIES = LVL.id === 'spillway' ? [
-  { i: Math.round(0.395 * NSAMP), lat: -5.2, r: 5.5, spin:  1.5, pull: 0.8 },
-  { i: Math.round(0.435 * NSAMP), lat:  5.0, r: 5.0, spin: -1.4, pull: 0.8 },
-  { i: Math.round(0.645 * NSAMP), lat:  0.4, r: 5.0, spin:  2.3, pull: 1.9, whirl: true },
-] : [
-  { i: Math.round(0.545 * NSAMP), lat: -2.5, r: 3.2, spin: -1.8, pull: 1.2 },              // waterwheel backwash
-  { i: Math.round(0.635 * NSAMP), lat:  0.0, r: 5.0, spin:  2.2, pull: 1.8, whirl: true }, // millpond whirl
-];
+const EDDIES = ({
+  spillway: [
+    { i: Math.round(0.395 * NSAMP), lat: -5.2, r: 5.5, spin:  1.5, pull: 0.8 },
+    { i: Math.round(0.435 * NSAMP), lat:  5.0, r: 5.0, spin: -1.4, pull: 0.8 },
+    { i: Math.round(0.645 * NSAMP), lat:  0.4, r: 5.0, spin:  2.3, pull: 1.9, whirl: true },
+  ],
+  millrace: [
+    { i: Math.round(0.545 * NSAMP), lat: -2.5, r: 3.2, spin: -1.8, pull: 1.2 },
+    { i: Math.round(0.635 * NSAMP), lat:  0.0, r: 5.0, spin:  2.2, pull: 1.8, whirl: true },
+  ],
+  undergrove: [
+    { i: Math.round(0.30 * NSAMP), lat:  4.0, r: 4.5, spin:  1.4, pull: 0.8 },
+    { i: Math.round(0.565 * NSAMP), lat: 0.0, r: 4.5, spin:  2.2, pull: 1.8, whirl: true },  // the black pool
+  ],
+  canopy: [
+    { i: Math.round(0.185 * NSAMP), lat: -3.0, r: 4.0, spin: -1.4, pull: 0.8 },
+    { i: Math.round(0.545 * NSAMP), lat:  0.0, r: 4.5, spin:  2.2, pull: 1.8, whirl: true }, // the mist pool
+  ],
+})[LVL.id];
 EDDIES.forEach(e => { e.pos = S.pos[e.i].clone().addScaledVector(S.side[e.i], e.lat); });
 
 // reed patches: slack water near the banks that kills your speed
 const REEDS = [];
-(LVL.id === 'spillway'
-  ? [[0.155, 1], [0.335, -1], [0.71, 1], [0.895, -1]]
-  : [[0.60, 1], [0.655, -1], [0.93, 1]]
+(({ spillway: [[0.155, 1], [0.335, -1], [0.71, 1], [0.895, -1]],
+    millrace: [[0.60, 1], [0.655, -1], [0.93, 1]],
+    undergrove: [[0.28, 1], [0.90, -1]],
+    canopy: [[0.14, -1], [0.42, 1], [0.87, -1]] })[LVL.id]
 ).forEach(([t, sgn]) => {
   const i = Math.round(t * NSAMP);
   REEDS.push({ i, pos: S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 1.6)), r: 2.6 });
 });
 
 // fast chutes (glassy arrowed tongues) and shoals (sandbars / one sticky mud flat)
-const CHUTES = LVL.id === 'spillway' ? [
-  { t0: 0.150, t1: 0.185, latC: -1.5, halfW: 1.6 },
-  { t0: 0.455, t1: 0.488, latC:  4.0, halfW: 1.8 },   // hugs the eddy pool — risk for reward
-  { t0: 0.820, t1: 0.852, latC:  0.0, halfW: 1.8 },
-] : [
-  { t0: 0.425, t1: 0.455, latC: -1.0, halfW: 1.5 },   // gate-alley exit tongue
-  { t0: 0.895, t1: 0.930, latC:  0.0, halfW: 1.7 },   // the penstock
-];
-const SHOALS = LVL.id === 'spillway' ? [
-  { t0: 0.210, t1: 0.238, latC: -3.2, halfW: 2.0, mul: 0.35, mud: false },
-  { t0: 0.752, t1: 0.778, latC:  2.8, halfW: 2.2, mul: 0.35, mud: false },
-  { t0: 0.872, t1: 0.900, latC: -3.5, halfW: 2.4, mul: 0.22, mud: true },
-] : [
-  { t0: 0.615, t1: 0.650, latC:  3.6, halfW: 2.4, mul: 0.35, mud: false },  // millpond sandbar
-  { t0: 0.845, t1: 0.870, latC: -2.6, halfW: 2.0, mul: 0.25, mud: true },   // mud before the penstock
-];
+const CHUTES = ({
+  spillway: [
+    { t0: 0.150, t1: 0.185, latC: -1.5, halfW: 1.6 },
+    { t0: 0.455, t1: 0.488, latC:  4.0, halfW: 1.8 },
+    { t0: 0.820, t1: 0.852, latC:  0.0, halfW: 1.8 },
+  ],
+  millrace: [
+    { t0: 0.425, t1: 0.455, latC: -1.0, halfW: 1.5 },
+    { t0: 0.895, t1: 0.930, latC:  0.0, halfW: 1.7 },
+  ],
+  undergrove: [
+    { t0: 0.665, t1: 0.72, latC: 0.0, halfW: 1.5 },    // glowworm narrows
+  ],
+  canopy: [
+    { t0: 0.305, t1: 0.345, latC: -0.5, halfW: 1.5 },  // moss chute
+    { t0: 0.775, t1: 0.835, latC:  0.0, halfW: 1.6 },  // the rain gutter
+  ],
+})[LVL.id];
+// flood-gate shortcut: opens on the final lap of a 3-lap race
+CHUTES.push(({
+  spillway: { t0: 0.285, t1: 0.37, latC: -2.0, halfW: 1.6, lapMin: 2 },
+  millrace: { t0: 0.13, t1: 0.21, latC: 1.6, halfW: 1.5, lapMin: 2 },
+  undergrove: { t0: 0.40, t1: 0.48, latC: 2.0, halfW: 1.5, lapMin: 2 },
+  canopy: { t0: 0.575, t1: 0.63, latC: -2.0, halfW: 1.5, lapMin: 2 },
+})[LVL.id]);
+const SHOALS = ({
+  spillway: [
+    { t0: 0.210, t1: 0.238, latC: -3.2, halfW: 2.0, mul: 0.35, mud: false },
+    { t0: 0.752, t1: 0.778, latC:  2.8, halfW: 2.2, mul: 0.35, mud: false },
+    { t0: 0.872, t1: 0.900, latC: -3.5, halfW: 2.4, mul: 0.22, mud: true },
+  ],
+  millrace: [
+    { t0: 0.615, t1: 0.650, latC:  3.6, halfW: 2.4, mul: 0.35, mud: false },
+    { t0: 0.845, t1: 0.870, latC: -2.6, halfW: 2.0, mul: 0.25, mud: true },
+  ],
+  undergrove: [
+    { t0: 0.295, t1: 0.325, latC: -3.6, halfW: 2.2, mul: 0.35, mud: false },
+    { t0: 0.845, t1: 0.875, latC:  2.4, halfW: 2.0, mul: 0.25, mud: true },
+  ],
+  canopy: [
+    { t0: 0.55, t1: 0.585, latC:  2.8, halfW: 2.2, mul: 0.35, mud: false },
+    { t0: 0.895, t1: 0.925, latC: -2.4, halfW: 2.0, mul: 0.25, mud: true },
+  ],
+})[LVL.id];
 [...CHUTES, ...SHOALS].forEach(z => { z.i0 = Math.round(z.t0 * NSAMP); z.i1 = Math.round(z.t1 * NSAMP); });
 const _zone = { chute: false, mud: false };
 
@@ -400,11 +531,18 @@ if (LVL.id === 'spillway') {
   // bridge pilings — thread the needle
   addRock(0.68, -3, 0.55); addRock(0.68, 0, 0.55); addRock(0.68, 3, 0.55);
   ROCKS.slice(-3).forEach(r => r.type = 'piling');
-} else {
+} else if (LVL.id === 'millrace') {
   // millrace: boulders in the log run, and the sawblade's solid hub
   addRock(0.775, -1.6, 1.1); addRock(0.805, 1.9, 1.2);
   addRock(0.565, 0.6, 1.4);
   ROCKS[ROCKS.length - 1].type = 'saw';
+} else if (LVL.id === 'undergrove') {
+  // stalagmites in the caves
+  addRock(0.20, -1.5, 1.1); addRock(0.24, 1.8, 1.2); addRock(0.60, 1.0, 1.3);
+  addRock(0.64, -2.0, 1.1); addRock(0.75, 1.5, 1.0);
+} else if (LVL.id === 'canopy') {
+  // knots and burls in the boughs
+  addRock(0.30, -1.2, 1.1); addRock(0.335, 1.6, 1.0); addRock(0.62, 2.0, 1.2); addRock(0.66, -1.5, 1.1);
 }
 
 // floating log barriers — angled, partially blocking the channel
@@ -421,7 +559,42 @@ if (LVL.id === 'spillway') {
   addLog(0.245, 2.2, 7, -1.15);   // downstream tip points at the open left gap
   addLog(0.475, -4.5, 6, 0.35);
   addLog(0.86, 2.5, 8, -1.0);
+} else if (LVL.id === 'undergrove') {
+  addLog(0.355, 2.0, 6, -1.2);    // fallen root across the glen mouth
+} else if (LVL.id === 'canopy') {
+  addLog(0.165, 1.8, 6, -1.1);    // branches lying across the run
+  addLog(0.485, -3.0, 7, 0.5);
 }
+
+// islands: fat capsule blockers that braid the channel (risky lane vs safe lane).
+// They ride the LOGS system — collision, AI gap-picking, and flow-shed come free.
+const ISLANDS = [];
+function addIsland(t0, t1, latC, halfW) {
+  const i0 = Math.round(t0 * NSAMP), i1 = Math.round(t1 * NSAMP);
+  const mid = Math.round((i0 + i1) / 2);
+  const a = S.pos[i0].clone().addScaledVector(S.side[i0], latC);
+  const b = S.pos[i1].clone().addScaledVector(S.side[i1], latC);
+  const dir = b.clone().sub(a); dir.y = 0;
+  const len = dir.length(); dir.normalize();
+  LOGS.push({ i: mid, c: a.clone().lerp(b, 0.5), dir, len, r: halfW, dyn: true,
+    latC, latHalf: halfW + 0.5, a, b, island: true });
+  ISLANDS.push({ i0, i1, mid, latC, halfW, a, b });
+}
+if (LVL.id === 'spillway') {
+  addIsland(0.398, 0.446, -1.2, 2.1);   // splits the eddy pool
+  addIsland(0.752, 0.788, 0.2, 1.6);    // splits rapids 2 — rocks guard the right cut
+}
+if (LVL.id === 'millrace') addIsland(0.615, 0.655, -2.0, 2.0);   // millpond bar
+if (LVL.id === 'undergrove') addIsland(0.29, 0.325, 1.0, 1.8);   // glen island under the moon-gap
+
+// critters: a lunging pike, a snapping turtle, cosmetic frogs
+const CRITTERS = { pike: [], turtle: [], frogs: [] };
+function addPike(t, lat) { const i = Math.round(t * NSAMP); CRITTERS.pike.push({ i, lat, cd: 0, lungeT: -1, home: S.pos[i].clone().addScaledVector(S.side[i], lat) }); }
+function addTurtle(t, lat) { const i = Math.round(t * NSAMP); CRITTERS.turtle.push({ i, lat, cd: randRange(2, 5), pos: S.pos[i].clone().addScaledVector(S.side[i], lat) }); }
+if (LVL.id === 'spillway') { addPike(0.19, 3.8); addPike(0.69, -4.2); addTurtle(0.33, -2.9); }
+if (LVL.id === 'millrace') { addPike(0.62, 4.0); addTurtle(0.79, 1.6); }
+if (LVL.id === 'undergrove') { addPike(0.47, -3.0); addPike(0.72, 2.2); }
+if (LVL.id === 'canopy') { addPike(0.44, -2.5); addTurtle(0.19, 2.6); }
 // millrace machinery: gates, booms, saw, and log traffic live in MDYN (updated per tick)
 const MDYN = { gates: [], booms: [], traffic: [], saw: null };
 if (LVL.id === 'millrace') {
@@ -520,6 +693,8 @@ function waterVelAt(p, si, out) {
   out.set(tan.x * spd, 0, tan.z * spd);
   const HZ = (DIFF[G.difficulty] || DIFF.medium).haz;
   _zone.chute = false; _zone.mud = false;
+  // lap 2+: high water — everything runs faster
+  if (G.raceLap >= 1) { out.x *= 1.12; out.z *= 1.12; }
   // eddies (whirlpool suction "breathes" so drifters eventually escape; grabbier at higher tiers)
   for (const e of EDDIES) {
     const dx = p.x - e.pos.x, dz = p.z - e.pos.z;
@@ -532,14 +707,15 @@ function waterVelAt(p, si, out) {
       out.z += ( dx / d) * s * f * 2.2 - dz / d * f * e.pull * br;
     }
   }
-  // fast chutes: ride the tongue for a 1.55x current
+  // fast chutes: ride the tongue for a 1.55x current (lap-gated ones open with the flood)
   for (const c of CHUTES) {
+    if (c.lapMin && G.raceLap < c.lapMin) continue;
     if (si >= c.i0 && si <= c.i1 && Math.abs(lat - c.latC) < c.halfW) {
       out.x *= 1.55; out.z *= 1.55; _zone.chute = true;
     }
   }
-  // shoals: shallow sand (slow) or mud (sticky slow)
-  for (const sh of SHOALS) {
+  // shoals: shallow sand (slow) or mud (sticky slow) — drowned by lap-2 high water
+  if (G.raceLap < 1) for (const sh of SHOALS) {
     if (si >= sh.i0 && si <= sh.i1 && Math.abs(lat - sh.latC) < sh.halfW) {
       const m = Math.max(0.12, sh.mul / HZ);
       out.x *= m; out.z *= m;
@@ -645,7 +821,7 @@ function resetDucks() {
 }
 
 // ============================================================ SIM
-const G = { mode: 'title', time: 0, countdown: 0, finishedCount: 0, results: [], playerSplashT: 0, camShake: 0, flyT: 0, difficulty: 'medium', laps: 1, weather: 'clear' };
+const G = { mode: 'title', time: 0, countdown: 0, finishedCount: 0, results: [], playerSplashT: 0, camShake: 0, flyT: 0, difficulty: 'medium', laps: 1, weather: 'clear', raceLap: 0, surge: -1, surgeLap: -1, slowmo: 0 };
 const input = { up: false, down: false, left: false, right: false };
 const PADDLE_ACC = 7.5, DRAG_XZ = 1.25;
 // CPU difficulty: steering skill, active paddle, hazard avoidance, aggression vs you,
@@ -677,6 +853,28 @@ SETTINGS.duck = Object.assign({ eyes: 'classic', pattern: 'none', patternColor: 
 if (!SETTINGS.keys) SETTINGS.keys = { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' };
 if (!SETTINGS.camView) SETTINGS.camView = 'behind';
 const PAD = { up: false, down: false, left: false, right: false, on: false, name: '' };
+const TOUCH = { up: false, down: false, left: false, right: false, active: 'ontouchstart' in window };
+if (TOUCH.active && !localStorage.getItem('spillway-settings')) SETTINGS.quality = 'medium';
+// progression: race stats feed gear unlocks
+const STATS = Object.assign({ races: 0, wins: {}, winsByLevel: {}, nemesisBeaten: 0 },
+  JSON.parse(localStorage.getItem('spillway-stats') || '{}'));
+function saveStats() { localStorage.setItem('spillway-stats', JSON.stringify(STATS)); }
+const LOCKS = {
+  hat: {
+    crown:  { ok: () => (STATS.wins.hard || 0) + (STATS.wins.insane || 0) >= 1, req: 'win a race on HARD or INSANE to earn the crown' },
+    pirate: { ok: () => (STATS.winsByLevel.millrace || 0) >= 1, req: 'win MILLRACE to earn the pirate hat' },
+    viking: { ok: () => (STATS.winsByLevel.undergrove || 0) >= 1, req: 'win UNDERGROVE to earn the viking helm' },
+    toque:  { ok: () => (STATS.winsByLevel.canopy || 0) >= 1, req: 'win CANOPY RUN to earn the chef\'s toque' },
+    prop:   { ok: () => STATS.races >= 10, req: 'finish 10 races to earn the propeller beanie' },
+  },
+  body: {
+    cape: { ok: () => STATS.nemesisBeaten >= 1, req: 'beat your NEMESIS to earn the cape' },
+  },
+};
+function gearLocked(key, val) {
+  const l = LOCKS[key] && LOCKS[key][val];
+  return l && !l.ok() ? l.req : null;
+}
 // weight classes: slightly different size / paddle power / mass (knockback given & taken)
 const WEIGHTS = {
   light:  { scale: 0.85, paddle: 1.12, mass: 0.7,  blurb: 'quick off the mark, easy to toss around' },
@@ -816,6 +1014,64 @@ function step(dt) {
   const racing = G.mode === 'race';
 
   if (LVL.id === 'millrace') updateMDYN();
+  // race-wide lap (the leader's) drives the lap mutators
+  if (racing) {
+    let maxLap = 0;
+    for (const d2 of ducks) if (d2.lap > maxLap) maxLap = d2.lap;
+    if (maxLap !== G.raceLap) {
+      G.raceLap = maxLap;
+      if (maxLap === 1) eventToast('HIGH WATER — the river runs faster, the shallows are drowned');
+      if (maxLap === 2) eventToast('FLOOD GATES OPEN — a new fast line appears!');
+    }
+    // dam release: once per lap, ~35s in
+    if (G.surgeLap !== G.raceLap && G.raceT - (G.surgeLapT || 0) > 35 && G.surge < 0) {
+      G.surgeLap = G.raceLap; G.surge = 0;
+      eventToast('⚠ DAM RELEASE — surge incoming!');
+      SFX.whistle(); setTimeout(() => SFX.whistle(), 400);
+    }
+    if (G.surge >= 0) {
+      G.surge += (22 / COURSE_LEN) * dt;
+      if (G.surge > 1.05) { G.surge = -1; G.surgeLapT = G.raceT; }
+    }
+  }
+  // critters
+  for (const pk of CRITTERS.pike) {
+    pk.cd -= dt;
+    if (pk.lungeT >= 0) {
+      pk.lungeT += dt;
+      if (pk.lungeT > 1.1) pk.lungeT = -1;
+    } else if (pk.cd <= 0) {
+      for (const d2 of ducks) {
+        if (d2.inFlume || d2.air) continue;
+        const dx = d2.p.x - pk.home.x, dz = d2.p.z - pk.home.z;
+        if (dx * dx + dz * dz < 9) {
+          pk.lungeT = 0; pk.cd = 7; pk.target = _tmpA.set(d2.p.x, 0, d2.p.z).clone();
+          const kick = 9 / massOf(d2);
+          d2.v.x += (dx / Math.hypot(dx, dz)) * kick; d2.v.z += (dz / Math.hypot(dx, dz)) * kick;
+          d2.spinV += (rand() - 0.5) * 22; d2._sq = Math.max(d2._sq || 0, 0.35);
+          splash({ x: d2.p.x, y: d2.y, z: d2.p.z }, 10);
+          if (d2.idx === 0) { G.camShake = 0.45; SFX.thud(5); SFX.quack(); }
+          break;
+        }
+      }
+    }
+  }
+  for (const tt of CRITTERS.turtle) {
+    tt.cd -= dt;
+    if (tt.cd <= 0) {
+      tt.cd = randRange(4, 7); tt.snap = 0.4;
+      for (const d2 of ducks) {
+        const dx = d2.p.x - tt.pos.x, dz = d2.p.z - tt.pos.z;
+        const dd = Math.hypot(dx, dz);
+        if (dd < 2.2 && dd > 0.01) {
+          d2.v.x += (dx / dd) * 6; d2.v.z += (dz / dd) * 6;
+          d2.spinV += (rand() - 0.5) * 14;
+          if (d2.idx === 0) { G.camShake = 0.3; SFX.thud(3); }
+        }
+      }
+    }
+    if (tt.snap > 0) tt.snap -= dt;
+  }
   // spatial hash for duck-duck collisions (flume riders are out of play)
   hash.clear();
   for (const d of ducks) {
@@ -835,15 +1091,24 @@ function step(dt) {
     waterVelAt(d.p, si, _tmpA);
     // hold everyone behind the gates until GO
     if (!racing && t01 < 0.06) _tmpA.multiplyScalar(0.15);
+    // the surge lifts and hurls everyone it passes
+    if (G.surge >= 0) {
+      const sDiff = Math.abs(si / NSAMP - G.surge) * NSAMP;
+      if (sDiff < 14) {
+        const f = 1 - sDiff / 14;
+        d.v.x += S.tan[si].x * 9 * f * dt * 6; d.v.z += S.tan[si].z * 9 * f * dt * 6;
+        if (f > 0.6 && rand() < dt * 4) { splash({ x: d.p.x, y: d.y, z: d.p.z }, 3); d._sq = Math.max(d._sq || 0, 0.12); }
+      }
+    }
 
     // ---- paddle (player) / wander (AI)
     if (d.idx === 0 && racing && !d.finished) {
       const fwd = S.tan[si], side = S.side[si];
       let ax = 0, az = 0;
-      if (input.up || PAD.up)       { ax += fwd.x;  az += fwd.z; }
-      if (input.down || PAD.down)   { ax -= fwd.x * 0.7; az -= fwd.z * 0.7; }
-      if (input.left || PAD.left)   { ax -= side.x; az -= side.z; }
-      if (input.right || PAD.right) { ax += side.x; az += side.z; }
+      if (input.up || PAD.up || TOUCH.up)       { ax += fwd.x;  az += fwd.z; }
+      if (input.down || PAD.down || TOUCH.down)   { ax -= fwd.x * 0.7; az -= fwd.z * 0.7; }
+      if (input.left || PAD.left || TOUCH.left)   { ax -= side.x; az -= side.z; }
+      if (input.right || PAD.right || TOUCH.right) { ax += side.x; az += side.z; }
       const m = Math.hypot(ax, az);
       d._stroking = m > 0.01;
       if (m > 0.01) {
@@ -1037,6 +1302,19 @@ function step(dt) {
       }
     }
 
+    // ---- anti-wedge failsafe: nobody parks forever in a corner the design missed
+    if (racing && !d.finished && !d.air) {
+      const spW = Math.hypot(d.v.x, d.v.z);
+      d._slowT = spW < 0.6 ? (d._slowT || 0) + dt : 0;
+      if (d._slowT > 6) {
+        d._slowT = 0;
+        d.v.x += S.tan[si].x * 4; d.v.z += S.tan[si].z * 4;
+        d.p.x += S.tan[si].x * 0.6 - (d.p.x - S.pos[si].x) * 0.08;
+        d.p.z += S.tan[si].z * 0.6 - (d.p.z - S.pos[si].z) * 0.08;
+        splash({ x: d.p.x, y: d.y, z: d.p.z }, 4);
+      }
+    }
+
     // ---- integrate (with a hard sanity cap so chaos never becomes teleporting)
     const vMag = Math.hypot(d.v.x, d.v.z);
     if (vMag > 26) { d.v.x *= 26 / vMag; d.v.z *= 26 / vMag; }
@@ -1057,7 +1335,10 @@ function step(dt) {
     } else {
       // launch when the bed ahead falls away (the falls) — you can't ride a cliff
       const whAhead = waterHeightAt(Math.min(NSAMP, d.si + 6));
-      if (wh - whAhead > 1.4 && Math.hypot(d.v.x, d.v.z) > 3) { d.air = true; d.vy = 1.2; d.airT = 0; }
+      if (wh - whAhead > 1.4 && Math.hypot(d.v.x, d.v.z) > 3) {
+        d.air = true; d.vy = 1.2; d.airT = 0;
+        if (d.idx === 0 && Math.abs(d.si - _fI0) < 45 && G.slowmo <= 0 && G.mode === 'race') { G.slowmo = 1.15; SFX.splash(); }
+      }
       else if (d.y - wh > 0.9) { d.air = true; d.vy = 0; d.airT = 0; }
       else d.y = wh;
     }
@@ -1108,6 +1389,7 @@ function step(dt) {
 let acc = 0;
 const FIXED = 1 / 60;
 function advance(dtReal) {
+  if (G.slowmo > 0) { G.slowmo -= dtReal; dtReal *= 0.42; }   // the falls moment
   acc += Math.min(dtReal, 0.25);
   while (acc >= FIXED) { step(FIXED); acc -= FIXED; }
 }
@@ -1204,7 +1486,8 @@ sun.shadow.camera.top = 70; sun.shadow.camera.bottom = -70;
 sun.shadow.bias = -0.0006;
 scene.add(sun, sun.target);
 const SUN_DIR = new THREE.Vector3(-70, 90, -30).normalize();
-scene.add(new THREE.AmbientLight(0x9fb4c8, 0.32));   // lighting floor: nothing ever goes black
+const ambLight = new THREE.AmbientLight(0x9fb4c8, 0.32);   // lighting floor: nothing ever goes black
+scene.add(ambLight);
 
 // ---------- water ribbon
 let waterMat;
@@ -1224,7 +1507,7 @@ let waterMat;
     slopeA.push(S.slope[i], S.slope[i]);
     // chute / shoal bands in uv-x space for this row
     let cB = [0.5, 0], sB = [0.5, 0], sKind = 0;
-    for (const c of CHUTES) if (i >= c.i0 && i <= c.i1) cB = [(c.latC + w) / (2 * w), c.halfW / (2 * w)];
+    for (const c of CHUTES) if (!c.lapMin && i >= c.i0 && i <= c.i1) cB = [(c.latC + w) / (2 * w), c.halfW / (2 * w)];
     for (const sh of SHOALS) if (i >= sh.i0 && i <= sh.i1) { sB = [(sh.latC + w) / (2 * w), sh.halfW / (2 * w)]; sKind = sh.mud ? 1 : 0; }
     chuteA.push(cB[0], cB[1], cB[0], cB[1]);
     shoalA.push(sB[0], sB[1], sB[0], sB[1]);
@@ -1670,10 +1953,11 @@ const ARROWS = [];
     for (let k = 0; k < 3; k++) {
       const i = Math.round(c.i0 + (c.i1 - c.i0) * (0.2 + 0.3 * k));
       const mesh = new THREE.Mesh(aGeo, new THREE.MeshBasicMaterial({
-        color: 0xd8f4f2, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
+        color: c.lapMin ? 0xaef2ff : 0xd8f4f2, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
       mesh.position.copy(S.pos[i]).addScaledVector(S.side[i], c.latC);
       mesh.position.y = waterHeightAt(i) + 0.1;
       mesh.rotation.y = Math.atan2(S.tan[i].x, S.tan[i].z);
+      mesh.userData.lapMin = c.lapMin || 0;
       ARROWS.push(mesh); scene.add(mesh);
     }
   }
@@ -1725,6 +2009,73 @@ if (LVL.id === 'millrace') {
       crate.position.set(p.x + 2, gy + 0.55, p.z + 1); crate.rotation.y = rand() * 1.5;
       scene.add(crate);
     }
+  }
+} else if (LVL.id === 'undergrove') {
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const emis = (c) => new THREE.MeshBasicMaterial({ color: c });
+  // lantern buoys mark the line through the dark; glow-mushrooms crowd the banks
+  for (const [d0, d1] of LVL.dark) {
+    for (let t2 = d0 + 0.015; t2 < d1; t2 += 0.028) {
+      const i = Math.round(t2 * NSAMP);
+      const lat = (Math.round(t2 * 100) % 2 ? 1 : -1) * (S.w[i] - 1.2);
+      const p = S.pos[i].clone().addScaledVector(S.side[i], lat);
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.3, 5), lam(0x4a3b2a));
+      post.position.set(p.x, waterHeightAt(i) + 0.5, p.z);
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), emis(0xffb347));
+      lamp.position.set(p.x, waterHeightAt(i) + 1.25, p.z);
+      scene.add(post, lamp);
+    }
+    for (let m2 = 0; m2 < 26; m2++) {
+      const i = Math.round((d0 + rand() * (d1 - d0)) * NSAMP);
+      const sgn = m2 % 2 ? 1 : -1, ob = randRange(0.5, 5);
+      const gy = waterHeightAt(i) + bankH(i, ob, sgn);
+      const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(randRange(0.12, 0.3), 7, 5),
+        emis(m2 % 3 ? 0x6ee7f2 : 0xc084fc));
+      cap.scale.y = 0.7; cap.position.set(p.x, gy + 0.2, p.z);
+      scene.add(cap);
+    }
+    // stalactite teeth over the channel edges
+    for (let s2 = 0; s2 < 10; s2++) {
+      const i = Math.round((d0 + rand() * (d1 - d0)) * NSAMP);
+      const sgn = s2 % 2 ? 1 : -1;
+      const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 0.5));
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(randRange(0.4, 0.8), randRange(2, 4), 5), lam(0x6f7378));
+      tooth.rotation.x = Math.PI;
+      tooth.position.set(p.x, waterHeightAt(i) + randRange(7, 10), p.z);
+      scene.add(tooth);
+    }
+  }
+} else if (LVL.id === 'canopy') {
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  // colossal trunks rising past the flood line, distance-checked off the course
+  for (let tk = 0; tk < 15; tk++) {
+    const i = Math.floor((tk / 15) * NSAMP);
+    const sgn = tk % 2 ? 1 : -1, ob = randRange(16, 34);
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+    let clear = true;
+    for (let ci = 0; ci <= NSAMP; ci += 25) {
+      const dx2 = p.x - S.pos[ci].x, dz2 = p.z - S.pos[ci].z;
+      if (dx2 * dx2 + dz2 * dz2 < 20 * 20) { clear = false; break; }
+    }
+    if (!clear) continue;
+    const r = randRange(4, 8);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.85, r, 70, 9), lam(0x6b4a2f));
+    trunk.position.set(p.x, waterHeightAt(i) - 5, p.z);
+    scene.add(trunk);
+    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(r * 2.2, 0), lam(0x3f7a3c));
+    crown.position.set(p.x, waterHeightAt(i) + 32, p.z);
+    scene.add(crown);
+  }
+  // leaf pads at the water's edge
+  for (let lp = 0; lp < 16; lp++) {
+    const i = Math.round(randRange(0.05, 0.92) * NSAMP);
+    const sgn = lp % 2 ? 1 : -1;
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 1.0));
+    const pad = new THREE.Mesh(new THREE.CircleGeometry(randRange(0.9, 1.7), 9), lam(0x53a64a));
+    pad.rotation.x = -Math.PI / 2;
+    pad.position.set(p.x, waterHeightAt(i) + 0.08, p.z);
+    scene.add(pad);
   }
 } else {
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
@@ -2035,6 +2386,75 @@ if (LVL.id === 'millrace') {
   }
 }
 
+// ---------- islands, critters, the surge wall, the falls rainbow
+let surgeMesh;
+{
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  // island mounds: grassy capsule humps with a tuft
+  for (const is2 of ISLANDS) {
+    const len = is2.a.distanceTo(is2.b);
+    const mound = new THREE.Mesh(new THREE.CapsuleGeometry(is2.halfW, len, 4, 10), lam(0x6da05b));
+    mound.position.copy(is2.a).lerp(is2.b, 0.5);
+    mound.position.y = waterHeightAt(is2.mid) - is2.halfW * 0.45;
+    mound.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), is2.b.clone().sub(is2.a).normalize());
+    mound.scale.set(1, 1, 0.55);
+    scene.add(mound);
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(is2.halfW * 0.45, 0), lam(0x8f949a));
+    rock.position.copy(mound.position); rock.position.y = waterHeightAt(is2.mid) + is2.halfW * 0.32;
+    scene.add(rock);
+    const tuft = new THREE.Mesh(new THREE.ConeGeometry(is2.halfW * 0.5, is2.halfW * 1.3, 6), lam(0x3f7a3c));
+    tuft.position.copy(rock.position); tuft.position.y += is2.halfW * 0.8;
+    scene.add(tuft);
+  }
+  // pike: dark lurker that darts
+  for (const pk of CRITTERS.pike) {
+    const grp = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.9, 3, 7), lam(0x3a5a3a));
+    body.rotation.x = Math.PI / 2;
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.35, 5), lam(0x2e4a2e));
+    tail.position.z = -0.75; tail.rotation.x = -Math.PI / 2;
+    grp.add(body, tail);
+    grp.position.copy(pk.home); grp.position.y = waterHeightAt(pk.i) - 0.25;
+    scene.add(grp); pk.mesh = grp;
+  }
+  // turtle: dome on a rock, head that snaps out
+  for (const tt of CRITTERS.turtle) {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.9, 0), lam(0x8a8f94));
+    rock.position.copy(tt.pos); rock.position.y = waterHeightAt(tt.i) - 0.1; rock.scale.y = 0.6;
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.5, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x4e6b3a));
+    shell.position.copy(tt.pos); shell.position.y = waterHeightAt(tt.i) + 0.32;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 7, 5), lam(0x6b8a4a));
+    head.position.copy(tt.pos); head.position.y = waterHeightAt(tt.i) + 0.4;
+    scene.add(rock, shell, head); tt.head = head; tt.baseZ = tt.pos.z;
+  }
+  // frogs: cosmetic hoppers
+  for (let fr = 0; fr < 3; fr++) {
+    const i = Math.round(randRange(0.1, 0.85) * NSAMP);
+    const frog = new THREE.Mesh(new THREE.SphereGeometry(0.16, 7, 5), lam(0x53d769));
+    frog.scale.set(1, 0.75, 1.15);
+    scene.add(frog);
+    CRITTERS.frogs.push({ mesh: frog, i, side: fr % 2 ? 1 : -1, t: -randRange(2, 8), dur: 1.1 });
+  }
+  // the surge: a churning white wall that sweeps the river
+  surgeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1.4, 3),
+    new THREE.MeshLambertMaterial({ color: 0xf2fbfa, transparent: true, opacity: 0.85 }));
+  surgeMesh.visible = false;
+  scene.add(surgeMesh);
+  // rainbow in the falls mist (clear & golden weather)
+  var rainbowGrp = new THREE.Group();
+  const RCOLS = [0xff5a5a, 0xffa14a, 0xffd23f, 0x53d769, 0x53a6ff, 0xa78bfa];
+  for (let rb = 0; rb < RCOLS.length; rb++) {
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(5.6 - rb * 0.28, 0.12, 6, 24, Math.PI),
+      new THREE.MeshBasicMaterial({ color: RCOLS[rb], transparent: true, opacity: 0.22, depthWrite: false }));
+    rainbowGrp.add(arc);
+  }
+  const rbP = S.pos[Math.min(NSAMP, _fI0 + 26)];
+  rainbowGrp.position.set(rbP.x, waterHeightAt(Math.min(NSAMP, _fI0 + 26)) + 0.5, rbP.z);
+  rainbowGrp.rotation.y = Math.atan2(S.side[_fI0].x, S.side[_fI0].z);
+  scene.add(rainbowGrp);
+  window._rainbow = rainbowGrp;
+}
+
 // ---------- storm rain
 let rainMesh, rainVel = [];
 {
@@ -2102,15 +2522,26 @@ let rainMesh, rainVel = [];
         vec3 c = mix(vec3(0.72, 0.87, 0.90), vec3(1.0), smoothstep(0.35, 0.8, s));
         gl_FragColor = vec4(c, 0.92); }`,
   });
-  const fall = new THREE.Mesh(new THREE.PlaneGeometry(w * 2, topY - botY + 1), fallsMat);
-  fall.position.set(p.x, (topY + botY) / 2, p.z);
-  fall.lookAt(fall.position.clone().add(S.tan[i0]));
-  scene.add(fall);
-  const mist = new THREE.Mesh(new THREE.SphereGeometry(w * 1.4, 12, 8),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false }));
-  mist.position.set(p.x, botY + 0.5, p.z + 3);
-  mist.scale.y = 0.35;
-  scene.add(mist);
+  // curtains + mist at EVERY significant drop (Canopy Run has four)
+  const dropSites = [];
+  let lastDrop = -100;
+  for (let i2 = 0; i2 < NSAMP - 10; i2++) {
+    if (S.pos[i2].y - S.pos[i2 + 8].y > 2.0 && i2 - lastDrop > 40) { dropSites.push(i2); lastDrop = i2; }
+  }
+  for (const di of dropSites) {
+    const dTop = waterHeightAt(di), dBot = waterHeightAt(Math.min(NSAMP, di + 22));
+    const dp = S.pos[Math.min(NSAMP, di + 5)];
+    const dw = S.w[di];
+    const fall = new THREE.Mesh(new THREE.PlaneGeometry(dw * 2, dTop - dBot + 1), fallsMat);
+    fall.position.set(dp.x, (dTop + dBot) / 2, dp.z);
+    fall.lookAt(fall.position.clone().add(S.tan[di]));
+    scene.add(fall);
+    const mist = new THREE.Mesh(new THREE.SphereGeometry(dw * 1.3, 12, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.32, depthWrite: false }));
+    mist.position.set(dp.x, dBot + 0.5, dp.z - 2);
+    mist.scale.y = 0.35;
+    scene.add(mist);
+  }
 }
 
 // ---------- ducks (3 instanced meshes: body+head colored, beak, eyes)
@@ -2694,13 +3125,25 @@ function onPlayerFinish() {
   setTimeout(showResults, 1800);
 }
 function showResults() {
-  const list = el('resultsList');
   const me = ducks[0];
+  if (!me.finished) return;   // race was restarted before the results timer fired
+  const list = el('resultsList');
   const rows = [];
   const top = G.results.slice(0, 8);
   top.forEach(d => rows.push(row(d)));
   if (me.finished && me.place > 8) { rows.push('<div style="opacity:.5">…</div>'); rows.push(row(me)); }
   let bestNote = '';
+  if (me.finished && !G.statsCounted) {
+    G.statsCounted = true;
+    STATS.races++;
+    if (me.place === 1) {
+      STATS.wins[G.difficulty] = (STATS.wins[G.difficulty] || 0) + 1;
+      STATS.winsByLevel[LVL.id] = (STATS.winsByLevel[LVL.id] || 0) + 1;
+    }
+    const nem = ducks.find(d3 => d3.isNemesis);
+    if (nem && (!nem.finished || nem.finishTime > me.finishTime)) STATS.nemesisBeaten++;
+    saveStats();
+  }
   if (me.finished) {
     const key = `${LVL.id}-${G.difficulty}-${G.laps}`;
     if (!BEST[key] || me.finishTime < BEST[key]) {
@@ -2728,6 +3171,7 @@ function prepRace(skipFly) {
   seed = (Math.floor(performance.now()) % 100000) + 7;
   G.raceT = 0; G.finishedCount = 0; G.results = []; G.tutStep = 0;
   G.laps = SETTINGS.laps;
+  G.raceLap = 0; G.surge = -1; G.surgeLap = -1; G.surgeLapT = 0; G.slowmo = 0; G.statsCounted = false;
   G.weather = ['clear', 'golden', 'mist', 'storm'][Math.floor(rand() * 4)];
   setTimeout(() => eventToast(`${WEATHERS[G.weather].label}${G.laps > 1 ? ` — ${G.laps} LAPS` : ''}`), 600);
   resetDucks();
@@ -2741,11 +3185,12 @@ function prepRace(skipFly) {
   el('results').style.display = 'none';
   el('hudTop').style.display = 'flex';
   el('minimap').style.display = 'block';
-  el('shovePill').style.display = '';
+  el('shovePill').style.display = TOUCH.active ? 'none' : '';
+  if (window._showTouchUI) _showTouchUI(true);
   G.playerShove = false;
 }
 function showTab(id) {
-  for (const p of ['title', 'duckPanel', 'levelPanel', 'settingsPanel']) el(p).classList.toggle('hidden', p !== id);
+  for (const p of ['title', 'duckPanel', 'levelPanel', 'settingsPanel', 'guidePanel']) el(p).classList.toggle('hidden', p !== id);
   document.querySelectorAll('#hubTabs button').forEach(b => b.classList.toggle('sel', b.dataset.tab === id));
   G.hubTab = id;
   el('results').style.display = 'none';
@@ -2760,6 +3205,7 @@ function toTitle() {
   el('hudTop').style.display = 'none';
   el('minimap').style.display = 'none';
   el('shovePill').style.display = 'none';
+  if (window._showTouchUI) _showTouchUI(false);
 }
 function openSettings() { showHub('settingsPanel'); }
 function closeSettings() {
@@ -2852,6 +3298,35 @@ function pollPad() {
   PAD._st = st2;
 }
 addEventListener('gamepadconnected', e2 => { eventToast(`CONTROLLER CONNECTED — A to race, stick to paddle`); PAD.name = e2.gamepad.id; });
+
+// ---- touch controls: virtual stick + shove button (touch devices only)
+if (TOUCH.active) {
+  const joy = el('joy'), nub = el('joyNub'), shv = el('shoveTouch');
+  const showTouchUI = (on) => { joy.style.display = shv.style.display = on ? '' : 'none'; };
+  window._showTouchUI = showTouchUI;
+  const setDir = (dx, dy) => {
+    const dz2 = 14;
+    TOUCH.left = dx < -dz2; TOUCH.right = dx > dz2;
+    TOUCH.up = dy < -dz2; TOUCH.down = dy > dz2;
+    nub.style.left = (45 + Math.max(-42, Math.min(42, dx))) + 'px';
+    nub.style.top = (45 + Math.max(-42, Math.min(42, dy))) + 'px';
+  };
+  const joyHandler = (ev) => {
+    ev.preventDefault(); auInit();
+    const t2 = ev.touches[0];
+    if (!t2) return;
+    const r = joy.getBoundingClientRect();
+    setDir(t2.clientX - (r.left + 65), t2.clientY - (r.top + 65));
+  };
+  joy.addEventListener('touchstart', joyHandler, { passive: false });
+  joy.addEventListener('touchmove', joyHandler, { passive: false });
+  joy.addEventListener('touchend', (ev) => { ev.preventDefault(); setDir(0, 0); }, { passive: false });
+  shv.addEventListener('touchstart', (ev) => { ev.preventDefault(); auInit(); if (G.mode === 'race') G.playerShove = true; }, { passive: false });
+  document.getElementById('c').addEventListener('touchstart', () => {
+    auInit();
+    if (G.mode === 'flyover') { G.mode = 'countdown'; G.countdown = 3.2; snapCam(); }
+  });
+}
 addEventListener('pointerdown', auInit, { once: false });
 
 // ---- menu & settings wiring
@@ -2940,12 +3415,13 @@ function buildSwatches(host, colors, key) {
 }
 buildSwatches(el('swBody'), DUCK_COLORS, 'color');
 buildSwatches(el('swBeak'), BEAK_COLORS, 'beak');
-document.querySelectorAll('#swHat button').forEach(b => b.addEventListener('click', () => {
-  SETTINGS.duck.hat = b.dataset.v; saveSettings(); applyDuck(); refreshDuckUI(); }));
+duckSeg('swHat', 'hat');
 document.querySelectorAll('#swWeight button').forEach(b => b.addEventListener('click', () => {
   SETTINGS.duck.weight = b.dataset.v; saveSettings(); refreshDuckUI(); }));
 function duckSeg(id, key) {
   document.querySelectorAll('#' + id + ' button').forEach(b => b.addEventListener('click', () => {
+    const req = gearLocked(key, b.dataset.v);
+    if (req && SETTINGS.duck[key] !== b.dataset.v) { tutToast('🔒 ' + req); return; }
     SETTINGS.duck[key] = b.dataset.v; saveSettings(); applyDuck(); refreshDuckUI();
   }));
 }
@@ -2956,7 +3432,13 @@ function refreshDuckUI() {
   document.querySelectorAll('#swBeak button').forEach(b => b.classList.toggle('sel', b.dataset.c === SETTINGS.duck.beak));
   document.querySelectorAll('#swPatCol button').forEach(b => b.classList.toggle('sel', b.dataset.c === SETTINGS.duck.patternColor));
   for (const [id, key] of [['swHat', 'hat'], ['swWeight', 'weight'], ['swEyes', 'eyes'], ['swPattern', 'pattern'], ['swFace', 'face'], ['swBodyAcc', 'body']])
-    document.querySelectorAll('#' + id + ' button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.duck[key]));
+    document.querySelectorAll('#' + id + ' button').forEach(b => {
+      b.classList.toggle('sel', b.dataset.v === SETTINGS.duck[key]);
+      const locked = !!gearLocked(key, b.dataset.v);
+      b.classList.toggle('lockedOpt', locked);
+      const base = b.textContent.replace('🔒 ', '');
+      b.textContent = locked ? '🔒 ' + base : base;
+    });
   el('weightBlurb').textContent = playerW().blurb;
   syncPreviewDuck();
 }
@@ -3095,12 +3577,20 @@ function frame(now) {
     fr *= wx.tint[0]; fg *= wx.tint[1]; fb *= wx.tint[2];
     const dk = td * 0.35;
     fr = fr * (1 - dk) + DUSK.hor[0] * dk; fg = fg * (1 - dk) + DUSK.hor[1] * dk; fb = fb * (1 - dk) + DUSK.hor[2] * dk;
-    scene.fog.color.setRGB(fr, fg, fb);
-    scene.fog.near = wx.fogNear; scene.fog.far = wx.fogFar;
+    // cave darkness (Undergrove): the world closes in
+    let cave = 0;
+    if (LVL.dark) {
+      const pt = ducks[0].si / NSAMP;
+      for (const [c0, c1] of LVL.dark) cave = Math.max(cave, sstep(c0 - 0.02, c0 + 0.02, pt) * (1 - sstep(c1 - 0.02, c1 + 0.02, pt)));
+    }
+    const cf = 1 - cave * 0.85;
+    scene.fog.color.setRGB(fr * cf, fg * cf, fb * cf);
+    scene.fog.near = wx.fogNear * (1 - cave * 0.7); scene.fog.far = wx.fogFar * (1 - cave * 0.68);
     waterMat.uniforms.uFog.value.copy(scene.fog.color);
     sun.color.set(wx.sun).lerp(_duskSun.set(DUSK.sun), td * 0.8);
-    sun.intensity = wx.sunInt * (1 - td * 0.3);
-    hemi.intensity = wx.hemi * (1 - td * 0.25);
+    sun.intensity = wx.sunInt * (1 - td * 0.3) * (1 - cave * 0.93);
+    hemi.intensity = wx.hemi * (1 - td * 0.25) * (1 - cave * 0.8);
+    ambLight.intensity = 0.32 * (1 - cave * 0.72);
     // water glint uniforms
     waterMat.uniforms.uCamPos.value.copy(camera.position);
     waterMat.uniforms.uSunCol.value.copy(sun.color).multiplyScalar(sun.intensity * 0.8);
@@ -3137,12 +3627,14 @@ function frame(now) {
       }
       mpos.needsUpdate = true;
     }
-    skyMat.uniforms.uTop.value.setRGB(...wx.sky[0]).lerp(_c3.setRGB(...DUSK.top), td * 0.85);
-    skyMat.uniforms.uHor.value.setRGB(...wx.sky[1]).lerp(_c3.setRGB(...DUSK.hor), td * 0.85);
-    skyMat.uniforms.uLow.value.setRGB(...wx.sky[2]).lerp(_c3.setRGB(...DUSK.low), td * 0.85);
+    skyMat.uniforms.uTop.value.setRGB(...wx.sky[0]).lerp(_c3.setRGB(...DUSK.top), td * 0.85).multiplyScalar(cf);
+    skyMat.uniforms.uHor.value.setRGB(...wx.sky[1]).lerp(_c3.setRGB(...DUSK.hor), td * 0.85).multiplyScalar(cf);
+    skyMat.uniforms.uLow.value.setRGB(...wx.sky[2]).lerp(_c3.setRGB(...DUSK.low), td * 0.85).multiplyScalar(cf);
+    waterMat.uniforms.uGlint.value *= cf;
     if (AU.ctx) {
       const spd2 = Math.hypot(ducks[0].v.x, ducks[0].v.z);
-      const target = G.mode === 'race' || G.mode === 'countdown' ? Math.min(0.5, 0.06 + (spd2 / 20) * 0.4) : 0.05;
+      const roar = Math.max(0, 1 - Math.abs(ducks[0].si - _fI0) / 150) * 0.34;   // the falls announce themselves
+      const target = G.mode === 'race' || G.mode === 'countdown' ? Math.min(0.75, 0.06 + (spd2 / 20) * 0.4 + roar) : 0.05;
       AU.amb.gain.value += (target - AU.amb.gain.value) * 0.06;
     }
   }
@@ -3181,6 +3673,40 @@ function frame(now) {
       po.children[1].rotation.z = t * 0.6;
       po.scale.setScalar(1 + Math.sin(t * 2.6) * 0.02 + G.portalPulse * 0.15);
     }
+    // surge wall sweeps
+    if (G.surge >= 0 && G.surge <= 1) {
+      const si2 = Math.min(NSAMP, Math.round(G.surge * NSAMP));
+      surgeMesh.visible = true;
+      surgeMesh.position.copy(S.pos[si2]);
+      surgeMesh.position.y = waterHeightAt(si2) + 0.5;
+      surgeMesh.scale.set(S.w[si2] * 2, 1 + Math.sin(t * 9) * 0.15, 1);
+      surgeMesh.rotation.y = Math.atan2(S.tan[si2].x, S.tan[si2].z) + Math.PI / 2;
+    } else surgeMesh.visible = false;
+    // critter animation
+    for (const pk of CRITTERS.pike) {
+      if (!pk.mesh) continue;
+      if (pk.lungeT >= 0 && pk.target) {
+        const k2 = Math.sin(Math.min(1, pk.lungeT / 1.1) * Math.PI);
+        pk.mesh.position.lerpVectors(pk.home, pk.target, k2 * 0.8);
+        pk.mesh.position.y = waterHeightAt(pk.i) - 0.25 + k2 * 0.45;
+      } else pk.mesh.position.set(pk.home.x, waterHeightAt(pk.i) - 0.28, pk.home.z);
+      pk.mesh.lookAt(pk.target ? pk.target.x : pk.home.x + 1, pk.mesh.position.y, pk.target ? pk.target.z : pk.home.z);
+    }
+    for (const tt of CRITTERS.turtle) {
+      if (tt.head) tt.head.position.z = tt.baseZ + (tt.snap > 0 ? Math.sin(tt.snap / 0.4 * Math.PI) * 0.5 : 0);
+    }
+    for (const fg of CRITTERS.frogs) {
+      fg.t += dt;
+      if (fg.t > fg.dur) { fg.t = -randRange(4, 10); fg.side *= -1; }
+      const k2 = Math.max(0, Math.min(1, fg.t / fg.dur));
+      const w2 = S.w[fg.i];
+      const lat = fg.side * w2 * (1 - k2 * 2);
+      fg.mesh.position.copy(S.pos[fg.i]).addScaledVector(S.side[fg.i], lat);
+      fg.mesh.position.y = waterHeightAt(fg.i) + 0.15 + Math.sin(k2 * Math.PI) * 2.2;
+      fg.mesh.visible = fg.t >= 0;
+    }
+    // rainbow only shines in kind light
+    if (window._rainbow) _rainbow.visible = (G.weather === 'clear' || G.weather === 'golden');
     // pedestrians cross the bridge
     for (const pe of PEDS) {
       pe.u += pe.dir * pe.speed * dt;
@@ -3191,7 +3717,8 @@ function frame(now) {
       pe.grp.position.y = waterHeightAt(pe.bi) + 3.42 + Math.abs(Math.sin(t * 6 + pe.ph)) * 0.05;
       pe.grp.rotation.y = Math.atan2(S.side[pe.bi].x * pe.dir, S.side[pe.bi].z * pe.dir);
     }
-    for (const a of ARROWS) a.material.opacity = 0.35 + 0.3 * Math.sin(t * 4 + a.position.z);
+    for (const a of ARROWS) a.material.opacity = (a.userData.lapMin && G.raceLap < a.userData.lapMin) ? 0
+      : 0.35 + 0.3 * Math.sin(t * 4 + a.position.z);
     // fish
     for (const f of FISH) {
       f.t += dt;
