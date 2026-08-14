@@ -2035,15 +2035,43 @@ if (LVL.id === 'millrace') {
       cap.scale.y = 0.7; cap.position.set(p.x, gy + 0.2, p.z);
       scene.add(cap);
     }
-    // stalactite teeth over the channel edges
-    for (let s2 = 0; s2 < 10; s2++) {
-      const i = Math.round((d0 + rand() * (d1 - d0)) * NSAMP);
-      const sgn = s2 % 2 ? 1 : -1;
-      const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 0.5));
-      const tooth = new THREE.Mesh(new THREE.ConeGeometry(randRange(0.4, 0.8), randRange(2, 4), 5), lam(0x6f7378));
-      tooth.rotation.x = Math.PI;
-      tooth.position.set(p.x, waterHeightAt(i) + randRange(7, 10), p.z);
-      scene.add(tooth);
+    // the cave itself: a rock ceiling vaulting the channel, stalactites hanging FROM it
+    {
+      const i0 = Math.round(d0 * NSAMP), i1 = Math.round(d1 * NSAMP);
+      const pos2 = [], idx2 = [];
+      const COLS = [-1.4, -0.7, 0, 0.7, 1.4];   // arch cross-section (× channel width)
+      let row = 0;
+      for (let i = i0; i <= i1; i += 4) {
+        const wSpan2 = S.w[i] + 8;
+        for (const cx2 of COLS) {
+          const p = S.pos[i].clone().addScaledVector(S.side[i], cx2 * wSpan2 * 0.7);
+          const arch = 9.5 - Math.abs(cx2) * 5.5;   // vault: high centre, meets terrain at edges
+          pos2.push(p.x, waterHeightAt(i) + arch, p.z);
+        }
+        if (i + 4 <= i1) {
+          const k = row * COLS.length;
+          for (let c2 = 0; c2 < COLS.length - 1; c2++)
+            idx2.push(k + c2, k + c2 + COLS.length, k + c2 + 1, k + c2 + 1, k + c2 + COLS.length, k + c2 + COLS.length + 1);
+        }
+        row++;
+      }
+      const cg = new THREE.BufferGeometry();
+      cg.setAttribute('position', new THREE.Float32BufferAttribute(pos2, 3));
+      cg.setIndex(idx2); cg.computeVertexNormals();
+      const ceiling = new THREE.Mesh(cg, new THREE.MeshLambertMaterial({ color: 0x4a4e54, side: THREE.DoubleSide, flatShading: true }));
+      scene.add(ceiling);
+      // stalactites hang from the vault
+      for (let s2 = 0; s2 < 12; s2++) {
+        const i = Math.round((d0 + rand() * (d1 - d0)) * NSAMP);
+        const lat = randRange(-0.8, 0.8) * S.w[i];
+        const p = S.pos[i].clone().addScaledVector(S.side[i], lat);
+        const arch = 9.5 - Math.abs(lat / (S.w[i] + 8) / 0.7) * 5.5;
+        const len = randRange(1.5, 3);
+        const tooth = new THREE.Mesh(new THREE.ConeGeometry(randRange(0.35, 0.7), len, 5), lam(0x5c6066));
+        tooth.rotation.x = Math.PI;
+        tooth.position.set(p.x, waterHeightAt(i) + arch - len / 2 + 0.2, p.z);
+        scene.add(tooth);
+      }
     }
   }
 } else if (LVL.id === 'canopy') {
@@ -2608,26 +2636,27 @@ function makeEyes(style) {
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
   const bk = 0x14222a;
   if (style === 'none') return g;
+  // offsets sit ON the head surface (head r ≈ 0.31 in local space)
   if (style === 'googly') {
     for (const sx of [-1, 1]) {
       const white = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 6), lam(0xffffff));
-      white.position.set(sx * 0.13, 0.09, 0.13);
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.042, 6, 5), new THREE.MeshBasicMaterial({ color: bk }));
-      pupil.position.set(sx * 0.13, 0.08, 0.20);
+      white.position.set(sx * 0.14, 0.11, 0.26);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 5), new THREE.MeshBasicMaterial({ color: bk }));
+      pupil.position.set(sx * 0.14, 0.10, 0.335);
       g.add(white, pupil);
     }
   } else if (style === 'sleepy') {
     for (const sx of [-1, 1]) {
       const lid = new THREE.Mesh(new THREE.SphereGeometry(0.05, 7, 5), new THREE.MeshBasicMaterial({ color: bk }));
-      lid.scale.set(1.3, 0.35, 1); lid.position.set(sx * 0.13, 0.06, 0.14);
+      lid.scale.set(1.3, 0.35, 1); lid.position.set(sx * 0.13, 0.09, 0.28);
       g.add(lid);
     }
   } else if (style === 'angry') {
     for (const sx of [-1, 1]) {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.048, 7, 5), new THREE.MeshBasicMaterial({ color: bk }));
-      eye.position.set(sx * 0.13, 0.055, 0.14);
-      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.028, 0.02), new THREE.MeshBasicMaterial({ color: bk }));
-      brow.position.set(sx * 0.12, 0.115, 0.15); brow.rotation.z = sx * -0.5;
+      eye.position.set(sx * 0.13, 0.08, 0.285);
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.025), new THREE.MeshBasicMaterial({ color: bk }));
+      brow.position.set(sx * 0.12, 0.155, 0.27); brow.rotation.z = sx * -0.5;
       g.add(eye, brow);
     }
   }
@@ -2638,22 +2667,22 @@ function makeFace(type) {
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
   if (type === 'shades') {
     for (const sx of [-1, 1]) {
-      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.08, 0.03), lam(0x14181e));
-      lens.position.set(sx * 0.12, 0.06, 0.16); g.add(lens);
+      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.09, 0.035), lam(0x14181e));
+      lens.position.set(sx * 0.13, 0.09, 0.285); g.add(lens);
     }
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.02), lam(0x14181e));
-    bridge.position.set(0, 0.07, 0.17); g.add(bridge);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.022, 0.025), lam(0x14181e));
+    bridge.position.set(0, 0.10, 0.30); g.add(bridge);
   } else if (type === 'monocle') {
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 6, 14), lam(0xd6b44c));
-    rim.position.set(0.12, 0.06, 0.165); g.add(rim);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.013, 6, 14), lam(0xd6b44c));
+    rim.position.set(0.13, 0.09, 0.295); g.add(rim);
   } else if (type === 'eyepatch') {
-    const patch = new THREE.Mesh(new THREE.SphereGeometry(0.055, 7, 5), new THREE.MeshBasicMaterial({ color: 0x14181e }));
-    patch.scale.set(1.2, 1.1, 0.5); patch.position.set(-0.12, 0.06, 0.15); g.add(patch);
+    const patch = new THREE.Mesh(new THREE.SphereGeometry(0.06, 7, 5), new THREE.MeshBasicMaterial({ color: 0x14181e }));
+    patch.scale.set(1.2, 1.1, 0.5); patch.position.set(-0.13, 0.09, 0.28); g.add(patch);
   } else if (type === 'snorkel') {
-    const mask = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.1, 0.05), lam(0x53a6ff));
-    mask.position.set(0, 0.06, 0.16);
-    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.34, 6), lam(0xff8c1a));
-    tube.position.set(0.18, 0.16, 0.05); tube.rotation.x = 0.3;
+    const mask = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.11, 0.06), lam(0x53a6ff));
+    mask.position.set(0, 0.09, 0.29);
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.36, 6), lam(0xff8c1a));
+    tube.position.set(0.19, 0.2, 0.13); tube.rotation.x = 0.3;
     g.add(mask, tube);
   }
   return g;
