@@ -150,10 +150,19 @@
 <div id="wipe"></div>
 
 <script type="importmap">
-{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
 </script>
 <script type="module">
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 
 // ============================================================ RNG (seeded)
 let seed = 1337;
@@ -923,6 +932,34 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xa8d8e0, 60, 220);
 const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 600);
 
+// ---------- post-processing: bloom + warm grade + vignette + FXAA
+const GradeShader = {
+  uniforms: { tDiffuse: { value: null }, uVig: { value: 0.30 }, uSat: { value: 1.07 }, uWarm: { value: 0.035 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uVig; uniform float uSat; uniform float uWarm; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      float l = dot(c.rgb, vec3(.299,.587,.114));
+      c.rgb = mix(vec3(l), c.rgb, uSat);
+      c.rgb += vec3(uWarm, uWarm*0.35, -uWarm*0.55) * (1.0 - l);
+      float d = distance(vUv, vec2(.5));
+      c.rgb *= 1.0 - uVig * smoothstep(.38, .78, d);
+      gl_FragColor = c; }`,
+};
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.55, 0.82);
+composer.addPass(bloomPass);
+composer.addPass(new ShaderPass(GradeShader));
+const fxaaPass = new ShaderPass(FXAAShader);
+composer.addPass(fxaaPass);
+composer.addPass(new OutputPass());
+function renderFrame() {
+  if (SETTINGS.quality === 'low') renderer.render(scene, camera);
+  else composer.render();
+}
+
 // sky dome
 {
   const skyGeo = new THREE.SphereGeometry(480, 16, 12);
@@ -1003,17 +1040,22 @@ let waterMat;
   g.setIndex(idx);
   waterMat = new THREE.ShaderMaterial({
     transparent: true,
-    uniforms: { uT: { value: 0 }, uFog: { value: new THREE.Color(0xa8d8e0) } },
+    uniforms: {
+      uT: { value: 0 }, uFog: { value: new THREE.Color(0xa8d8e0) },
+      uCamPos: { value: new THREE.Vector3() }, uSunDir: { value: new THREE.Vector3(-0.6, 0.7, -0.26) },
+      uSunCol: { value: new THREE.Color(0xfff2d0) }, uGlint: { value: 0.9 },
+    },
     vertexShader: `
       attribute float aSpd; attribute float aFoam; attribute float aSlope;
       attribute vec3 aDeep; attribute vec3 aShal;
       attribute vec2 aChuteB; attribute vec2 aShoalB; attribute float aKind;
       uniform float uT;
       varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog; varying float vSlope;
-      varying vec3 vDeep; varying vec3 vShal;
+      varying vec3 vDeep; varying vec3 vShal; varying vec3 vWorld;
       varying vec2 vChute; varying vec2 vShoal; varying float vKind;
       void main(){ vUv = uv; vSpd = aSpd; vFoam = aFoam; vSlope = aSlope; vDeep = aDeep; vShal = aShal;
         vChute = aChuteB; vShoal = aShoalB; vKind = aKind;
+        vWorld = position;
         vec3 p = position;
         // chop: traveling waves, bigger in fast water, calmed on steep ramps (no zigzag shear)
         float dist = uv.y / 0.14;
@@ -1025,8 +1067,9 @@ let waterMat;
         gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `
       uniform float uT; uniform vec3 uFog;
+      uniform vec3 uCamPos; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uGlint;
       varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog; varying float vSlope;
-      varying vec3 vDeep; varying vec3 vShal;
+      varying vec3 vDeep; varying vec3 vShal; varying vec3 vWorld;
       varying vec2 vChute; varying vec2 vShoal; varying float vKind;
       float n21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.55); }
       float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
@@ -1045,6 +1088,16 @@ let waterMat;
         // sun sparkle
         float sp = pow(noise(vec2(vUv.x * 38., flow * 26. + vUv.x * 9.)), 9.) * (0.2 + 1.0 * smoothstep(1.0, 2.3, vSpd));
         c += vec3(1.0, 0.98, 0.9) * sp * detail;
+        // true sun glint: specular off a wave-perturbed surface — the water finally reads WET
+        {
+          vec3 vdir = normalize(vWorld - uCamPos);
+          float h0 = noise(vec2(vUv.x * 26., flow * 18.));
+          float hx = noise(vec2(vUv.x * 26. + 0.55, flow * 18.));
+          float hy = noise(vec2(vUv.x * 26., flow * 18. + 0.55));
+          vec3 n = normalize(vec3((h0 - hx) * 1.5, 1.0, (h0 - hy) * 1.5));
+          float sg = pow(max(dot(reflect(vdir, n), uSunDir), 0.0), 80.0) * uGlint;
+          c += uSunCol * sg;
+        }
         // whitewater: rapids by speed + baked foam (rocks/logs/falls/cascades)
         float f2 = noise(vec2(vUv.x * 8. + 40., flow * 11.));
         float f3 = noise(vec2(vUv.x * 13. + 90., flow * 19.));
@@ -1119,7 +1172,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   g.setIndex(idx); g.computeVertexNormals();
-  var banksMesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  var banksMesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, flatShading: true }));
   banksMesh.receiveShadow = true;
   scene.add(banksMesh);
 }
@@ -1599,6 +1652,72 @@ const BFLIES = [];
   }
 }
 
+// ---------- drifting motes: pollen / dust / petals / fireflies at dusk
+const MOTES = { n: 240 };
+{
+  const mp = new Float32Array(MOTES.n * 3);
+  MOTES.vel = [];
+  for (let i = 0; i < MOTES.n; i++) {
+    mp[i * 3] = randRange(-30, 30); mp[i * 3 + 1] = randRange(-4, 14); mp[i * 3 + 2] = randRange(-30, 30);
+    MOTES.vel.push([randRange(-0.3, 0.3), randRange(-0.25, 0.15), randRange(-0.3, 0.3), rand() * 6]);
+  }
+  const mg = new THREE.BufferGeometry();
+  mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
+  const mc = document.createElement('canvas'); mc.width = mc.height = 32;
+  const mx = mc.getContext('2d');
+  const mgd = mx.createRadialGradient(16, 16, 1, 16, 16, 15);
+  mgd.addColorStop(0, 'rgba(255,255,255,1)'); mgd.addColorStop(1, 'rgba(255,255,255,0)');
+  mx.fillStyle = mgd; mx.fillRect(0, 0, 32, 32);
+  MOTES.mat = new THREE.PointsMaterial({ color: 0xffe9b0, size: 0.13, transparent: true, opacity: 0.55,
+    map: new THREE.CanvasTexture(mc), blending: THREE.AdditiveBlending, depthWrite: false });
+  MOTES.mesh = new THREE.Points(mg, MOTES.mat);
+  MOTES.mesh.frustumCulled = false;
+  scene.add(MOTES.mesh);
+}
+
+// ---------- god rays: additive shafts leaning with the sun through the gorge
+const RAYS = [];
+{
+  const rc = document.createElement('canvas'); rc.width = 64; rc.height = 256;
+  const rx = rc.getContext('2d');
+  const grad = rx.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, 'rgba(255,244,214,0.55)'); grad.addColorStop(1, 'rgba(255,244,214,0)');
+  rx.fillStyle = grad; rx.fillRect(0, 0, 64, 256);
+  const rTex = new THREE.CanvasTexture(rc);
+  for (let k = 0; k < 6; k++) {
+    const i = Math.round((0.38 + k * 0.035) * NSAMP);
+    const mat = new THREE.MeshBasicMaterial({ map: rTex, transparent: true, opacity: 0.0,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const shaft = new THREE.Mesh(new THREE.PlaneGeometry(2.6 + (k % 3), 26), mat);
+    shaft.position.copy(S.pos[i]).addScaledVector(S.side[i], randRange(-3, 3));
+    shaft.position.y = waterHeightAt(i) + 12;
+    shaft.rotation.z = 0.38; shaft.rotation.y = Math.atan2(S.side[i].x, S.side[i].z) + 0.4;
+    scene.add(shaft); RAYS.push(mat);
+  }
+}
+
+// ---------- mist wisps: sprites hugging the water (falls always; everywhere in mist weather)
+const WISPS = [];
+{
+  const wc = document.createElement('canvas'); wc.width = wc.height = 128;
+  const wx2 = wc.getContext('2d');
+  const g2 = wx2.createRadialGradient(64, 64, 8, 64, 64, 62);
+  g2.addColorStop(0, 'rgba(255,255,255,0.5)'); g2.addColorStop(1, 'rgba(255,255,255,0)');
+  wx2.fillStyle = g2; wx2.fillRect(0, 0, 128, 128);
+  const wTex = new THREE.CanvasTexture(wc);
+  for (let k = 0; k < 10; k++) {
+    const mat = new THREE.SpriteMaterial({ map: wTex, transparent: true, opacity: 0.22, depthWrite: false });
+    const sp = new THREE.Sprite(mat);
+    const falls = k < 2;
+    const i = falls ? _fI0 + 16 + k * 8 : Math.round(((k - 2) / 8) * 0.9 * NSAMP + 40);
+    sp.position.copy(S.pos[Math.min(NSAMP, i)]).addScaledVector(S.side[Math.min(NSAMP, i)], randRange(-2, 2));
+    sp.position.y = waterHeightAt(Math.min(NSAMP, i)) + (falls ? 1.5 : 0.9);
+    sp.scale.set(randRange(7, 11), randRange(2, 3.2), 1);
+    scene.add(sp);
+    WISPS.push({ sp, falls, ph: rand() * 6, baseY: sp.position.y });
+  }
+}
+
 // ---------- storm rain
 let rainMesh, rainVel = [];
 {
@@ -1686,7 +1805,8 @@ var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
   const headG = new THREE.SphereGeometry(DUCK_R * 0.62, 10, 8);
   headG.translate(0, DUCK_R * 0.7, DUCK_R * 0.72);
   const merged = duckBodyG = mergeGeoms([bodyG, headG]);
-  bodyIM = new THREE.InstancedMesh(merged, new THREE.MeshLambertMaterial({ color: 0xffffff }), N_DUCKS);
+  bodyIM = new THREE.InstancedMesh(merged,
+    new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 55, specular: 0x666666 }), N_DUCKS);   // rubber sheen
 
   const beakG = duckBeakG = new THREE.ConeGeometry(DUCK_R * 0.22, DUCK_R * 0.55, 6);
   beakG.rotateX(Math.PI / 2);
@@ -1697,6 +1817,10 @@ var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
   const eR = new THREE.SphereGeometry(DUCK_R * 0.09, 6, 5); eR.translate( DUCK_R * 0.26, DUCK_R * 0.88, DUCK_R * 1.0);
   duckEyeG = mergeGeoms([eL, eR]);
   eyeIM = new THREE.InstancedMesh(duckEyeG, new THREE.MeshBasicMaterial({ color: 0x14222a }), N_DUCKS);
+  // tiny catchlights make the eyes alive
+  const sL = new THREE.SphereGeometry(DUCK_R * 0.032, 4, 3); sL.translate(-DUCK_R * 0.235, DUCK_R * 0.915, DUCK_R * 1.07);
+  const sR = new THREE.SphereGeometry(DUCK_R * 0.032, 4, 3); sR.translate( DUCK_R * 0.285, DUCK_R * 0.915, DUCK_R * 1.07);
+  var eyeShineIM = new THREE.InstancedMesh(mergeGeoms([sL, sR]), new THREE.MeshBasicMaterial({ color: 0xffffff }), N_DUCKS);
   const bkCol = new THREE.Color(0xff8c1a);
   for (let i = 0; i < N_DUCKS; i++) beakIM.setColorAt(i, bkCol);
 
@@ -1707,8 +1831,8 @@ var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
     else c.set(palette[1 + Math.floor(rand() * (palette.length - 1))]).offsetHSL(randRange(-0.02, 0.02), 0, randRange(-0.06, 0.06));
     bodyIM.setColorAt(i, c);
   }
-  bodyIM.frustumCulled = beakIM.frustumCulled = eyeIM.frustumCulled = false;
-  scene.add(bodyIM, beakIM, eyeIM);
+  bodyIM.frustumCulled = beakIM.frustumCulled = eyeIM.frustumCulled = eyeShineIM.frustumCulled = false;
+  scene.add(bodyIM, beakIM, eyeIM, eyeShineIM);
 }
 // naive geometry merge (positions/normals/uv discarded ok for lambert flat colors)
 function mergeGeoms(geoms) {
@@ -1767,6 +1891,12 @@ function makeHat(type) {
 }
 const playerHat = new THREE.Group();
 scene.add(playerHat);
+// soft cream outline (inverted hull) so you never lose your duck in the pack
+const outlineMesh = new THREE.Mesh(duckBodyG,
+  new THREE.MeshBasicMaterial({ color: 0xfff8e7, side: THREE.BackSide, transparent: true, opacity: 0.65 }));
+outlineMesh.geometry = duckBodyG.clone();
+outlineMesh.geometry.scale(1.07, 1.07, 1.07);
+scene.add(outlineMesh);
 let playerHatType = null;
 function applyDuck() {
   const dk = SETTINGS.duck;
@@ -1787,7 +1917,13 @@ let splashMesh;
 {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(splashPts.p, 3));
-  splashMesh = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xf2fbfa, size: 0.22, transparent: true, opacity: 0.9 }));
+  const sc2 = document.createElement('canvas'); sc2.width = sc2.height = 32;
+  const sx2 = sc2.getContext('2d');
+  const sg2 = sx2.createRadialGradient(16, 16, 2, 16, 16, 15);
+  sg2.addColorStop(0, 'rgba(255,255,255,1)'); sg2.addColorStop(1, 'rgba(255,255,255,0)');
+  sx2.fillStyle = sg2; sx2.fillRect(0, 0, 32, 32);
+  splashMesh = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xf2fbfa, size: 0.26, transparent: true, opacity: 0.85,
+    map: new THREE.CanvasTexture(sc2), depthWrite: false }));
   splashMesh.frustumCulled = false;
   scene.add(splashMesh);
 }
@@ -1912,11 +2048,14 @@ function syncDucks(t) {
       playerHat.scale.setScalar(wsc);
     }
     bodyIM.setMatrixAt(d.idx, _m4); beakIM.setMatrixAt(d.idx, _m4); eyeIM.setMatrixAt(d.idx, _m4);
+    eyeShineIM.setMatrixAt(d.idx, _m4);
+    if (d.idx === 0) { outlineMesh.matrix.copy(_m4); outlineMesh.matrixAutoUpdate = false; }
   }
   _s.set(1, 1, 1);
   bodyIM.instanceMatrix.needsUpdate = true;
   beakIM.instanceMatrix.needsUpdate = true;
   eyeIM.instanceMatrix.needsUpdate = true;
+  eyeShineIM.instanceMatrix.needsUpdate = true;
   ring.position.set(ducks[0].p.x, ducks[0].y + 0.1, ducks[0].p.z);
   ring.material.opacity = 0.55 + Math.sin(t * 5) * 0.25;
 }
@@ -2152,6 +2291,8 @@ function applyQuality() {
   renderer.setPixelRatio(pr);
   if (window.SCATTER) SCATTER.forEach(im => { im.count = Math.max(1, Math.floor(im._full * frac)); });
   sun.castShadow = SETTINGS.quality !== 'low';
+  MOTES.mesh.visible = SETTINGS.quality !== 'low';
+  bloomPass.enabled = SETTINGS.quality === 'high';
   camera.fov = SETTINGS.fov; camera.updateProjectionMatrix();
   resize();
 }
@@ -2222,6 +2363,10 @@ refreshSettingsUI(); setDiff(SETTINGS.difficulty); setLaps(SETTINGS.laps); apply
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
+  composer.setSize(w, h);
+  const pr = renderer.getPixelRatio();
+  composer.setPixelRatio(pr);
+  fxaaPass.material.uniforms.resolution.value.set(1 / (w * pr), 1 / (h * pr));
   camera.aspect = w / h; camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
@@ -2321,6 +2466,42 @@ function frame(now) {
     sun.color.set(wx.sun).lerp(_duskSun.set(DUSK.sun), td * 0.8);
     sun.intensity = wx.sunInt * (1 - td * 0.3);
     hemi.intensity = wx.hemi * (1 - td * 0.25);
+    // water glint uniforms
+    waterMat.uniforms.uCamPos.value.copy(camera.position);
+    waterMat.uniforms.uSunCol.value.copy(sun.color).multiplyScalar(sun.intensity * 0.8);
+    waterMat.uniforms.uGlint.value = 0.85 * (wx.sunInt / 1.35);
+    // god rays live in clear/golden light, die in mist/storm and at night
+    const rayOp = (G.weather === 'clear' ? 0.10 : G.weather === 'golden' ? 0.16 : 0) * (1 - td * 0.5);
+    for (const rm of RAYS) rm.opacity = rayOp * (0.7 + 0.3 * Math.sin(now / 700 + rm.id || 0));
+    // mist wisps: falls pair always, the rest only in misty weather
+    for (const wsp of WISPS) {
+      const on = wsp.falls || G.weather === 'mist';
+      wsp.sp.material.opacity = on ? 0.16 + 0.08 * Math.sin(now / 900 + wsp.ph) : 0;
+      wsp.sp.position.y = wsp.baseY + Math.sin(now / 1200 + wsp.ph) * 0.25;
+    }
+    // motes: biome-flavoured drift, fireflies as dusk falls
+    {
+      const fire = td > 0.55;
+      const zw2 = zw;
+      MOTES.mat.color.setRGB(
+        fire ? 0.85 : 1.0 * zw2[0] + 0.82 * zw2[1] + 0.85 * zw2[2] + 1.0 * zw2[3],
+        fire ? 1.0 : 0.91 * zw2[0] + 0.86 * zw2[1] + 0.60 * zw2[2] + 0.80 * zw2[3],
+        fire ? 0.45 : 0.69 * zw2[0] + 0.88 * zw2[1] + 0.38 * zw2[2] + 0.88 * zw2[3]);
+      MOTES.mat.size = fire ? 0.2 : 0.13;
+      MOTES.mat.opacity = (fire ? 0.75 : 0.5) * (G.weather === 'storm' ? 0.3 : 1);
+      const mpos = MOTES.mesh.geometry.attributes.position;
+      const cx2 = camera.position.x, cy2 = camera.position.y, cz2 = camera.position.z;
+      for (let i2 = 0; i2 < MOTES.n; i2++) {
+        const v2 = MOTES.vel[i2];
+        let x2 = mpos.getX(i2) + v2[0] * dt, y2 = mpos.getY(i2) + v2[1] * dt + Math.sin(now / 600 + v2[3]) * 0.006,
+            z2 = mpos.getZ(i2) + v2[2] * dt;
+        if (Math.abs(x2 - cx2) > 32) x2 = cx2 + (x2 > cx2 ? -31 : 31);
+        if (Math.abs(z2 - cz2) > 32) z2 = cz2 + (z2 > cz2 ? -31 : 31);
+        if (y2 < cy2 - 10 || y2 > cy2 + 16) y2 = cy2 + randRange(-4, 12);
+        mpos.setXYZ(i2, x2, y2, z2);
+      }
+      mpos.needsUpdate = true;
+    }
     skyMat.uniforms.uTop.value.setRGB(...wx.sky[0]).lerp(_c3.setRGB(...DUSK.top), td * 0.85);
     skyMat.uniforms.uHor.value.setRGB(...wx.sky[1]).lerp(_c3.setRGB(...DUSK.hor), td * 0.85);
     skyMat.uniforms.uLow.value.setRGB(...wx.sky[2]).lerp(_c3.setRGB(...DUSK.low), td * 0.85);
@@ -2422,7 +2603,7 @@ function frame(now) {
       rp.needsUpdate = true;
     }
   }
-  renderer.render(scene, camera);
+  renderFrame();
 }
 requestAnimationFrame(frame);
 
@@ -2436,7 +2617,7 @@ setInterval(() => {
     if (G.mode !== 'title') { while (dt > 0) { advance(Math.min(dt, 0.25)); dt -= 0.25; } }
     updateCamera(0.25);
     syncDucks(now / 1000);
-    renderer.render(scene, camera);
+    renderFrame();
   }
 }, 500);
 </script>
