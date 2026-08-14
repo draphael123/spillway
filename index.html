@@ -917,10 +917,10 @@ const DIFF = {
 };
 // per-race weather moods
 const WEATHERS = {
-  clear:  { label: 'CLEAR SKIES',    sun: 0xfff2d0, sunInt: 1.35, hemi: 0.95, fogNear: 60, fogFar: 220, tint: [1, 1, 1],          sky: [[.35,.62,.86],[.66,.85,.88],[.93,.90,.78]], rain: false },
-  golden: { label: 'GOLDEN HOUR',    sun: 0xffd9a0, sunInt: 1.5,  hemi: 0.80, fogNear: 50, fogFar: 200, tint: [1.05,.95,.82],     sky: [[.45,.55,.80],[.95,.80,.62],[1,.88,.62]],   rain: false },
-  mist:   { label: 'MISTY MORNING',  sun: 0xe8eef0, sunInt: 0.7,  hemi: 1.10, fogNear: 25, fogFar: 110, tint: [.94,.98,1.0],      sky: [[.62,.72,.78],[.80,.86,.88],[.88,.92,.92]], rain: false },
-  storm:  { label: 'STORM WATER',    sun: 0xb9c4cc, sunInt: 0.55, hemi: 0.85, fogNear: 40, fogFar: 150, tint: [.75,.80,.85],      sky: [[.35,.42,.50],[.55,.62,.68],[.60,.66,.70]], rain: true  },
+  clear:  { label: 'CLEAR SKIES',    sun: 0xfff2d0, sunInt: 1.35, hemi: 0.95, fogNear: 60, fogFar: 220, tint: [1, 1, 1],          sky: [[.35,.62,.86],[.66,.85,.88],[.93,.90,.78]], rain: false, cloud: 0.26, cloudCol: [1, 1, 1] },
+  golden: { label: 'GOLDEN HOUR',    sun: 0xffd9a0, sunInt: 1.5,  hemi: 0.80, fogNear: 50, fogFar: 200, tint: [1.05,.95,.82],     sky: [[.45,.55,.80],[.95,.80,.62],[1,.88,.62]],   rain: false, cloud: 0.34, cloudCol: [1, .9, .78] },
+  mist:   { label: 'MISTY MORNING',  sun: 0xe8eef0, sunInt: 0.7,  hemi: 1.10, fogNear: 25, fogFar: 110, tint: [.94,.98,1.0],      sky: [[.62,.72,.78],[.80,.86,.88],[.88,.92,.92]], rain: false, cloud: 0.55, cloudCol: [.9, .93, .94] },
+  storm:  { label: 'STORM WATER',    sun: 0xb9c4cc, sunInt: 0.55, hemi: 0.85, fogNear: 40, fogFar: 150, tint: [.75,.80,.85],      sky: [[.35,.42,.50],[.55,.62,.68],[.60,.66,.70]], rain: true,  cloud: 0.85, cloudCol: [.5, .55, .61] },
 };
 const DUSK = { top: [.28,.30,.55], hor: [.95,.55,.40], low: [1,.75,.5], sun: 0xff9a55 };
 
@@ -1543,13 +1543,39 @@ function renderFrame() {
       uTop: { value: new THREE.Color(0.35, 0.62, 0.86) },
       uHor: { value: new THREE.Color(0.66, 0.85, 0.88) },
       uLow: { value: new THREE.Color(0.93, 0.90, 0.78) },
+      uT: { value: 0 },
+      uSunDir: { value: new THREE.Vector3(-0.6, 0.7, -0.26).normalize() },
+      uSunCol: { value: new THREE.Color(1, 0.95, 0.82) },
+      uCloudAmt: { value: 0.3 },
+      uCloudCol: { value: new THREE.Color(1, 1, 1) },
     },
     vertexShader: `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
     fragmentShader: `varying vec3 vP; uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uLow;
+      uniform float uT; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uCloudAmt; uniform vec3 uCloudCol;
+      float n21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.55); }
+      float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+        return mix(mix(n21(i),n21(i+vec2(1,0)),f.x), mix(n21(i+vec2(0,1)),n21(i+vec2(1,1)),f.x), f.y); }
+      float fbm(vec2 p){ return noise(p)*0.55 + noise(p*2.3)*0.28 + noise(p*4.9)*0.17; }
       void main(){
-      float h = normalize(vP).y * .5 + .5;
+      vec3 d = normalize(vP);
+      float h = d.y * .5 + .5;
       vec3 c = mix(uHor, uTop, smoothstep(.45,.85,h));
       c = mix(uLow, c, smoothstep(.42,.55,h));
+      // the sun: a real disc with a soft halo
+      float sd = dot(d, uSunDir);
+      c += uSunCol * (smoothstep(0.9991, 0.9997, sd) * 1.1 + pow(max(sd, 0.), 42.) * 0.24);
+      // drifting cumulus band
+      if (d.y > 0.015) {
+        vec2 cuv = d.xz / (d.y + 0.22);
+        cuv += vec2(uT * 0.008, uT * 0.0035);
+        float f = fbm(cuv * 0.9);
+        float cl = smoothstep(0.78 - uCloudAmt * 0.32, 0.88, f);
+        cl *= smoothstep(0.10, 0.24, d.y) * (1. - smoothstep(0.52, 0.85, d.y));   // hard horizon fade — no radial smears
+        // shaded flat bottoms: darken the lower fringe of each puff
+        float f2 = fbm(cuv * 0.9 + vec2(0., 0.06));
+        vec3 cc = uCloudCol * (0.82 + 0.18 * smoothstep(-0.06, 0.06, f - f2));
+        c = mix(c, cc, cl * 0.85);
+      }
       gl_FragColor = vec4(c,1.); }`,
   });
   var skyMesh = new THREE.Mesh(skyGeo, skyMat);
@@ -1573,7 +1599,7 @@ scene.add(ambLight);
 // ---------- water ribbon
 let waterMat;
 {
-  const pos = [], uv = [], spd = [], foamA = [], slopeA = [], deepA = [], shalA = [], chuteA = [], shoalA = [], kindA = [], surgeA = [], idx = [];
+  const pos = [], uv = [], spd = [], foamA = [], slopeA = [], deepA = [], shalA = [], chuteA = [], shoalA = [], kindA = [], surgeA = [], rockA = [], idx = [];
   const DEEPS = [[0.06,0.29,0.40],[0.04,0.23,0.34],[0.10,0.30,0.33],[0.10,0.32,0.35]];   // per biome
   const SHALS = [[0.26,0.60,0.60],[0.20,0.50,0.56],[0.36,0.60,0.50],[0.35,0.62,0.53]];
   for (let i = 0; i <= NSAMP; i++) {
@@ -1600,6 +1626,18 @@ let waterMat;
       sgV = Math.max(sgV, sstep(a2 - 0.02, a2, t2) * (1 - sstep(b2, b2 + 0.02, t2)));
     }
     surgeA.push(sgV, sgV);
+    // rock wake band: foam concentrates in a widening crescent DOWNSTREAM of each rock
+    let rB = [0.5, 0, 0], rBest = 1e9;
+    for (const r of ROCKS) {
+      const drs = wrapDS(i, r.i);
+      if (drs > -3 && drs < 30 && drs < rBest) {
+        rBest = drs;
+        const spreadW = r.r * 1.25 + Math.max(0, drs) * 0.055;
+        const strength = drs < 0 ? 0.35 : 1 - drs / 30;
+        rB = [(r.lat + w) / (2 * w), spreadW / (2 * w), strength];
+      }
+    }
+    rockA.push(rB[0], rB[1], rB[2], rB[0], rB[1], rB[2]);
     const zw = zoneW(i);
     for (let ch = 0; ch < 3; ch++) {
       // per-course water palette wins; Spillway blends its four quarters
@@ -1621,6 +1659,7 @@ let waterMat;
   g.setAttribute('aShoalB', new THREE.Float32BufferAttribute(shoalA, 2));
   g.setAttribute('aKind', new THREE.Float32BufferAttribute(kindA, 1));
   g.setAttribute('aSurge', new THREE.Float32BufferAttribute(surgeA, 1));
+  g.setAttribute('aRockB', new THREE.Float32BufferAttribute(rockA, 3));
   g.setIndex(idx);
   waterMat = new THREE.ShaderMaterial({
     transparent: true,
@@ -1632,14 +1671,14 @@ let waterMat;
     },
     vertexShader: `
       attribute float aSpd; attribute float aFoam; attribute float aSlope; attribute float aSurge;
-      attribute vec3 aDeep; attribute vec3 aShal;
+      attribute vec3 aDeep; attribute vec3 aShal; attribute vec3 aRockB;
       attribute vec2 aChuteB; attribute vec2 aShoalB; attribute float aKind;
       uniform float uT;
       varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog; varying float vSlope;
-      varying vec3 vDeep; varying vec3 vShal; varying vec3 vWorld;
+      varying vec3 vDeep; varying vec3 vShal; varying vec3 vWorld; varying vec3 vRockB;
       varying vec2 vChute; varying vec2 vShoal; varying float vKind; varying float vSurge;
       void main(){ vUv = uv; vSpd = aSpd; vFoam = aFoam; vSlope = aSlope; vDeep = aDeep; vShal = aShal;
-        vChute = aChuteB; vShoal = aShoalB; vKind = aKind; vSurge = aSurge;
+        vChute = aChuteB; vShoal = aShoalB; vKind = aKind; vSurge = aSurge; vRockB = aRockB;
         vWorld = position;
         vec3 p = position;
         // chop: traveling waves, bigger in fast water, calmed on steep ramps (no zigzag shear)
@@ -1655,7 +1694,7 @@ let waterMat;
       uniform vec3 uCamPos; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uGlint;
       uniform vec3 uSurgeCol; uniform float uDark;
       varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog; varying float vSlope;
-      varying vec3 vDeep; varying vec3 vShal; varying vec3 vWorld;
+      varying vec3 vDeep; varying vec3 vShal; varying vec3 vWorld; varying vec3 vRockB;
       varying vec2 vChute; varying vec2 vShoal; varying float vKind; varying float vSurge;
       float n21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.55); }
       float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
@@ -1664,34 +1703,43 @@ let waterMat;
         // centre of the channel scrolls faster than the banks — bends stop looking like sliding
         float depth = 1. - abs(vUv.x * 2. - 1.);
         float flow = vUv.y - uT * (0.55 + vSpd * 0.75) * (0.55 + 0.6 * depth);
-        vec3 c = mix(vShal, vDeep, depth * 0.85);
-        // long current streaks drawn along the flow
-        float st = smoothstep(0.68, 0.97, noise(vec2(vUv.x * 22., flow * 3.0)));
-        c += vec3(0.06, 0.09, 0.085) * st * (0.35 + 0.65 * smoothstep(0.8, 1.9, vSpd));
-        // fine ripple shimmer (fades with distance so it never fizzes)
-        float detail = 1. - vFog * 0.95;
-        c += vec3(0.035) * noise(vec2(vUv.x * 14. + flow * 5., flow * 8.)) * detail;
-        // sun sparkle
-        float sp = pow(noise(vec2(vUv.x * 38., flow * 26. + vUv.x * 9.)), 9.) * (0.2 + 1.0 * smoothstep(1.0, 2.3, vSpd));
-        c += vec3(1.0, 0.98, 0.9) * sp * detail;
-        // true sun glint: specular off a wave-perturbed surface — the water finally reads WET
+        // real camera-distance detail fade: near water is alive, far water is calm colour
+        float dCam = length(vWorld - uCamPos);
+        float detail = 1. - smoothstep(22., 80., dCam);
+        // body: shallow bright edges into a deep centre
+        vec3 c = mix(vShal, vDeep, smoothstep(0., 0.85, depth * 0.95));
+        // broad slow tone bands — gives the surface body without any fizz
+        float band = noise(vec2(vUv.x * 5., flow * 1.3));
+        c += vec3(0.05, 0.065, 0.06) * (band - 0.5) * (0.6 + 0.7 * smoothstep(0.9, 1.9, vSpd));
+        // long glossy streaks, fast water only, near camera only
+        float st = smoothstep(0.74, 0.95, noise(vec2(vUv.x * 10., flow * 2.1)));
+        c += vec3(0.05, 0.075, 0.07) * st * smoothstep(1.15, 2.1, vSpd) * (0.25 + 0.75 * detail);
+        // rare sparkle glints, only up close
+        float sp = pow(noise(vec2(vUv.x * 30., flow * 16.)), 12.) * smoothstep(1.1, 2.3, vSpd);
+        c += vec3(1.0, 0.98, 0.9) * sp * detail * detail * 1.6;
+        // true sun glint: specular off a wave-perturbed surface — the water reads WET
         {
           vec3 vdir = normalize(vWorld - uCamPos);
-          float h0 = noise(vec2(vUv.x * 26., flow * 18.));
-          float hx = noise(vec2(vUv.x * 26. + 0.55, flow * 18.));
-          float hy = noise(vec2(vUv.x * 26., flow * 18. + 0.55));
-          vec3 n = normalize(vec3((h0 - hx) * 1.5, 1.0, (h0 - hy) * 1.5));
+          float h0 = noise(vec2(vUv.x * 22., flow * 14.));
+          float hx = noise(vec2(vUv.x * 22. + 0.55, flow * 14.));
+          float hy = noise(vec2(vUv.x * 22., flow * 14. + 0.55));
+          vec3 n = normalize(vec3((h0 - hx) * 1.4, 1.0, (h0 - hy) * 1.4));
           float sg = pow(max(dot(reflect(vdir, n), uSunDir), 0.0), 80.0) * uGlint;
-          c += uSunCol * sg;
+          c += uSunCol * sg * (0.4 + 0.6 * detail);
         }
-        // whitewater: rapids by speed + baked foam (rocks/logs/falls/cascades)
-        float f2 = noise(vec2(vUv.x * 8. + 40., flow * 11.));
-        float f3 = noise(vec2(vUv.x * 13. + 90., flow * 19.));
-        float foamAmt = clamp(smoothstep(1.25, 2.4, vSpd) * 0.9 + vFoam + smoothstep(0.06, 0.22, vSlope), 0., 1.3);
+        // ---- STRUCTURED whitewater ----
+        float foamAmt = clamp(smoothstep(1.35, 2.5, vSpd) * 0.7 + vFoam + smoothstep(0.07, 0.24, vSlope), 0., 1.25);
         // fast chute: glassy dark tongue, foam suppressed, dashed centre line rushing through it
         float chuteBand = vChute.y > 0.001 ? 1. - smoothstep(vChute.y * 0.65, vChute.y, abs(vUv.x - vChute.x)) : 0.;
         foamAmt *= 1. - chuteBand * 0.85;
-        float foam = smoothstep(0.72 - 0.3 * foamAmt, 0.88, f2 * 0.6 + f3 * 0.5) * clamp(foamAmt, 0., 1.);
+        // rock wakes: crescents of foam trailing downstream of each rock
+        float wake = vRockB.y > 0.001 ? (1. - smoothstep(vRockB.y * 0.55, vRockB.y, abs(vUv.x - vRockB.x))) * vRockB.z : 0.;
+        // rapids foam = elongated streaks; heavy foam (falls/plunge) = churning cauldron blobs
+        float streakN = noise(vec2(vUv.x * 8., flow * 4.5)) * 0.62 + noise(vec2(vUv.x * 14. + 40., flow * 8.)) * 0.38;
+        float cauldronN = noise(vec2(vUv.x * 4.2 + 30., flow * 2.0)) * 0.6 + noise(vec2(vUv.x * 8.5 + 60., flow * 4.2)) * 0.4;
+        float fN = mix(streakN, cauldronN, smoothstep(0.55, 0.95, foamAmt));
+        float drive = clamp(foamAmt + wake, 0., 1.3);
+        float foam = smoothstep(0.80 - 0.38 * drive, 0.9, fN) * clamp(foamAmt * 0.85 + wake, 0., 1.);
         // apply chute tint + rushing dashes
         c = mix(c, vDeep * 0.80, chuteBand * 0.38);
         float dash = smoothstep(0.45, 0.7, fract(flow * 4.)) * (1. - smoothstep(vChute.y * 0.14, vChute.y * 0.30, abs(vUv.x - vChute.x)));
@@ -1708,14 +1756,15 @@ let waterMat;
           float rd = smoothstep(0.55, 0.8, fract(flow * 5.5)) * smoothstep(0.6, 0.2, abs(vUv.x - 0.5));
           c += uSurgeCol * rd * vSurge * (0.8 + 0.5 * pulse);
           // glow motes
-          float gm = pow(noise(vec2(vUv.x * 30., flow * 22.)), 7.) * 2.2;
+          float gm = pow(noise(vec2(vUv.x * 30., flow * 22.)), 7.) * 2.2 * (0.3 + 0.7 * detail);
           c += uSurgeCol * gm * vSurge;
           foam *= 1. - vSurge * 0.8;
         }
-        // shore: soften into the sand — fade alpha + breathing lace at the waterline
+        // shore: crisp bright waterline rim + breathing lace, then alpha-fade into the sand
         float shore = min(vUv.x, 1. - vUv.x);
-        float lace = smoothstep(0.09, 0.012, shore) * smoothstep(0.35, 0.75, noise(vec2(vUv.x * 30., flow * 40. + sin(uT * 1.3) * 0.6)));
-        c = mix(c, vec3(0.95, 0.98, 0.97), clamp(foam + lace, 0., 1.));
+        float edgeLine = smoothstep(0.05, 0.018, shore) * 0.45;
+        float lace = smoothstep(0.10, 0.015, shore) * smoothstep(0.4, 0.75, noise(vec2(vUv.x * 20., flow * 24. + sin(uT * 1.3) * 0.6))) * 0.8;
+        c = mix(c, vec3(0.95, 0.98, 0.97), clamp(foam + lace + edgeLine, 0., 1.));
         c *= 0.3 + 0.7 * uDark;   // cave darkness reaches the river itself (foam included)
         c = mix(c, uFog, vFog);
         float alpha = mix(0.45, 0.95, smoothstep(0.0, 0.09, shore));
@@ -1757,6 +1806,9 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
         else if ((nearFalls || zw[1] > 0.5) && ob > 6) cTmp.set(0x8d9298).offsetHSL(0, 0, (patch - .5) * .12);  // gorge rock walls
         else if (zw[2] > 0.5 && ob > 8) cTmp.setHSL(0.035, 0.5, 0.34 + (patch - .5) * 0.12); // canyon mesa bands
         else cTmp.setHSL(gh + patch * 0.045, gs, gl - 0.02 + patch * 0.14 - Math.min(1, ob / 26) * 0.06);
+        // fake AO: wet-sand darkening at the waterline, soft crease just above it
+        const ao = ob < 0.6 ? 0.74 : ob < 2 ? 0.90 : 1.0;
+        cTmp.multiplyScalar(ao);
         col.push(cTmp.r, cTmp.g, cTmp.b);
         vi++;
       }
@@ -1797,12 +1849,17 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
   const cCol = new THREE.Color();
   const groundAt = (i, ob, sgn) => waterHeightAt(i) + bankH(i, ob, sgn);
+  const BLOBS = [];   // contact-shadow positions collected during placement
   const place = (im, k, i, ob, sgn, y, s, ry) => {
     const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
     if (ry) q.setFromAxisAngle(_tmpB.set(0, 1, 0), ry); else q.identity();
     m.compose(_tmpA.set(p.x, y, p.z), q, sc.set(s, s, s));
     im.setMatrixAt(k, m);
     return p;
+  };
+  const blobAt = (i, ob, sgn, r) => {
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+    BLOBS.push({ x: p.x, y: groundAt(i, ob, sgn), z: p.z, r });
   };
 
   // pines — forest & gorge, rebuilt as proper three-tier trees with a sculpted silhouette
@@ -1826,6 +1883,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const y = groundAt(i, ob, sgn), s = randRange(0.75, 1.6);
     const ry = rand() * 6;
     const p = place(trunks, k, i, ob, sgn, y + 1.0 * s, s, ry);
+    blobAt(i, ob, sgn, 1.7 * s);
     q.setFromAxisAngle(_tmpB.set(0, 1, 0), ry);
     m.compose(_tmpA.set(p.x, y, p.z), q, sc.set(s, s, s));
     const baseH = LVL.pal ? LVL.pal.tree[0] + rand() * 0.04 : forest ? 0.30 + rand() * 0.05 : 0.34 + rand() * 0.04;
@@ -1833,8 +1891,10 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const baseL = LVL.pal ? LVL.pal.tree[2] + rand() * 0.08 : forest ? 0.26 + rand() * 0.1 : 0.19 + rand() * 0.07;
     for (let tr = 0; tr < 3; tr++) {
       tiers[tr].setMatrixAt(k, m);
-      tiers[tr].setColorAt(k, cCol.setHSL(baseH + tr * 0.012, baseS, baseL + tr * 0.045));  // tips catch light
+      // strong base→tip gradient: shadowed skirt, sunlit crown — the anti-clay trick
+      tiers[tr].setColorAt(k, cCol.setHSL(baseH + tr * 0.016, baseS, baseL - 0.05 + tr * 0.075));
     }
+    trunks.setColorAt(k, cCol.setScalar(0.8 + rand() * 0.35));   // value jitter over the wood tone
   }
   const crowns = tiers[0];  // legacy name, kept so scene.add below stays simple
   scene.add(tiers[1], tiers[2]);
@@ -1849,6 +1909,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const sgn = (k % 2) * 2 - 1, ob = randRange(3, 14);
     const y = groundAt(i, ob, sgn), s = randRange(0.8, 1.5);
     const p = place(mTrunks, k, i, ob, sgn, y + 1.0 * s, s);
+    if (LVL.id === 'spillway') blobAt(i, ob, sgn, 1.5 * s);
     m.compose(_tmpA.set(p.x, y + 2.8 * s, p.z), q, sc.set(s, s, s)); mCrowns.setMatrixAt(k, m);
     mCrowns.setColorAt(k, cCol.setHSL(0.16 + rand() * 0.06, 0.5, 0.36 + rand() * 0.12));
   }
@@ -1859,7 +1920,10 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   for (let k = 0; k < nC; k++) {
     const i = Math.floor((0.50 + rand() * 0.24) * NSAMP);
     const sgn = (k % 2) * 2 - 1, ob = randRange(2, 12);
-    place(cacti, k, i, ob, sgn, groundAt(i, ob, sgn) + 1.0, randRange(0.7, 1.4));
+    const cs = randRange(0.7, 1.4);
+    place(cacti, k, i, ob, sgn, groundAt(i, ob, sgn) + 1.0, cs);
+    cacti.setColorAt(k, cCol.setScalar(0.82 + rand() * 0.32));
+    if (LVL.id === 'spillway') blobAt(i, ob, sgn, 0.7 * cs);
   }
   const nSl = 34;
   const slabs = new THREE.InstancedMesh(new THREE.BoxGeometry(1.6, 1.0, 1.1),
@@ -1867,8 +1931,10 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   for (let k = 0; k < nSl; k++) {
     const i = Math.floor((0.50 + rand() * 0.26) * NSAMP);
     const sgn = (k % 2) * 2 - 1, ob = randRange(4.5, 13);   // clear of the waterline — slabs must never float
-    place(slabs, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.4, randRange(0.6, 1.8), rand() * 6);
+    const ss2 = randRange(0.6, 1.8);
+    place(slabs, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.4, ss2, rand() * 6);
     slabs.setColorAt(k, cCol.setHSL(0.03 + rand() * 0.03, 0.45, 0.32 + rand() * 0.1));
+    if (LVL.id === 'spillway') blobAt(i, ob, sgn, 1.1 * ss2);
   }
   // gorge spires — jagged gray teeth around the falls
   const nSp = 26;
@@ -1877,7 +1943,10 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   for (let k = 0; k < nSp; k++) {
     const i = Math.floor((0.27 + rand() * 0.24) * NSAMP);
     const sgn = (k % 2) * 2 - 1, ob = randRange(1.6, 10);
-    place(spires, k, i, ob, sgn, groundAt(i, ob, sgn) + 1.2, randRange(0.6, 1.6), rand() * 6);
+    const sp2 = randRange(0.6, 1.6);
+    place(spires, k, i, ob, sgn, groundAt(i, ob, sgn) + 1.2, sp2, rand() * 6);
+    spires.setColorAt(k, cCol.setScalar(0.82 + rand() * 0.32));
+    if (LVL.id === 'spillway') blobAt(i, ob, sgn, 0.9 * sp2);
   }
   // bushes
   const nB = 150;
@@ -1885,7 +1954,9 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     new THREE.MeshLambertMaterial({ color: 0xffffff }), nB);
   for (let k = 0; k < nB; k++) {
     const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.4, 13);
-    place(bushes, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.3, randRange(0.5, 1.3), rand() * 6);
+    const bs2 = randRange(0.5, 1.3);
+    place(bushes, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.3, bs2, rand() * 6);
+    blobAt(i, ob, sgn, 1.0 * bs2);
     bushes.setColorAt(k, cCol.setHSL(0.24 + rand() * 0.1, 0.5, 0.3 + rand() * 0.12));
   }
   // flowers — thick in the meadow finale, scattered through the forest
@@ -1906,7 +1977,10 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     new THREE.MeshLambertMaterial({ color: 0x8f949a }), nBo);
   for (let k = 0; k < nBo; k++) {
     const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.6, 14);
-    place(boulders, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.2, randRange(0.4, 1.5), rand() * 6);
+    const bo2 = randRange(0.4, 1.5);
+    place(boulders, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.2, bo2, rand() * 6);
+    boulders.setColorAt(k, cCol.setScalar(0.8 + rand() * 0.35));
+    blobAt(i, ob, sgn, 0.95 * bo2);
   }
   // reeds — dense in the reed patches (in the water), sparse along waterlines
   const nR = 260;
@@ -1927,10 +2001,28 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     m.compose(_tmpA, q, sc.set(s, s, s));
     reedsIM.setMatrixAt(k, m);
   }
-  // distant mountains — tinted by the biome they stand in
+  // distant mountains — ridged silhouettes w/ snow caps, tinted by the biome they stand in
   const nM = 30;
-  const mountains = new THREE.InstancedMesh(new THREE.ConeGeometry(14, 20, 7),
-    new THREE.MeshLambertMaterial({ color: 0xffffff }), nM);
+  const mtnGeo = new THREE.ConeGeometry(14, 20, 7, 2);
+  {
+    const pa = mtnGeo.attributes.position;
+    for (let vi2 = 0; vi2 < pa.count; vi2++) {
+      const vx = pa.getX(vi2), vz = pa.getZ(vi2), vy = pa.getY(vi2);
+      const r = Math.hypot(vx, vz);
+      if (r > 0.01) {
+        const ang = Math.atan2(vz, vx);
+        const f = 0.82 + vhash(Math.cos(ang) * 3.1, Math.sin(ang) * 3.1) * 0.45;
+        pa.setX(vi2, vx * f); pa.setZ(vi2, vz * f);
+        pa.setY(vi2, vy + (vhash(ang * 7.3, r * 0.7) - 0.5) * 2.2 * (r / 14));
+      }
+    }
+    mtnGeo.computeVertexNormals();
+  }
+  const mountains = new THREE.InstancedMesh(mtnGeo,
+    new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }), nM);
+  const capGeo = new THREE.ConeGeometry(4.6, 6.2, 7, 1);
+  const caps = new THREE.InstancedMesh(capGeo,
+    new THREE.MeshLambertMaterial({ color: 0xeef4f4, flatShading: true }), nM);
   for (let k = 0; k < nM; k++) {
     const i = Math.floor((k / nM) * NSAMP), sgn = (k % 2) * 2 - 1;
     const ob = randRange(30, 48), s = randRange(0.7, 1.6);
@@ -1941,15 +2033,35 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
       const dx2 = mp2.x - S.pos[ci].x, dz2 = mp2.z - S.pos[ci].z;
       if (dx2 * dx2 + dz2 * dz2 < 26 * 26) { clear = false; break; }
     }
-    if (!clear) { place(mountains, k, i, ob, sgn, -200, 0.001, 0); continue; }   // bury it
-    place(mountains, k, i, ob, sgn, waterHeightAt(i) + 4 + s * 6, s, rand() * 6);
+    if (!clear) {   // bury it (and its cap)
+      place(mountains, k, i, ob, sgn, -200, 0.001, 0);
+      place(caps, k, i, ob, sgn, -200, 0.001, 0);
+      continue;
+    }
+    const ry2 = rand() * 6, my = waterHeightAt(i) + 4 + s * 6;
+    place(mountains, k, i, ob, sgn, my, s, ry2);
+    place(caps, k, i, ob, sgn, my + 7.4 * s, s, ry2);
     const zw = zoneW(i);
     mountains.setColorAt(k, cCol.setHSL(
       0.38*zw[0] + 0.40*zw[1] + 0.04*zw[2] + 0.20*zw[3],
       0.18*zw[0] + 0.10*zw[1] + 0.40*zw[2] + 0.25*zw[3],
       0.44 + rand() * 0.08));
   }
+  scene.add(caps);
   if (LVL.id !== 'spillway') { cacti.count = 0; slabs.count = 0; spires.count = 0; mTrunks.count = 0; mCrowns.count = 0; }
+  // contact shadows: one soft dark disc under every prop — grounds the whole world
+  {
+    const bg = new THREE.CircleGeometry(1, 10); bg.rotateX(-Math.PI / 2);
+    const bIM = new THREE.InstancedMesh(bg,
+      new THREE.MeshBasicMaterial({ color: 0x0e2a33, transparent: true, opacity: 0.16, depthWrite: false }), Math.max(1, BLOBS.length));
+    q.identity();
+    BLOBS.forEach((b, k2) => {
+      m.compose(_tmpA.set(b.x, b.y + 0.07, b.z), q, sc.set(b.r, 1, b.r));
+      bIM.setMatrixAt(k2, m);
+    });
+    bIM.frustumCulled = false; bIM.renderOrder = 1;
+    scene.add(bIM);
+  }
   window.SCATTER = [trunks, crowns, tiers[1], tiers[2], mTrunks, mCrowns, cacti, slabs, spires, bushes, flowers, boulders, reedsIM];
   SCATTER.forEach(im => { im._full = im.count; });
   scene.add(...SCATTER, mountains);
@@ -3886,6 +3998,11 @@ function frame(now) {
     skyMat.uniforms.uHor.value.setRGB(...wx.sky[1]).lerp(_c3.setRGB(...DUSK.hor), td * 0.85).multiplyScalar(cf);
     skyMat.uniforms.uLow.value.setRGB(...wx.sky[2]).lerp(_c3.setRGB(...DUSK.low), td * 0.85).multiplyScalar(cf);
     if (sm) { const u = skyMat.uniforms; u.uTop.value.multiply(_c3.setRGB(...sm)); u.uHor.value.multiply(_c3.setRGB(...sm)); u.uLow.value.multiply(_c3.setRGB(...sm)); }
+    // sun disc + cloud mood follow the weather / dusk / caves
+    skyMat.uniforms.uT.value = now / 1000;
+    skyMat.uniforms.uSunCol.value.copy(sun.color).multiplyScalar(Math.min(1.2, wx.sunInt) * cf * (1 - td * 0.25));
+    skyMat.uniforms.uCloudAmt.value = wx.cloud || 0.3;
+    skyMat.uniforms.uCloudCol.value.setRGB(...(wx.cloudCol || [1, 1, 1])).multiplyScalar(cf).lerp(_c3.setRGB(...DUSK.hor), td * 0.4);
     waterMat.uniforms.uGlint.value *= cf;
     if (AU.ctx) {
       const spd2 = Math.hypot(ducks[0].v.x, ducks[0].v.z);
