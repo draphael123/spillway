@@ -120,6 +120,11 @@
       <button data-v="low">LOW</button><button data-v="medium">MED</button><button data-v="high">HIGH</button></div></div>
     <div class="setRow"><span>Camera</span><div class="segRow" id="setCam">
       <button data-v="near">NEAR</button><button data-v="std">STD</button><button data-v="far">FAR</button></div></div>
+    <div class="setRow"><span>View</span><div class="segRow" id="setView">
+      <button data-v="behind">BEHIND</button><button data-v="front">FRONT</button></div></div>
+    <div class="setRow"><span>Controls</span><div class="segRow" id="keyBtns">
+      <button data-a="up">W</button><button data-a="left">A</button><button data-a="down">S</button><button data-a="right">D</button><button data-a="shove">SHIFT</button></div></div>
+    <div class="mini" id="padStatus" style="cursor:default; text-decoration:none;">controller: none detected</div>
     <div class="setRow"><span>Field of view</span><input type="range" id="setFov" min="48" max="72"></div>
     <div class="setRow"><span>Steering assist</span><div class="segRow" id="setAssist">
       <button data-v="off">OFF</button><button data-v="on">ON</button></div></div>
@@ -481,10 +486,15 @@ const DUSK = { top: [.28,.30,.55], hor: [.95,.55,.40], low: [1,.75,.5], sun: 0xf
 
 // ---- persisted settings
 const SETTINGS = Object.assign(
-  { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', fov: 58, assist: false, difficulty: 'medium', laps: 1,
+  { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', camView: 'behind', fov: 58, assist: false,
+    difficulty: 'medium', laps: 1,
+    keys: { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' },
     duck: { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium' } },
   JSON.parse(localStorage.getItem('spillway-settings') || '{}'));
 if (!SETTINGS.duck) SETTINGS.duck = { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium' };
+if (!SETTINGS.keys) SETTINGS.keys = { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' };
+if (!SETTINGS.camView) SETTINGS.camView = 'behind';
+const PAD = { up: false, down: false, left: false, right: false, on: false, name: '' };
 // weight classes: slightly different size / paddle power / mass (knockback given & taken)
 const WEIGHTS = {
   light:  { scale: 0.85, paddle: 1.12, mass: 0.7,  blurb: 'quick off the mark, easy to toss around' },
@@ -645,10 +655,10 @@ function step(dt) {
     if (d.idx === 0 && racing && !d.finished) {
       const fwd = S.tan[si], side = S.side[si];
       let ax = 0, az = 0;
-      if (input.up)    { ax += fwd.x;  az += fwd.z; }
-      if (input.down)  { ax -= fwd.x * 0.7; az -= fwd.z * 0.7; }
-      if (input.left)  { ax -= side.x; az -= side.z; }
-      if (input.right) { ax += side.x; az += side.z; }
+      if (input.up || PAD.up)       { ax += fwd.x;  az += fwd.z; }
+      if (input.down || PAD.down)   { ax -= fwd.x * 0.7; az -= fwd.z * 0.7; }
+      if (input.left || PAD.left)   { ax -= side.x; az -= side.z; }
+      if (input.right || PAD.right) { ax += side.x; az += side.z; }
       const m = Math.hypot(ax, az);
       d._stroking = m > 0.01;
       if (m > 0.01) {
@@ -1977,18 +1987,21 @@ const CAMS = { near: [7, 4.2], std: [9, 5.2], far: [12, 6.6] };
 function updateCamera(dt) {
   const d = ducks[0];
   const [camBack, camH] = CAMS[SETTINGS.camDist] || CAMS.std;
+  const front = SETTINGS.camView === 'front';
   // once you've finished, hold the camera at the finish line instead of drifting into the runout
   const si = Math.min(d.si, Math.round(FINISH_T * NSAMP) + 30);
   const anchor = d.si > si ? S.pos[si] : d.p;
-  const back = S.tan[si].clone().multiplyScalar(-camBack);
+  const back = S.tan[si].clone().multiplyScalar(front ? camBack * 0.95 : -camBack);
   const target = _tmpA.set(anchor.x, 0, anchor.z).add(back);
-  target.y = d.y + camH;
+  target.y = d.y + camH * (front ? 0.85 : 1);
   // over the falls, pull the camera up and back so you see the drop
   const t01 = si / NSAMP;
   if (t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4; target.add(S.tan[si].clone().multiplyScalar(-4)); }
   const k = 1 - Math.pow(0.0004, dt);
   camState.pos.lerp(target, k);
-  const lookT = _tmpB.set(anchor.x, d.y + 1.2, anchor.z).addScaledVector(S.tan[si], 6);
+  const lookT = front
+    ? _tmpB.set(d.p.x, d.y + 0.8, d.p.z).addScaledVector(S.tan[si], -2.5)   // broadcast view: watch your duck & the chasing pack
+    : _tmpB.set(anchor.x, d.y + 1.2, anchor.z).addScaledVector(S.tan[si], 6);
   camState.look.lerp(lookT, 1 - Math.pow(0.0002, dt));
   camera.position.copy(camState.pos);
   camera.lookAt(camState.look);
@@ -2217,11 +2230,19 @@ G.tutOn = !localStorage.getItem('spillway-tut');
 addEventListener('keydown', e => {
   auInit();
   const k = e.key.toLowerCase();
-  if (k === 'w' || k === 'arrowup') input.up = true;
-  if (k === 's' || k === 'arrowdown') input.down = true;
-  if (k === 'a' || k === 'arrowleft') input.left = true;
-  if (k === 'd' || k === 'arrowright') input.right = true;
-  if (k === 'shift' && G.mode === 'race') G.playerShove = true;
+  // key rebinding capture
+  if (G._rebind) {
+    e.preventDefault();
+    if (k !== 'escape') { SETTINGS.keys[G._rebind] = k; saveSettings(); }
+    G._rebind = null; refreshKeyBtns();
+    return;
+  }
+  const K = SETTINGS.keys;
+  if (k === K.up || k === 'arrowup') input.up = true;
+  if (k === K.down || k === 'arrowdown') input.down = true;
+  if (k === K.left || k === 'arrowleft') input.left = true;
+  if (k === K.right || k === 'arrowright') input.right = true;
+  if (k === K.shove && G.mode === 'race') G.playerShove = true;
   const settingsOpen = !el('settingsPanel').classList.contains('hidden');
   if (k === ' ') {
     e.preventDefault();
@@ -2240,11 +2261,40 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => {
   const k = e.key.toLowerCase();
-  if (k === 'w' || k === 'arrowup') input.up = false;
-  if (k === 's' || k === 'arrowdown') input.down = false;
-  if (k === 'a' || k === 'arrowleft') input.left = false;
-  if (k === 'd' || k === 'arrowright') input.right = false;
+  const K = SETTINGS.keys;
+  if (k === K.up || k === 'arrowup') input.up = false;
+  if (k === K.down || k === 'arrowdown') input.down = false;
+  if (k === K.left || k === 'arrowleft') input.left = false;
+  if (k === K.right || k === 'arrowright') input.right = false;
 });
+
+// ---- gamepad: left stick / d-pad paddles, A = race & shove, RT also paddles forward, START = restart
+function pollPad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let p = null;
+  for (const p2 of pads) if (p2 && p2.connected) { p = p2; break; }
+  PAD.on = !!p;
+  if (!p) { PAD.up = PAD.down = PAD.left = PAD.right = false; return; }
+  PAD.name = p.id;
+  const dz = 0.35;
+  const btn = (i2) => p.buttons[i2] && p.buttons[i2].pressed;
+  PAD.left = p.axes[0] < -dz || btn(14);
+  PAD.right = p.axes[0] > dz || btn(15);
+  PAD.up = p.axes[1] < -dz || btn(12) || btn(7);
+  PAD.down = p.axes[1] > dz || btn(13);
+  const a = btn(0);
+  if (a && !PAD._a) {
+    auInit();
+    if (G.mode === 'title' && el('settingsPanel').classList.contains('hidden')) prepRace();
+    else if (G.mode === 'flyover') { G.mode = 'countdown'; G.countdown = 3.2; snapCam(); }
+    else if (G.mode === 'race') G.playerShove = true;
+  }
+  PAD._a = a;
+  const st2 = btn(9);
+  if (st2 && !PAD._st && G.mode !== 'title') prepRace();
+  PAD._st = st2;
+}
+addEventListener('gamepadconnected', e2 => { eventToast(`CONTROLLER CONNECTED — A to race, stick to paddle`); PAD.name = e2.gamepad.id; });
 addEventListener('pointerdown', auInit, { once: false });
 
 // ---- menu & settings wiring
@@ -2271,6 +2321,17 @@ function segWire(id, key, after) {
 }
 segWire('setQuality', 'quality', () => applyQuality());
 segWire('setCam', 'camDist');
+segWire('setView', 'camView');
+function refreshKeyBtns() {
+  document.querySelectorAll('#keyBtns button').forEach(b => {
+    const kv = SETTINGS.keys[b.dataset.a];
+    b.textContent = G._rebind === b.dataset.a ? '…' :
+      (kv === ' ' ? 'SPACE' : kv === 'arrowup' ? '↑' : kv === 'arrowdown' ? '↓' : kv === 'arrowleft' ? '←' : kv === 'arrowright' ? '→' : kv.toUpperCase());
+  });
+}
+document.querySelectorAll('#keyBtns button').forEach(b => b.addEventListener('click', () => {
+  G._rebind = b.dataset.a; refreshKeyBtns();
+}));
 document.querySelectorAll('#setAssist button').forEach(b => b.addEventListener('click', () => {
   SETTINGS.assist = b.dataset.v === 'on'; saveSettings(); refreshSettingsUI();
 }));
@@ -2283,7 +2344,10 @@ function refreshSettingsUI() {
   el('setFov').value = SETTINGS.fov;
   document.querySelectorAll('#setQuality button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.quality));
   document.querySelectorAll('#setCam button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.camDist));
+  document.querySelectorAll('#setView button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.camView));
   document.querySelectorAll('#setAssist button').forEach(b => b.classList.toggle('sel', (b.dataset.v === 'on') === SETTINGS.assist));
+  refreshKeyBtns();
+  el('padStatus').textContent = PAD.on || PAD.name ? `controller: ${(PAD.name || 'connected').slice(0, 40)}` : 'controller: none detected — plug in & press a button';
 }
 function applyQuality() {
   const qmap = { low: [1, 0.4], medium: [1.5, 0.75], high: [Math.min(devicePixelRatio, 2), 1] };
@@ -2385,6 +2449,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now; lastRAF = now;
+  pollPad();
   if (G.mode !== 'title') advance(dt);
   else { // gentle idle bob on the title screen
     for (const d of ducks) { d.y = waterHeightAt(d.si); }
