@@ -85,6 +85,13 @@ import * as THREE from 'three';
 let seed = 1337;
 function rand() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
 function randRange(a, b) { return a + rand() * (b - a); }
+function vhash(x, z) { const n = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return n - Math.floor(n); }
+function vnoise(x, z) {
+  const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
+  const u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
+  return vhash(xi, zi) * (1 - u) * (1 - v) + vhash(xi + 1, zi) * u * (1 - v)
+       + vhash(xi, zi + 1) * (1 - u) * v + vhash(xi + 1, zi + 1) * u * v;
+}
 
 // ============================================================ COURSE
 // The river is a CatmullRom spline downhill. Each control point:
@@ -152,10 +159,18 @@ function nearestSample(p, hint) {
 // ============================================================ FEATURES
 // Eddy: swirling trap in the big pool. Rocks: obstacles that deflect flow.
 const EDDIES = [
-  { i: Math.round(0.395 * NSAMP), lat: -5.2, r: 5.5, spin:  1.5 },
-  { i: Math.round(0.435 * NSAMP), lat:  5.0, r: 5.0, spin: -1.4 },
+  { i: Math.round(0.395 * NSAMP), lat: -5.2, r: 5.5, spin:  1.5, pull: 0.8 },
+  { i: Math.round(0.435 * NSAMP), lat:  5.0, r: 5.0, spin: -1.4, pull: 0.8 },
+  { i: Math.round(0.645 * NSAMP), lat:  0.4, r: 5.0, spin:  2.3, pull: 1.9, whirl: true },  // plunge-pool whirlpool
 ];
 EDDIES.forEach(e => { e.pos = S.pos[e.i].clone().addScaledVector(S.side[e.i], e.lat); });
+
+// reed patches: slack water near the banks that kills your speed
+const REEDS = [];
+[[0.155, 1], [0.335, -1], [0.71, 1], [0.895, -1]].forEach(([t, sgn]) => {
+  const i = Math.round(t * NSAMP);
+  REEDS.push({ i, pos: S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 1.6)), r: 2.6 });
+});
 
 const ROCKS = [];
 function addRock(t, lat, r) {
@@ -168,6 +183,35 @@ addRock(0.300, -2.2, 1.3); addRock(0.315, 2.6, 1.1); addRock(0.330, 0.2, 1.5);
 addRock(0.345, -3.0, 1.0); addRock(0.360, 2.0, 1.2);
 // rapids 2 scatter
 addRock(0.735, -1.8, 1.1); addRock(0.755, 2.2, 1.3); addRock(0.775, -0.6, 1.0);
+// bridge pilings — thread the needle
+addRock(0.68, -3, 0.55); addRock(0.68, 0, 0.55); addRock(0.68, 3, 0.55);
+ROCKS.slice(-3).forEach(r => r.type = 'piling');
+
+// floating log barriers — angled, partially blocking the channel
+const LOGS = [];
+function addLog(t, lat, len, ang) {
+  const i = Math.round(t * NSAMP);
+  const c = S.pos[i].clone().addScaledVector(S.side[i], lat);
+  const dir = S.tan[i].clone().multiplyScalar(Math.cos(ang)).addScaledVector(S.side[i], Math.sin(ang));
+  dir.y = 0; dir.normalize();
+  LOGS.push({ i, c, dir, len, r: 0.55,
+    a: c.clone().addScaledVector(dir, -len / 2), b: c.clone().addScaledVector(dir, len / 2) });
+}
+addLog(0.245, 2.2, 7, -1.15);   // downstream tip points at the open left gap
+addLog(0.475, -4.5, 6, 0.35);
+addLog(0.86, 2.5, 8, -1.0);
+
+// baked foam intensity along the course (rocks, logs, eddies, the falls)
+const FOAM = new Float32Array(NSAMP + 1);
+{
+  for (let i = 0; i <= NSAMP; i++) {
+    let f = 0;
+    for (const r of ROCKS) { const d = i - r.i; if (d > -8 && d < 20) f = Math.max(f, (r.type === 'piling' ? 0.5 : 0.8) * (1 - Math.abs(d - 6) / 14)); }
+    for (const e of EDDIES) { const d = Math.abs(i - e.i); if (d < 20) f = Math.max(f, 0.35 * (1 - d / 20)); }
+    for (const L of LOGS) { const d = i - L.i; if (d > -6 && d < 12) f = Math.max(f, 0.6); }
+    FOAM[i] = Math.min(1, f);
+  }
+}
 
 // find the falls from the geometry itself (steepest 8-sample descent)
 let _fI0 = 0, _steep = 0;
@@ -176,6 +220,7 @@ for (let i = 0; i < NSAMP - 8; i++) {
   if (drop > _steep) { _steep = drop; _fI0 = i; }
 }
 const FALLS_T0 = _fI0 / NSAMP, FALLS_T1 = (_fI0 + 12) / NSAMP;
+for (let i = Math.max(0, _fI0 - 12); i < Math.min(NSAMP, _fI0 + 40); i++) FOAM[i] = 1;
 
 // ============================================================ WATER FIELD
 const _tmpA = new THREE.Vector3(), _tmpB = new THREE.Vector3();
@@ -188,17 +233,36 @@ function waterVelAt(p, si, out) {
   const prof = 1 - 0.45 * Math.min(1, (lat / w) ** 2);
   const spd = BASE_FLOW * S.sMul[si] * prof;
   out.set(tan.x * spd, 0, tan.z * spd);
-  // eddies
+  // eddies (whirlpool suction "breathes" so drifters eventually escape)
   for (const e of EDDIES) {
     const dx = p.x - e.pos.x, dz = p.z - e.pos.z;
     const d = Math.hypot(dx, dz);
     if (d < e.r && d > 0.01) {
       const f = 1 - d / e.r;
-      const s = e.spin * (2.2 + 2.5 * f);
-      out.x += (-dz / d) * s * f * 2.2 - dx / d * f * 0.8;
-      out.z += ( dx / d) * s * f * 2.2 - dz / d * f * 0.8;
+      const br = e.whirl ? 0.55 + 0.45 * Math.sin(G.time * 0.5) : 1;
+      const s = e.spin * (2.2 + 2.5 * f) * br;
+      out.x += (-dz / d) * s * f * 2.2 - dx / d * f * e.pull * br;
+      out.z += ( dx / d) * s * f * 2.2 - dz / d * f * e.pull * br;
     }
   }
+  // logs shed the current along their length toward the open end
+  for (const L of LOGS) {
+    if (Math.abs(L.i - si) > 40) continue;
+    const abx = L.b.x - L.a.x, abz = L.b.z - L.a.z;
+    const tt = Math.max(0, Math.min(1, ((p.x - L.a.x) * abx + (p.z - L.a.z) * abz) / (abx * abx + abz * abz)));
+    const cx = L.a.x + abx * tt, cz = L.a.z + abz * tt;
+    const dd = Math.hypot(p.x - cx, p.z - cz), inf = L.r + 2.0;
+    if (dd < inf) { const f = (1 - dd / inf) * 3.0; out.x += L.dir.x * f; out.z += L.dir.z * f; }
+  }
+  // reed patches: slack water
+  for (const rp of REEDS) {
+    const dx = p.x - rp.pos.x, dz = p.z - rp.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d < rp.r) { const k = 0.35 + 0.65 * (d / rp.r); out.x *= k; out.z *= k; }
+  }
+  // physical cap: no flow stack may exceed the narrows' top speed
+  const spCap = Math.hypot(out.x, out.z);
+  if (spCap > 16.5) { out.x *= 16.5 / spCap; out.z *= 16.5 / spCap; }
   // rocks part the water around themselves
   for (const r of ROCKS) {
     if (Math.abs(r.i - si) > 60) continue;
@@ -250,7 +314,7 @@ function resetDucks() {
 // ============================================================ SIM
 const G = { mode: 'title', time: 0, countdown: 0, finishedCount: 0, results: [], playerSplashT: 0 };
 const input = { up: false, down: false, left: false, right: false };
-const PADDLE_ACC = 5.2, DRAG_XZ = 1.25;
+const PADDLE_ACC = 7.5, DRAG_XZ = 1.25;
 
 const hash = new Map();
 function hashKey(x, z) { return ((x + 512) << 11) | (z + 512); }
@@ -292,7 +356,13 @@ function step(dt) {
       if (input.left)  { ax -= side.x; az -= side.z; }
       if (input.right) { ax += side.x; az += side.z; }
       const m = Math.hypot(ax, az);
+      d._stroking = m > 0.01;
       if (m > 0.01) { d.v.x += (ax / m) * PADDLE_ACC * dt; d.v.z += (az / m) * PADDLE_ACC * dt; }
+      // wake spray when moving fast — sells the speed
+      d._wakeT = (d._wakeT || 0) - dt;
+      if (!d.air && d._wakeT <= 0 && Math.hypot(d.v.x, d.v.z) > 10) {
+        d._wakeT = 0.1; splash({ x: d.p.x, y: d.y, z: d.p.z }, 2);
+      }
     } else if (!d.finished) {
       d.wanderPh += dt * d.wanderF * 2;
       const side = S.side[si];
@@ -302,8 +372,10 @@ function step(dt) {
 
     // ---- water drag pulls duck velocity toward water velocity
     if (!d.air) {
-      d.v.x += (_tmpA.x - d.v.x) * Math.min(1, DRAG_XZ * d.drag * dt);
-      d.v.z += (_tmpA.z - d.v.z) * Math.min(1, DRAG_XZ * d.drag * dt);
+      // paddling loosens the water's grip so strokes carry
+      const grip = DRAG_XZ * d.drag * (d._stroking ? 0.65 : 1);
+      d.v.x += (_tmpA.x - d.v.x) * Math.min(1, grip * dt);
+      d.v.z += (_tmpA.z - d.v.z) * Math.min(1, grip * dt);
     } else {
       d.v.x *= 1 - 0.1 * dt; d.v.z *= 1 - 0.1 * dt;   // a little air drag
     }
@@ -336,6 +408,22 @@ function step(dt) {
         d.p.x = r.pos.x + nx * min; d.p.z = r.pos.z + nz * min;
         const vn = d.v.x * nx + d.v.z * nz;
         if (vn < 0) { d.v.x -= nx * vn * 1.5; d.v.z -= nz * vn * 1.5; d.spinV += vn * 8 * (rand() - .5); }
+      }
+    }
+
+    // ---- floating logs: capsule collision, slide along them
+    for (const L of LOGS) {
+      if (Math.abs(L.i - si) > 40) continue;
+      const abx = L.b.x - L.a.x, abz = L.b.z - L.a.z;
+      const tt = Math.max(0, Math.min(1, ((d.p.x - L.a.x) * abx + (d.p.z - L.a.z) * abz) / (abx * abx + abz * abz)));
+      const cx = L.a.x + abx * tt, cz = L.a.z + abz * tt;
+      const dx = d.p.x - cx, dz = d.p.z - cz;
+      const dist = Math.hypot(dx, dz), min = L.r + DUCK_R * 0.8;
+      if (dist < min && dist > 0.001) {
+        const nx = dx / dist, nz = dz / dist;
+        d.p.x = cx + nx * min; d.p.z = cz + nz * min;
+        const vn = d.v.x * nx + d.v.z * nz;
+        if (vn < 0) { d.v.x -= nx * vn * 1.4; d.v.z -= nz * vn * 1.4; d.spinV += (rand() - .5) * 6; }
       }
     }
 
@@ -383,7 +471,7 @@ function step(dt) {
       let diff = want - d.heading;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      d.heading += diff * Math.min(1, 3 * dt);
+      d.heading += diff * Math.min(1, (d.idx === 0 ? 8 : 3.5) * dt);
     }
     d.heading += d.spinV * dt;
     d.spinV *= 1 - Math.min(1, 3 * dt);
@@ -411,7 +499,7 @@ function advance(dtReal) {
 window.SPILLWAY = {
   step: (dt) => step(dt || FIXED),
   sim: (seconds) => { const n = Math.round(seconds / FIXED); for (let i = 0; i < n; i++) step(FIXED); return window.SPILLWAY.state(); },
-  start: () => { if (G.mode !== 'race') startRace(); G.countdown = 0; G.mode = 'race'; G.raceT = G.raceT || 0; },
+  start: () => { startRace(); G.countdown = 0; G.mode = 'race'; G.raceT = 0; },
   state: () => ({ mode: G.mode, t: G.raceT, finished: G.finishedCount,
     player: { place: placeOf(ducks[0]), si: ducks[0].si, t01: ducks[0].si / NSAMP, finished: ducks[0].finished, time: ducks[0].finishTime },
     top: G.results.slice(0, 5).map(d => ({ name: d.name, time: +d.finishTime.toFixed(2) })) }),
@@ -451,13 +539,13 @@ const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 600);
 }
 scene.add(new THREE.HemisphereLight(0xcfe8ee, 0x5a7a4a, 0.95));
 const sun = new THREE.DirectionalLight(0xfff2d0, 1.35);
-sun.position.set(60, 120, -40);
+sun.position.set(-70, 90, -30);
 scene.add(sun);
 
 // ---------- water ribbon
 let waterMat;
 {
-  const pos = [], uv = [], spd = [], idx = [];
+  const pos = [], uv = [], spd = [], foamA = [], idx = [];
   for (let i = 0; i <= NSAMP; i++) {
     const w = S.w[i] + 0.4;
     const a = S.pos[i].clone().addScaledVector(S.side[i], -w);
@@ -466,65 +554,100 @@ let waterMat;
     pos.push(a.x, y, a.z, b.x, y, b.z);
     uv.push(0, S.dist[i] * 0.14, 1, S.dist[i] * 0.14);
     spd.push(S.sMul[i], S.sMul[i]);
+    foamA.push(FOAM[i], FOAM[i]);
     if (i < NSAMP) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setAttribute('aSpd', new THREE.Float32BufferAttribute(spd, 1));
+  g.setAttribute('aFoam', new THREE.Float32BufferAttribute(foamA, 1));
   g.setIndex(idx);
   waterMat = new THREE.ShaderMaterial({
     transparent: true,
     uniforms: { uT: { value: 0 } },
     vertexShader: `
-      attribute float aSpd; varying vec2 vUv; varying float vSpd; varying float vFog;
-      void main(){ vUv = uv; vSpd = aSpd;
-        vec4 mv = modelViewMatrix * vec4(position,1.);
+      attribute float aSpd; attribute float aFoam;
+      uniform float uT;
+      varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog;
+      void main(){ vUv = uv; vSpd = aSpd; vFoam = aFoam;
+        vec3 p = position;
+        // chop: traveling waves, bigger in fast water
+        float dist = uv.y / 0.14;
+        float amp = 0.035 + 0.15 * smoothstep(1.1, 2.6, aSpd);
+        p.y += sin(dist * 0.9 - uT * (2.0 + aSpd)) * amp
+             + sin(dist * 2.7 - uT * (3.5 + aSpd * 2.0) + uv.x * 9.0) * amp * 0.5;
+        vec4 mv = modelViewMatrix * vec4(p, 1.);
         vFog = smoothstep(60., 220., -mv.z);
         gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `
-      uniform float uT; varying vec2 vUv; varying float vSpd; varying float vFog;
+      uniform float uT; varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog;
       float n21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.55); }
       float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
         return mix(mix(n21(i),n21(i+vec2(1,0)),f.x), mix(n21(i+vec2(0,1)),n21(i+vec2(1,1)),f.x), f.y); }
       void main(){
         float flow = vUv.y - uT * (0.55 + vSpd * 0.75);
-        float band = noise(vec2(vUv.x * 6., flow * 9.));
-        float band2 = noise(vec2(vUv.x * 13. + 40., flow * 22.));
-        vec3 deep = vec3(0.10, 0.35, 0.42);
-        vec3 shal = vec3(0.22, 0.55, 0.58);
-        vec3 c = mix(deep, shal, band * .7);
-        float foamAmt = smoothstep(1.15, 2.3, vSpd);
-        float foam = smoothstep(0.55, 0.8, band2) * foamAmt;
-        // lacy foam along the banks
-        float edge = smoothstep(0.32, 0.02, min(vUv.x, 1.-vUv.x)) * smoothstep(.4,.75,band2) * .8;
-        c = mix(c, vec3(0.94, 0.97, 0.96), clamp(foam + edge, 0., 1.));
+        // depth gradient: dark centre channel, teal shallows at the edges
+        float depth = 1. - abs(vUv.x * 2. - 1.);
+        vec3 deep = vec3(0.06, 0.29, 0.40);
+        vec3 shal = vec3(0.26, 0.60, 0.60);
+        vec3 c = mix(shal, deep, depth * 0.85);
+        // long current streaks drawn along the flow
+        float st = smoothstep(0.60, 0.95, noise(vec2(vUv.x * 22., flow * 3.0)));
+        c += vec3(0.09, 0.13, 0.12) * st;
+        // fine ripple shimmer
+        c += vec3(0.05) * noise(vec2(vUv.x * 42. + flow * 8., flow * 30.));
+        // sun sparkle
+        float sp = pow(noise(vec2(vUv.x * 90., flow * 70. + vUv.x * 13.)), 7.) * (0.15 + 1.1 * smoothstep(1.0, 2.3, vSpd));
+        c += vec3(1.0, 0.98, 0.9) * sp;
+        // whitewater: rapids by speed + baked foam at rocks/logs/falls
+        float f2 = noise(vec2(vUv.x * 16. + 40., flow * 26.));
+        float f3 = noise(vec2(vUv.x * 33. + 90., flow * 52.));
+        float foamAmt = clamp(smoothstep(1.25, 2.4, vSpd) * 0.9 + vFoam, 0., 1.2);
+        float foam = smoothstep(0.72 - 0.3 * foamAmt, 0.88, f2 * 0.6 + f3 * 0.5) * clamp(foamAmt, 0., 1.);
+        // thin lace along the waterline
+        float edge = smoothstep(0.10, 0.015, min(vUv.x, 1. - vUv.x)) * smoothstep(0.45, 0.8, f3);
+        c = mix(c, vec3(0.95, 0.98, 0.97), clamp(foam + edge, 0., 1.));
         c = mix(c, vec3(0.66, 0.85, 0.88), vFog);
-        gl_FragColor = vec4(c, 0.94); }`,
+        gl_FragColor = vec4(c, 0.95); }`,
   });
   scene.add(new THREE.Mesh(g, waterMat));
 }
 
-// ---------- banks / valley
+// ---------- banks / valley (noise heights + colour patches; shared with scatter placement)
+function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
+  const t = Math.min(1, ob / 16);
+  const base = 0.3 + 5.2 * t * t;
+  const n = vnoise(i * 0.02 + sgn * 13, ob * 0.12) * 2.4 + vnoise(i * 0.09 + sgn * 51, ob * 0.3) * 0.9;
+  return base + n * Math.min(1, t * 2.5) - 0.35;
+}
 {
+  const OFFS = [0.15, 1.1, 3.5, 8, 16, 26];
   const pos = [], col = [], idx = [];
-  const grass = new THREE.Color(0x6da05b), grassDk = new THREE.Color(0x527b43), sand = new THREE.Color(0xcdb98a);
+  const cTmp = new THREE.Color();
   let vi = 0;
   for (const sgn of [-1, 1]) {
     const start = vi;
     for (let i = 0; i <= NSAMP; i++) {
-      const w = S.w[i];
-      const y0 = waterHeightAt(i);
-      const a = S.pos[i].clone().addScaledVector(S.side[i], sgn * (w + 0.15)); // waterline
-      const b = S.pos[i].clone().addScaledVector(S.side[i], sgn * (w + 2.2));  // beach
-      const c = S.pos[i].clone().addScaledVector(S.side[i], sgn * (w + 14));   // valley wall
-      const dHill = 3.5 + 2.5 * Math.sin(i * 0.05 + sgn * 2) + 1.5 * Math.sin(i * 0.13);
-      pos.push(a.x, y0 - 0.15, a.z,  b.x, y0 + 0.35, b.z,  c.x, y0 + dHill, c.z);
-      col.push(sand.r, sand.g, sand.b, grass.r, grass.g, grass.b, grassDk.r, grassDk.g, grassDk.b);
-      vi += 3;
+      const w = S.w[i], y0 = waterHeightAt(i);
+      const nearFalls = Math.abs(i - _fI0) < 50;
+      for (let k = 0; k < OFFS.length; k++) {
+        const ob = OFFS[k];
+        const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (w + ob));
+        const h = k === 0 ? -0.15 : bankH(i, ob, sgn);
+        pos.push(p.x, y0 + h, p.z);
+        const patch = vnoise(i * 0.045 + sgn * 31, ob * 0.4);
+        if (ob < 0.8) cTmp.set(0xcdb98a);                                     // wet sand lip
+        else if (ob < 2) cTmp.set(0xb9a878).lerp(new THREE.Color(0x7aa85e), patch);
+        else if (nearFalls && ob > 6) cTmp.set(0x8d9298).offsetHSL(0, 0, (patch - .5) * .1);  // rock walls at the gorge
+        else cTmp.setHSL(0.26 + patch * 0.05, 0.42, 0.30 + patch * 0.14 - Math.min(1, ob / 26) * 0.06);
+        col.push(cTmp.r, cTmp.g, cTmp.b);
+        vi++;
+      }
       if (i < NSAMP) {
-        const k = start + i * 3;
-        idx.push(k, k + 3, k + 1, k + 1, k + 3, k + 4, k + 1, k + 4, k + 2, k + 2, k + 4, k + 5);
+        const row = OFFS.length, k0 = start + i * row;
+        for (let k = 0; k < row - 1; k++)
+          idx.push(k0 + k, k0 + k + row, k0 + k + 1, k0 + k + 1, k0 + k + row, k0 + k + row + 1);
       }
     }
   }
@@ -532,7 +655,7 @@ let waterMat;
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   g.setIndex(idx); g.computeVertexNormals();
-  scene.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true })));
+  scene.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })));
 }
 
 // ---------- riverbed (dark, under the water, so falls don't show sky)
@@ -551,40 +674,154 @@ let waterMat;
   scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x14333c })));
 }
 
-// ---------- trees (instanced)
+// ---------- scatter: trees, bushes, flowers, boulders, reeds, mountains (all instanced)
 {
-  const trunkG = new THREE.CylinderGeometry(0.22, 0.32, 1.6, 5);
-  const crownG = new THREE.ConeGeometry(1.5, 3.6, 6);
-  const nT = 160;
-  const trunks = new THREE.InstancedMesh(trunkG, new THREE.MeshLambertMaterial({ color: 0x6b4a2f }), nT);
-  const crowns = new THREE.InstancedMesh(crownG, new THREE.MeshLambertMaterial({ color: 0x3f7a3c }), nT);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
   const cCol = new THREE.Color();
+  const groundAt = (i, ob, sgn) => waterHeightAt(i) + bankH(i, ob, sgn);
+  const place = (im, k, i, ob, sgn, y, s, ry) => {
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+    if (ry) q.setFromAxisAngle(_tmpB.set(0, 1, 0), ry); else q.identity();
+    m.compose(_tmpA.set(p.x, y, p.z), q, sc.set(s, s, s));
+    im.setMatrixAt(k, m);
+    return p;
+  };
+
+  // trees — alternate banks so BOTH sides read
+  const nT = 220;
+  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.22, 0.32, 1.6, 5),
+    new THREE.MeshLambertMaterial({ color: 0x6b4a2f }), nT);
+  const crowns = new THREE.InstancedMesh(new THREE.ConeGeometry(1.5, 3.6, 6),
+    new THREE.MeshLambertMaterial({ color: 0x3f7a3c }), nT);
   for (let k = 0; k < nT; k++) {
     const i = Math.floor(rand() * NSAMP);
-    const sgn = rand() < 0.5 ? -1 : 1;
-    const off = S.w[i] + randRange(4, 13);
-    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * off);
-    const hill = 3.5 + 2.5 * Math.sin(i * 0.05 + sgn * 2) + 1.5 * Math.sin(i * 0.13);
-    const y = waterHeightAt(i) + hill * Math.min(1, (off - S.w[i]) / 14) * 0.9;
-    const s = randRange(0.8, 1.6);
-    m.compose(_tmpA.set(p.x, y + 0.8 * s, p.z), q, sc.set(s, s, s)); trunks.setMatrixAt(k, m);
-    m.compose(_tmpA.set(p.x, y + (1.6 + 1.4) * s, p.z), q, sc.set(s, s, s)); crowns.setMatrixAt(k, m);
-    crowns.setColorAt(k, cCol.setHSL(0.32 + rand() * 0.06, 0.45, 0.3 + rand() * 0.12));
+    const sgn = (k % 2) * 2 - 1;
+    const ob = randRange(3.5, 15);
+    const y = groundAt(i, ob, sgn), s = randRange(0.8, 1.7);
+    const p = place(trunks, k, i, ob, sgn, y + 0.8 * s, s);
+    m.compose(_tmpA.set(p.x, y + 3.0 * s, p.z), q, sc.set(s, s, s)); crowns.setMatrixAt(k, m);
+    crowns.setColorAt(k, cCol.setHSL(0.30 + rand() * 0.08, 0.45, 0.26 + rand() * 0.14));
   }
-  scene.add(trunks, crowns);
+  // bushes
+  const nB = 150;
+  const bushes = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.9, 0),
+    new THREE.MeshLambertMaterial({ color: 0xffffff }), nB);
+  for (let k = 0; k < nB; k++) {
+    const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.4, 13);
+    place(bushes, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.3, randRange(0.5, 1.3), rand() * 6);
+    bushes.setColorAt(k, cCol.setHSL(0.24 + rand() * 0.1, 0.5, 0.3 + rand() * 0.12));
+  }
+  // flowers
+  const nF = 240;
+  const flowers = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 5, 4),
+    new THREE.MeshLambertMaterial({ color: 0xffffff }), nF);
+  const petals = [0xfff8e7, 0xffd23f, 0xff6b6b, 0xc084fc, 0xff9ff3];
+  for (let k = 0; k < nF; k++) {
+    const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.2, 9);
+    place(flowers, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.15, randRange(0.7, 1.3));
+    flowers.setColorAt(k, cCol.set(petals[Math.floor(rand() * petals.length)]));
+  }
+  // bank boulders
+  const nBo = 60;
+  const boulders = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.8, 0),
+    new THREE.MeshLambertMaterial({ color: 0x8f949a }), nBo);
+  for (let k = 0; k < nBo; k++) {
+    const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.6, 14);
+    place(boulders, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.2, randRange(0.4, 1.5), rand() * 6);
+  }
+  // reeds — dense in the reed patches (in the water), sparse along waterlines
+  const nR = 260;
+  const reedsIM = new THREE.InstancedMesh(new THREE.ConeGeometry(0.07, 1.5, 4),
+    new THREE.MeshLambertMaterial({ color: 0x9aa84e }), nR);
+  for (let k = 0; k < nR; k++) {
+    if (k < 150) {
+      const rp = REEDS[k % REEDS.length];
+      const a = rand() * Math.PI * 2, rr = Math.sqrt(rand()) * (rp.r - 0.3);
+      _tmpA.set(rp.pos.x + Math.cos(a) * rr, waterHeightAt(rp.i) + 0.5, rp.pos.z + Math.sin(a) * rr);
+    } else {
+      const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1;
+      const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - randRange(0, 0.7)));
+      _tmpA.set(p.x, waterHeightAt(i) + 0.45, p.z);
+    }
+    q.setFromAxisAngle(_tmpB.set(1, 0, 0), randRange(-0.12, 0.12));
+    const s = randRange(0.7, 1.4);
+    m.compose(_tmpA, q, sc.set(s, s, s));
+    reedsIM.setMatrixAt(k, m);
+  }
+  // distant mountains
+  const nM = 26;
+  const mountains = new THREE.InstancedMesh(new THREE.ConeGeometry(14, 20, 7),
+    new THREE.MeshLambertMaterial({ color: 0x6f8a80 }), nM);
+  for (let k = 0; k < nM; k++) {
+    const i = Math.floor((k / nM) * NSAMP), sgn = (k % 2) * 2 - 1;
+    const ob = randRange(30, 48), s = randRange(0.7, 1.6);
+    place(mountains, k, i, ob, sgn, waterHeightAt(i) + 4 + s * 6, s, rand() * 6);
+    mountains.setColorAt(k, cCol.setHSL(0.36 + rand() * 0.06, 0.18, 0.42 + rand() * 0.1));
+  }
+  scene.add(trunks, crowns, bushes, flowers, boulders, reedsIM, mountains);
 }
 
-// ---------- rocks
+// ---------- rocks, pilings + bridge, logs, whirlpool
+let whirlMesh;
 {
   const g = new THREE.DodecahedronGeometry(1, 0);
   const mat = new THREE.MeshLambertMaterial({ color: 0x8a8f94 });
+  const pilingG = new THREE.CylinderGeometry(1, 1.1, 4, 8);
+  const pilingM = new THREE.MeshLambertMaterial({ color: 0x7a5c40 });
   for (const r of ROCKS) {
-    const mesh = new THREE.Mesh(g, mat);
-    mesh.position.set(r.pos.x, waterHeightAt(r.i) - 0.2, r.pos.z);
-    mesh.scale.set(r.r, r.r * randRange(0.7, 1.1), r.r);
-    mesh.rotation.set(rand() * 3, rand() * 3, rand() * 3);
-    scene.add(mesh);
+    if (r.type === 'piling') {
+      const mesh = new THREE.Mesh(pilingG, pilingM);
+      mesh.position.set(r.pos.x, waterHeightAt(r.i) + 1.2, r.pos.z);
+      mesh.scale.set(r.r, 1, r.r);
+      scene.add(mesh);
+    } else {
+      const mesh = new THREE.Mesh(g, mat);
+      mesh.position.set(r.pos.x, waterHeightAt(r.i) - 0.2, r.pos.z);
+      mesh.scale.set(r.r, r.r * randRange(0.7, 1.1), r.r);
+      mesh.rotation.set(rand() * 3, rand() * 3, rand() * 3);
+      scene.add(mesh);
+    }
+  }
+  // bridge deck over the pilings
+  {
+    const bi = Math.round(0.68 * NSAMP);
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(S.w[bi] * 2 + 4, 0.5, 2.4),
+      new THREE.MeshLambertMaterial({ color: 0x8a6a48 }));
+    deck.position.copy(S.pos[bi]); deck.position.y = waterHeightAt(bi) + 3.2;
+    deck.rotation.y = Math.atan2(S.tan[bi].x, S.tan[bi].z);
+    scene.add(deck);
+  }
+  // floating logs
+  {
+    const logM = new THREE.MeshLambertMaterial({ color: 0x6e4c2e });
+    for (const L of LOGS) {
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(L.r, L.r, L.len, 8), logM);
+      mesh.position.set(L.c.x, waterHeightAt(L.i) + 0.05, L.c.z);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), L.dir);
+      scene.add(mesh);
+    }
+  }
+  // whirlpool spiral
+  {
+    const wp = EDDIES.find(e => e.whirl);
+    const c2d = document.createElement('canvas'); c2d.width = c2d.height = 256;
+    const cx = c2d.getContext('2d');
+    cx.strokeStyle = 'rgba(255,255,255,0.75)'; cx.lineWidth = 7; cx.lineCap = 'round';
+    for (let arm = 0; arm < 3; arm++) {
+      cx.beginPath();
+      for (let a = 0; a < Math.PI * 1.9; a += 0.08) {
+        const rr = 14 + (a / (Math.PI * 1.9)) * 110;
+        const th = a + arm * (Math.PI * 2 / 3);
+        const x = 128 + Math.cos(th) * rr, y = 128 + Math.sin(th) * rr;
+        a === 0 ? cx.moveTo(x, y) : cx.lineTo(x, y);
+      }
+      cx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(c2d);
+    const gDisc = new THREE.CircleGeometry(wp.r * 0.95, 28); gDisc.rotateX(-Math.PI / 2);
+    whirlMesh = new THREE.Mesh(gDisc, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+    whirlMesh.position.set(wp.pos.x, waterHeightAt(wp.i) + 0.12, wp.pos.z);
+    scene.add(whirlMesh);
   }
 }
 
@@ -624,8 +861,22 @@ let waterMat;
   const topY = waterHeightAt(i0), botY = waterHeightAt(i1 + 20);
   const p = S.pos[Math.round((i0 + i1) / 2)];
   const w = S.w[i0];
-  const fall = new THREE.Mesh(new THREE.PlaneGeometry(w * 2, topY - botY + 1),
-    new THREE.MeshBasicMaterial({ color: 0xeaf6f5, transparent: true, opacity: 0.85 }));
+  var fallsMat = new THREE.ShaderMaterial({
+    transparent: true,
+    uniforms: { uT: { value: 0 } },
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+    fragmentShader: `
+      uniform float uT; varying vec2 vUv;
+      float n21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.55); }
+      float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+        return mix(mix(n21(i),n21(i+vec2(1,0)),f.x), mix(n21(i+vec2(0,1)),n21(i+vec2(1,1)),f.x), f.y); }
+      void main(){
+        float s = noise(vec2(vUv.x * 9., vUv.y * 5. + uT * 2.4)) * 0.6
+                + noise(vec2(vUv.x * 21., vUv.y * 13. + uT * 4.)) * 0.5;
+        vec3 c = mix(vec3(0.72, 0.87, 0.90), vec3(1.0), smoothstep(0.35, 0.8, s));
+        gl_FragColor = vec4(c, 0.92); }`,
+  });
+  const fall = new THREE.Mesh(new THREE.PlaneGeometry(w * 2, topY - botY + 1), fallsMat);
   fall.position.set(p.x, (topY + botY) / 2, p.z);
   fall.lookAt(fall.position.clone().add(S.tan[i0]));
   scene.add(fall);
@@ -729,10 +980,10 @@ function updateCamera(dt) {
   // over the falls, pull the camera up and back so you see the drop
   const t01 = si / NSAMP;
   if (t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4; target.add(S.tan[si].clone().multiplyScalar(-4)); }
-  const k = 1 - Math.pow(0.0018, dt);
+  const k = 1 - Math.pow(0.0004, dt);
   camState.pos.lerp(target, k);
   const lookT = _tmpB.set(anchor.x, d.y + 1.2, anchor.z).addScaledVector(S.tan[si], 6);
-  camState.look.lerp(lookT, 1 - Math.pow(0.0005, dt));
+  camState.look.lerp(lookT, 1 - Math.pow(0.0002, dt));
   camera.position.copy(camState.pos);
   camera.lookAt(camState.look);
   // splash shake
@@ -747,9 +998,13 @@ function updateCamera(dt) {
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new THREE.Vector3(1, 1, 1);
 function syncDucks(t) {
   for (const d of ducks) {
-    const bob = d.air ? 0 : Math.sin(t * 4.2 + d.bobPh) * 0.06;
-    const rockX = d.air ? -0.35 : Math.sin(t * 3.1 + d.bobPh) * 0.08;
-    const rockZ = d.air ? 0 : Math.sin(t * 3.7 + d.bobPh * 2) * 0.1;
+    const chop = S.sMul[d.si];
+    const bob = d.air ? 0 : Math.sin(t * (3.2 + chop * 2) + d.bobPh) * (0.04 + 0.05 * chop);
+    const rockX = d.air ? -0.35 : Math.sin(t * 3.1 + d.bobPh) * (0.05 + 0.05 * chop);
+    // lean into lateral motion — carving reads in the body
+    const latV = d.v.x * Math.cos(d.heading) - d.v.z * Math.sin(d.heading);
+    const lean = Math.max(-0.3, Math.min(0.3, latV * 0.05));
+    const rockZ = d.air ? 0 : Math.sin(t * 3.7 + d.bobPh * 2) * (0.06 + 0.06 * chop) - lean;
     _e.set(rockX, d.heading, rockZ);
     _q.setFromEuler(_e);
     _m4.compose(_tmpA.set(d.p.x, d.y + bob, d.p.z), _q, _s);
@@ -897,14 +1152,17 @@ function frame(now) {
   }
   updateSplashes(dt);
   if (G.mode === 'title') {
-    // slow orbit of the start pool
-    const t = now / 1000;
-    camera.position.set(S.pos[0].x + Math.sin(t * 0.12) * 16, S.pos[0].y + 9, S.pos[0].z + Math.cos(t * 0.12) * 16);
-    camera.lookAt(S.pos[20].x, S.pos[20].y + 1, S.pos[20].z);
+    // sway behind the start pool, always facing downstream (never shows the open course edge)
+    const t = now / 1000, sway = Math.sin(t * 0.22) * 0.55;
+    const c0 = S.pos[25];
+    camera.position.set(c0.x + Math.sin(sway) * 15, c0.y + 7.5, c0.z + Math.cos(sway) * 15);
+    camera.lookAt(S.pos[70].x, S.pos[70].y + 1, S.pos[70].z);
   } else updateCamera(dt);
   syncDucks(now / 1000);
   skyMesh.position.copy(camera.position);
   waterMat.uniforms.uT.value = now / 1000;
+  fallsMat.uniforms.uT.value = now / 1000;
+  if (whirlMesh) whirlMesh.rotation.y = -now / 1000 * 1.6;
   if (G.mode === 'race' || G.mode === 'countdown') {
     el('place').firstChild.textContent = `P${placeOf(ducks[0])}/${N_DUCKS}`;
     el('timer').firstChild.textContent = fmtTime(G.raceT || 0);
