@@ -44,6 +44,19 @@
   #resultsList .you { background:var(--sun); border-radius:6px; padding:0 8px; font-weight:bold; }
   #resultsList span.t { float:right; opacity:.65; font-variant-numeric:tabular-nums; margin-left:24px; }
   .hidden { display:none !important; }
+  .diffRow { display:flex; gap:8px; justify-content:center; margin:0 0 16px; }
+  .diffRow button, .segRow button { font-family:inherit; font-size:14px; font-weight:bold; letter-spacing:1px; padding:7px 16px;
+    border:2px solid var(--ink); border-radius:999px; background:#fff; cursor:pointer; box-shadow:0 2px 0 rgba(14,42,51,.35); color:var(--ink); }
+  .diffRow button.sel, .segRow button.sel { background:var(--sun); }
+  .mini { margin-top:14px; font-size:13px; opacity:.7; cursor:pointer; text-decoration:underline; }
+  .setRow { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:10px 0; font-size:15px; }
+  .setRow input[type=range] { width:170px; accent-color:var(--rush); }
+  .segRow { display:flex; gap:6px; }
+  .segRow button { font-size:12px; padding:5px 12px; }
+  #tutToast { bottom:12%; left:50%; transform:translateX(-50%); font-size:20px; font-weight:bold;
+    background:rgba(14,42,51,.88); color:var(--cream); padding:10px 24px; border-radius:999px;
+    opacity:0; transition:opacity .3s; max-width:80%; text-align:center; }
+  .go { cursor:pointer; }
 </style>
 </head>
 <body>
@@ -62,18 +75,36 @@
   <div class="panel" id="title">
     <h1>SPILLWAY</h1>
     <div class="sub">a rubber duck derby &mdash; eighty ducks, one river, no engines</div>
-    <div class="go">Press <b>SPACE</b> to open the gates</div>
+    <div class="diffRow" id="diffRow">
+      <button data-d="easy">EASY</button><button data-d="medium">MEDIUM</button><button data-d="hard">HARD</button>
+    </div>
+    <div class="go" id="raceBtn">RACE &mdash; press <b>SPACE</b></div>
     <div class="keys">
       <kbd>W A S D</kbd> or <kbd>&larr;&uarr;&darr;&rarr;</kbd> paddle &mdash; you can't beat the river, only read it<br>
-      Ride the fast water. Dodge the eddies. Survive the falls.
+      Forest &rarr; gorge &rarr; canyon &rarr; meadow. Survive the falls.
     </div>
+    <div class="mini" id="settingsBtn">&#9881; settings &mdash; ESC</div>
   </div>
   <div class="panel" id="results">
     <h2 id="resultsTitle">RACE RESULTS</h2>
     <div id="resultsList"></div>
-    <div class="go">Press <b>R</b> to race again</div>
+    <div class="go" id="againBtn">Press <b>R</b> to race again &nbsp;&middot;&nbsp; <b>ESC</b> menu</div>
+  </div>
+  <div class="panel hidden" id="settingsPanel">
+    <h2>SETTINGS</h2>
+    <div class="setRow"><span>Music</span><input type="range" id="setMusic" min="0" max="100"></div>
+    <div class="setRow"><span>Sound</span><input type="range" id="setSfx" min="0" max="100"></div>
+    <div class="setRow"><span>Quality</span><div class="segRow" id="setQuality">
+      <button data-v="low">LOW</button><button data-v="medium">MED</button><button data-v="high">HIGH</button></div></div>
+    <div class="setRow"><span>Camera</span><div class="segRow" id="setCam">
+      <button data-v="near">NEAR</button><button data-v="std">STD</button><button data-v="far">FAR</button></div></div>
+    <div class="setRow"><span>Field of view</span><input type="range" id="setFov" min="48" max="72"></div>
+    <div class="setRow"><span>Steering assist</span><div class="segRow" id="setAssist">
+      <button data-v="off">OFF</button><button data-v="on">ON</button></div></div>
+    <div class="go" id="settingsClose">DONE &mdash; ESC</div>
   </div>
 </div>
+<div class="hud" id="tutToast"></div>
 
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
@@ -141,6 +172,33 @@ const S = { pos: [], tan: [], side: [], w: [], sMul: [], dist: [] };
     S.dist.push(acc);
   }
 }
+// smooth speed & width so foam/colour transitions never band into visible seams
+{
+  const sm = S.sMul.slice(), wm = S.w.slice();
+  for (let i = 0; i <= NSAMP; i++) {
+    let a = 0, b = 0, n = 0;
+    for (let k = -25; k <= 25; k++) { const j = Math.min(NSAMP, Math.max(0, i + k)); a += sm[j]; b += wm[j]; n++; }
+    S.sMul[i] = a / n; S.w[i] = b / n;
+  }
+}
+// downhill slope per sample: drives cascade whitewater and calms wave-chop on ramps
+S.slope = [];
+for (let i = 0; i <= NSAMP; i++) {
+  const j0 = Math.max(0, i - 4), j1 = Math.min(NSAMP, i + 4);
+  const dy = S.pos[j0].y - S.pos[j1].y, ds = Math.max(0.001, S.dist[j1] - S.dist[j0]);
+  S.slope.push(Math.max(0, dy / ds));
+}
+function sstep(a, b, x) { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+// biome journey: forest → gorge → canyon → meadow, soft-blended
+function zoneW(i) {
+  const t = i / NSAMP;
+  const s1 = sstep(0.26, 0.34, t), s2 = sstep(0.58, 0.66, t), s3 = sstep(0.78, 0.86, t);
+  return [1 - s1, s1 - s2, s2 - s3, s3];   // [forest, gorge, canyon, meadow]
+}
+function zoneMix(i, vals) {   // vals = [forest, gorge, canyon, meadow] scalars
+  const zw = zoneW(i);
+  return vals[0] * zw[0] + vals[1] * zw[1] + vals[2] * zw[2] + vals[3] * zw[3];
+}
 const COURSE_LEN = S.dist[NSAMP];
 const FINISH_T = 0.93;                    // finish banner before the runout
 const BASE_FLOW = 6.2;                    // u/s in a s:1.0 stretch
@@ -176,7 +234,7 @@ const ROCKS = [];
 function addRock(t, lat, r) {
   const i = Math.round(t * NSAMP);
   const p = S.pos[i].clone().addScaledVector(S.side[i], lat);
-  ROCKS.push({ pos: p, r, i });
+  ROCKS.push({ pos: p, r, i, lat });
 }
 // rock garden
 addRock(0.300, -2.2, 1.3); addRock(0.315, 2.6, 1.1); addRock(0.330, 0.2, 1.5);
@@ -194,7 +252,7 @@ function addLog(t, lat, len, ang) {
   const c = S.pos[i].clone().addScaledVector(S.side[i], lat);
   const dir = S.tan[i].clone().multiplyScalar(Math.cos(ang)).addScaledVector(S.side[i], Math.sin(ang));
   dir.y = 0; dir.normalize();
-  LOGS.push({ i, c, dir, len, r: 0.55,
+  LOGS.push({ i, c, dir, len, r: 0.55, latC: lat, latHalf: Math.abs(Math.sin(ang)) * len / 2 + 1.0,
     a: c.clone().addScaledVector(dir, -len / 2), b: c.clone().addScaledVector(dir, len / 2) });
 }
 addLog(0.245, 2.2, 7, -1.15);   // downstream tip points at the open left gap
@@ -209,6 +267,7 @@ const FOAM = new Float32Array(NSAMP + 1);
     for (const r of ROCKS) { const d = i - r.i; if (d > -8 && d < 20) f = Math.max(f, (r.type === 'piling' ? 0.5 : 0.8) * (1 - Math.abs(d - 6) / 14)); }
     for (const e of EDDIES) { const d = Math.abs(i - e.i); if (d < 20) f = Math.max(f, 0.35 * (1 - d / 20)); }
     for (const L of LOGS) { const d = i - L.i; if (d > -6 && d < 12) f = Math.max(f, 0.6); }
+    f = Math.max(f, sstep(0.05, 0.16, S.slope[i]));   // cascades wherever the bed ramps down
     FOAM[i] = Math.min(1, f);
   }
 }
@@ -290,6 +349,7 @@ function makeDuckState(idx) {
     y: 0, vy: 0, air: false,
     si: 0, heading: 0, bobPh: rand() * Math.PI * 2,
     drag: randRange(1.05, 1.45),           // personality: how tightly it follows the water
+    skill: randRange(0.6, 1.4),            // personality: how sharp a racer it is
     wanderPh: rand() * Math.PI * 2, wanderF: randRange(0.15, 0.5),
     progress: 0, finished: false, finishTime: 0, place: 0,
     spinV: 0,
@@ -312,9 +372,98 @@ function resetDucks() {
 }
 
 // ============================================================ SIM
-const G = { mode: 'title', time: 0, countdown: 0, finishedCount: 0, results: [], playerSplashT: 0 };
+const G = { mode: 'title', time: 0, countdown: 0, finishedCount: 0, results: [], playerSplashT: 0, camShake: 0, flyT: 0, difficulty: 'medium' };
 const input = { up: false, down: false, left: false, right: false };
 const PADDLE_ACC = 7.5, DRAG_XZ = 1.25;
+// CPU difficulty: steering skill, active paddle, hazard avoidance, aggression vs you,
+// and rubber-band (ahead = leaders eased back / behind = stragglers nudged on)
+const DIFF = {
+  easy:   { steer: 0.7, paddle: 0.3, avoid: 0.8, aggr: 0,   bandAhead: 0.30, bandBehind: 0.0 },
+  medium: { steer: 1.8, paddle: 1.0, avoid: 1.8, aggr: 0.5, bandAhead: 0.08, bandBehind: 0.06 },
+  hard:   { steer: 3.0, paddle: 2.2, avoid: 2.8, aggr: 1.4, bandAhead: 0.02, bandBehind: 0.12 },
+};
+
+// ---- persisted settings
+const SETTINGS = Object.assign(
+  { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', fov: 58, assist: false, difficulty: 'medium' },
+  JSON.parse(localStorage.getItem('spillway-settings') || '{}'));
+G.difficulty = SETTINGS.difficulty;
+function saveSettings() { localStorage.setItem('spillway-settings', JSON.stringify(SETTINGS)); }
+
+// ============================================================ AUDIO (procedural — zero assets)
+const AU = { ctx: null };
+function auInit() {
+  if (AU.ctx) return;
+  const ctx = AU.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  AU.sfx = ctx.createGain(); AU.sfx.connect(ctx.destination);
+  AU.music = ctx.createGain(); AU.music.connect(ctx.destination);
+  applyVolumes();
+  // river ambience: looping soft brown noise, volume driven by player speed
+  const len = ctx.sampleRate * 2;
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const dat = buf.getChannelData(0);
+  let lastN = 0;
+  for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; lastN = (lastN + 0.02 * w) / 1.02; dat[i] = lastN * 3.5; }
+  const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 650;
+  AU.amb = ctx.createGain(); AU.amb.gain.value = 0;
+  src.connect(lp); lp.connect(AU.amb); AU.amb.connect(AU.sfx);
+  src.start();
+  setInterval(musicTick, 380);
+}
+function applyVolumes() { if (!AU.ctx) return; AU.sfx.gain.value = SETTINGS.sfx; AU.music.gain.value = SETTINGS.music * 0.5; }
+const SCALE = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3];
+let melodyIx = 3;
+function musicTick() {
+  if (!AU.ctx || SETTINGS.music <= 0 || Math.random() < 0.35) return;
+  melodyIx = Math.max(0, Math.min(SCALE.length - 1, melodyIx + [-2, -1, -1, 0, 1, 1, 2][Math.floor(Math.random() * 7)]));
+  pluck(SCALE[melodyIx], 0.16, AU.music);
+  if (Math.random() < 0.15) pluck(SCALE[melodyIx] / 2, 0.1, AU.music, 2.0);
+}
+function pluck(freq, vol, dest, dur = 1.2) {
+  const ctx = AU.ctx; if (!ctx) return;
+  const t = ctx.currentTime;
+  const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = freq;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(dest); o.start(t); o.stop(t + dur);
+}
+function noiseBurst(dur, freq, q, vol) {
+  const ctx = AU.ctx; if (!ctx) return;
+  const len = Math.ceil(ctx.sampleRate * dur);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const dat = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) dat[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+  const g = ctx.createGain(); g.gain.value = vol;
+  src.connect(bp); bp.connect(g); g.connect(AU.sfx);
+  src.start();
+}
+const SFX = {
+  splash() { noiseBurst(0.3, 1400, 0.8, 0.4); },
+  thud(mag) {
+    if (!AU.ctx) return;
+    noiseBurst(0.12, 200, 1.2, Math.min(0.9, 0.25 + mag * 0.08));
+    const ctx = AU.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.15);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    o.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + 0.2);
+  },
+  quack() {
+    if (!AU.ctx) return;
+    const ctx = AU.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(480, t); o.frequency.exponentialRampToValueAtTime(190, t + 0.12);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 2.5;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    o.connect(bp); bp.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + 0.18);
+  },
+  beep(hi) { pluck(hi ? 880 : 620, 0.25, AU.sfx, 0.35); },
+  fanfare() { [392, 523, 659, 784].forEach((f, ix) => setTimeout(() => pluck(f, 0.3, AU.sfx, 0.9), ix * 120)); },
+};
 
 const hash = new Map();
 function hashKey(x, z) { return ((x + 512) << 11) | (z + 512); }
@@ -323,7 +472,10 @@ function step(dt) {
   G.time += dt;
   if (G.mode === 'countdown') {
     G.countdown -= dt;
-    if (G.countdown <= 0) { G.mode = 'race'; G.raceT = 0; toast('GO!', 900); }
+    if (G.countdown <= 0) {
+      G.mode = 'race'; G.raceT = 0; toast('GO!', 900);
+      SFX.beep(true); SFX.quack(); setTimeout(() => SFX.quack(), 160);
+    }
   }
   if (G.mode === 'race') G.raceT += dt;
   const racing = G.mode === 'race';
@@ -363,11 +515,61 @@ function step(dt) {
       if (!d.air && d._wakeT <= 0 && Math.hypot(d.v.x, d.v.z) > 10) {
         d._wakeT = 0.1; splash({ x: d.p.x, y: d.y, z: d.p.z }, 2);
       }
-    } else if (!d.finished) {
+      // steering assist: a gentle hand off the banks
+      if (SETTINGS.assist) {
+        const sideA = S.side[si];
+        const latA = (d.p.x - S.pos[si].x) * sideA.x + (d.p.z - S.pos[si].z) * sideA.z;
+        if (Math.abs(latA) > w - 1.8) {
+          const sgnA = Math.sign(latA);
+          d.v.x -= sideA.x * sgnA * 2.5 * dt; d.v.z -= sideA.z * sgnA * 2.5 * dt;
+        }
+      }
+    } else if (!d.finished && racing) {
+      // -------- CPU racer --------
+      const D = DIFF[G.difficulty], side = S.side[si], fwd = S.tan[si];
+      const lat = (d.p.x - S.pos[si].x) * side.x + (d.p.z - S.pos[si].z) * side.z;
+      // seek the fast middle lane
+      let steer = (-lat / Math.max(1, w)) * D.steer * d.skill;
+      // avoid rocks/pilings ahead
+      for (const r of ROCKS) {
+        const ahead = r.i - si;
+        if (ahead > 0 && ahead < 50) {
+          const dl = r.lat - lat;
+          if (Math.abs(dl) < r.r + 1.3) steer += (dl > 0 ? -1 : 1) * D.avoid * d.skill * (1 - ahead / 50);
+        }
+      }
+      // aim for the open gap around logs
+      for (const L of LOGS) {
+        const ahead = L.i - si;
+        if (ahead > 0 && ahead < 60 && Math.abs(L.latC - lat) < L.latHalf + 0.8) {
+          const roomL = (L.latC - L.latHalf) - (-w), roomR = w - (L.latC + L.latHalf);
+          steer += (roomR > roomL ? 1 : -1) * D.avoid * d.skill * (1 - ahead / 60);
+        }
+      }
+      // steer wide of eddies and reeds
+      for (const e of EDDIES) {
+        const ahead = e.i - si;
+        if (ahead > -10 && ahead < 60 && Math.abs(e.lat - lat) < e.r + 1) {
+          steer += (e.lat > lat ? -1 : 1) * D.avoid * d.skill * 0.8 * (1 - Math.abs(ahead) / 60);
+        }
+      }
+      d.v.x += side.x * steer * dt; d.v.z += side.z * steer * dt;
+      // active downstream paddling
+      d.v.x += fwd.x * D.paddle * d.skill * dt; d.v.z += fwd.z * D.paddle * d.skill * dt;
+      // a little organic wobble
       d.wanderPh += dt * d.wanderF * 2;
-      const side = S.side[si];
-      const wob = Math.sin(d.wanderPh) * 0.55;
+      const wob = Math.sin(d.wanderPh) * 0.4;
       d.v.x += side.x * wob * dt; d.v.z += side.z * wob * dt;
+      // dirty racing: shoulder into the player
+      if (D.aggr > 0 && !ducks[0].finished && d.skill > 1.0) {
+        const px = ducks[0].p.x - d.p.x, pz = ducks[0].p.z - d.p.z;
+        const pd = Math.hypot(px, pz);
+        if (pd < 4 && pd > 0.01) { d.v.x += (px / pd) * D.aggr * dt * 2; d.v.z += (pz / pd) * D.aggr * dt * 2; }
+      }
+      // rubber-band: keep the show close
+      const lead = d.progress - ducks[0].progress;
+      if (lead > 15) { const k = 1 - D.bandAhead * dt; d.v.x *= k; d.v.z *= k; }
+      else if (lead < -25) { d.v.x += fwd.x * D.bandBehind * 4 * dt; d.v.z += fwd.z * D.bandBehind * 4 * dt; }
     }
 
     // ---- water drag pulls duck velocity toward water velocity
@@ -390,10 +592,23 @@ function step(dt) {
         const dx = o.p.x - d.p.x, dz = o.p.z - d.p.z;
         const dist = Math.hypot(dx, dz), min = DUCK_R * 2 * 0.92;
         if (dist < min && dist > 0.001) {
-          const push = (min - dist) * 6 * dt, nx = dx / dist, nz = dz / dist;
-          d.v.x -= nx * push * 4; d.v.z -= nz * push * 4;
-          o.v.x += nx * push * 4; o.v.z += nz * push * 4;
-          d.spinV += (rand() - 0.5) * 2 * push * 20;
+          const nx = dx / dist, nz = dz / dist;
+          // positional separation
+          const push = (min - dist) * 6 * dt;
+          d.v.x -= nx * push * 3; d.v.z -= nz * push * 3;
+          o.v.x += nx * push * 3; o.v.z += nz * push * 3;
+          // elastic impulse — bumper-boat chaos
+          const vn = (o.v.x - d.v.x) * nx + (o.v.z - d.v.z) * nz;
+          if (vn < -0.5) {
+            const J = Math.min(6, -vn * 0.85);
+            d.v.x -= nx * J; d.v.z -= nz * J;
+            o.v.x += nx * J; o.v.z += nz * J;
+            d.spinV += (rand() - 0.5) * J * 7; o.spinV += (rand() - 0.5) * J * 7;
+            if (J > 1.6) splash({ x: (d.p.x + o.p.x) / 2, y: d.y, z: (d.p.z + o.p.z) / 2 }, Math.min(10, Math.round(J * 2)));
+            if (J > 2.2 && (d.idx === 0 || o.idx === 0)) { G.camShake = Math.min(0.5, J * 0.09); SFX.thud(J); }
+            else if (J > 2.5 && rand() < 0.25) SFX.quack();
+          }
+          d.spinV += (rand() - 0.5) * 2 * push * 12;
         }
       }
     }
@@ -407,7 +622,11 @@ function step(dt) {
         const nx = dx / dist, nz = dz / dist;
         d.p.x = r.pos.x + nx * min; d.p.z = r.pos.z + nz * min;
         const vn = d.v.x * nx + d.v.z * nz;
-        if (vn < 0) { d.v.x -= nx * vn * 1.5; d.v.z -= nz * vn * 1.5; d.spinV += vn * 8 * (rand() - .5); }
+        if (vn < 0) {
+          d.v.x -= nx * vn * 2.2; d.v.z -= nz * vn * 2.2;
+          d.spinV += vn * 14 * (rand() - .5);
+          if (vn < -3) { splash({ x: d.p.x, y: d.y, z: d.p.z }, 8); if (d.idx === 0) { G.camShake = 0.35; SFX.thud(-vn); } }
+        }
       }
     }
 
@@ -423,7 +642,11 @@ function step(dt) {
         const nx = dx / dist, nz = dz / dist;
         d.p.x = cx + nx * min; d.p.z = cz + nz * min;
         const vn = d.v.x * nx + d.v.z * nz;
-        if (vn < 0) { d.v.x -= nx * vn * 1.4; d.v.z -= nz * vn * 1.4; d.spinV += (rand() - .5) * 6; }
+        if (vn < 0) {
+          d.v.x -= nx * vn * 2.0; d.v.z -= nz * vn * 2.0;
+          d.spinV += (rand() - .5) * 12;
+          if (vn < -3) { splash({ x: d.p.x, y: d.y, z: d.p.z }, 8); if (d.idx === 0) { G.camShake = 0.3; SFX.thud(-vn); } }
+        }
       }
     }
 
@@ -441,7 +664,9 @@ function step(dt) {
       }
     }
 
-    // ---- integrate
+    // ---- integrate (with a hard sanity cap so chaos never becomes teleporting)
+    const vMag = Math.hypot(d.v.x, d.v.z);
+    if (vMag > 26) { d.v.x *= 26 / vMag; d.v.z *= 26 / vMag; }
     d.p.x += d.v.x * dt; d.p.z += d.v.z * dt;
 
     // ---- vertical: ride the surface; go ballistic over the falls
@@ -453,7 +678,7 @@ function step(dt) {
         d.air = false; d.y = wh;
         d.v.x *= 0.5; d.v.z *= 0.5; d.vy = 0;
         d.spinV += (rand() - 0.5) * 10;
-        if (d.idx === 0) { G.playerSplashT = 0.4; }
+        if (d.idx === 0) { G.playerSplashT = 0.4; SFX.splash(); }
         splash(d.p, 14);
       }
     } else {
@@ -545,9 +770,11 @@ scene.add(sun);
 // ---------- water ribbon
 let waterMat;
 {
-  const pos = [], uv = [], spd = [], foamA = [], idx = [];
+  const pos = [], uv = [], spd = [], foamA = [], slopeA = [], deepA = [], shalA = [], idx = [];
+  const DEEPS = [[0.06,0.29,0.40],[0.04,0.23,0.34],[0.10,0.30,0.33],[0.10,0.32,0.35]];   // per biome
+  const SHALS = [[0.26,0.60,0.60],[0.20,0.50,0.56],[0.36,0.60,0.50],[0.35,0.62,0.53]];
   for (let i = 0; i <= NSAMP; i++) {
-    const w = S.w[i] + 0.4;
+    const w = S.w[i] + 0.7;   // tuck the sheet under the banks — no exposed hard edge
     const a = S.pos[i].clone().addScaledVector(S.side[i], -w);
     const b = S.pos[i].clone().addScaledVector(S.side[i], w);
     const y = waterHeightAt(i) - 0.06;
@@ -555,6 +782,13 @@ let waterMat;
     uv.push(0, S.dist[i] * 0.14, 1, S.dist[i] * 0.14);
     spd.push(S.sMul[i], S.sMul[i]);
     foamA.push(FOAM[i], FOAM[i]);
+    slopeA.push(S.slope[i], S.slope[i]);
+    const zw = zoneW(i);
+    for (let ch = 0; ch < 3; ch++) {
+      deepA.push(DEEPS[0][ch]*zw[0] + DEEPS[1][ch]*zw[1] + DEEPS[2][ch]*zw[2] + DEEPS[3][ch]*zw[3]);
+      shalA.push(SHALS[0][ch]*zw[0] + SHALS[1][ch]*zw[1] + SHALS[2][ch]*zw[2] + SHALS[3][ch]*zw[3]);
+    }
+    deepA.push(...deepA.slice(-3)); shalA.push(...shalA.slice(-3));   // second vertex of the pair
     if (i < NSAMP) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
   }
   const g = new THREE.BufferGeometry();
@@ -562,54 +796,62 @@ let waterMat;
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setAttribute('aSpd', new THREE.Float32BufferAttribute(spd, 1));
   g.setAttribute('aFoam', new THREE.Float32BufferAttribute(foamA, 1));
+  g.setAttribute('aSlope', new THREE.Float32BufferAttribute(slopeA, 1));
+  g.setAttribute('aDeep', new THREE.Float32BufferAttribute(deepA, 3));
+  g.setAttribute('aShal', new THREE.Float32BufferAttribute(shalA, 3));
   g.setIndex(idx);
   waterMat = new THREE.ShaderMaterial({
     transparent: true,
-    uniforms: { uT: { value: 0 } },
+    uniforms: { uT: { value: 0 }, uFog: { value: new THREE.Color(0xa8d8e0) } },
     vertexShader: `
-      attribute float aSpd; attribute float aFoam;
+      attribute float aSpd; attribute float aFoam; attribute float aSlope;
+      attribute vec3 aDeep; attribute vec3 aShal;
       uniform float uT;
-      varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog;
-      void main(){ vUv = uv; vSpd = aSpd; vFoam = aFoam;
+      varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog; varying float vSlope;
+      varying vec3 vDeep; varying vec3 vShal;
+      void main(){ vUv = uv; vSpd = aSpd; vFoam = aFoam; vSlope = aSlope; vDeep = aDeep; vShal = aShal;
         vec3 p = position;
-        // chop: traveling waves, bigger in fast water
+        // chop: traveling waves, bigger in fast water, calmed on steep ramps (no zigzag shear)
         float dist = uv.y / 0.14;
-        float amp = 0.035 + 0.15 * smoothstep(1.1, 2.6, aSpd);
+        float amp = (0.035 + 0.15 * smoothstep(1.1, 2.6, aSpd)) * (1. - smoothstep(0.05, 0.25, aSlope));
         p.y += sin(dist * 0.9 - uT * (2.0 + aSpd)) * amp
              + sin(dist * 2.7 - uT * (3.5 + aSpd * 2.0) + uv.x * 9.0) * amp * 0.5;
         vec4 mv = modelViewMatrix * vec4(p, 1.);
         vFog = smoothstep(60., 220., -mv.z);
         gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `
-      uniform float uT; varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog;
+      uniform float uT; uniform vec3 uFog;
+      varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog; varying float vSlope;
+      varying vec3 vDeep; varying vec3 vShal;
       float n21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.55); }
       float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
         return mix(mix(n21(i),n21(i+vec2(1,0)),f.x), mix(n21(i+vec2(0,1)),n21(i+vec2(1,1)),f.x), f.y); }
       void main(){
-        float flow = vUv.y - uT * (0.55 + vSpd * 0.75);
-        // depth gradient: dark centre channel, teal shallows at the edges
+        // centre of the channel scrolls faster than the banks — bends stop looking like sliding
         float depth = 1. - abs(vUv.x * 2. - 1.);
-        vec3 deep = vec3(0.06, 0.29, 0.40);
-        vec3 shal = vec3(0.26, 0.60, 0.60);
-        vec3 c = mix(shal, deep, depth * 0.85);
+        float flow = vUv.y - uT * (0.55 + vSpd * 0.75) * (0.55 + 0.6 * depth);
+        vec3 c = mix(vShal, vDeep, depth * 0.85);
         // long current streaks drawn along the flow
         float st = smoothstep(0.60, 0.95, noise(vec2(vUv.x * 22., flow * 3.0)));
-        c += vec3(0.09, 0.13, 0.12) * st;
-        // fine ripple shimmer
-        c += vec3(0.05) * noise(vec2(vUv.x * 42. + flow * 8., flow * 30.));
+        c += vec3(0.09, 0.13, 0.12) * st * (0.35 + 0.65 * smoothstep(0.8, 1.9, vSpd));
+        // fine ripple shimmer (fades with distance so it never fizzes)
+        float detail = 1. - vFog * 0.95;
+        c += vec3(0.045) * noise(vec2(vUv.x * 22. + flow * 6., flow * 13.)) * detail;
         // sun sparkle
-        float sp = pow(noise(vec2(vUv.x * 90., flow * 70. + vUv.x * 13.)), 7.) * (0.15 + 1.1 * smoothstep(1.0, 2.3, vSpd));
-        c += vec3(1.0, 0.98, 0.9) * sp;
-        // whitewater: rapids by speed + baked foam at rocks/logs/falls
-        float f2 = noise(vec2(vUv.x * 16. + 40., flow * 26.));
-        float f3 = noise(vec2(vUv.x * 33. + 90., flow * 52.));
-        float foamAmt = clamp(smoothstep(1.25, 2.4, vSpd) * 0.9 + vFoam, 0., 1.2);
+        float sp = pow(noise(vec2(vUv.x * 38., flow * 26. + vUv.x * 9.)), 9.) * (0.2 + 1.0 * smoothstep(1.0, 2.3, vSpd));
+        c += vec3(1.0, 0.98, 0.9) * sp * detail;
+        // whitewater: rapids by speed + baked foam (rocks/logs/falls/cascades)
+        float f2 = noise(vec2(vUv.x * 13. + 40., flow * 18.));
+        float f3 = noise(vec2(vUv.x * 21. + 90., flow * 30.));
+        float foamAmt = clamp(smoothstep(1.25, 2.4, vSpd) * 0.9 + vFoam + smoothstep(0.06, 0.22, vSlope), 0., 1.3);
         float foam = smoothstep(0.72 - 0.3 * foamAmt, 0.88, f2 * 0.6 + f3 * 0.5) * clamp(foamAmt, 0., 1.);
-        // thin lace along the waterline
-        float edge = smoothstep(0.10, 0.015, min(vUv.x, 1. - vUv.x)) * smoothstep(0.45, 0.8, f3);
-        c = mix(c, vec3(0.95, 0.98, 0.97), clamp(foam + edge, 0., 1.));
-        c = mix(c, vec3(0.66, 0.85, 0.88), vFog);
-        gl_FragColor = vec4(c, 0.95); }`,
+        // shore: soften into the sand — fade alpha + breathing lace at the waterline
+        float shore = min(vUv.x, 1. - vUv.x);
+        float lace = smoothstep(0.09, 0.012, shore) * smoothstep(0.35, 0.75, noise(vec2(vUv.x * 30., flow * 40. + sin(uT * 1.3) * 0.6)));
+        c = mix(c, vec3(0.95, 0.98, 0.97), clamp(foam + lace, 0., 1.));
+        c = mix(c, uFog, vFog);
+        float alpha = mix(0.45, 0.95, smoothstep(0.0, 0.09, shore));
+        gl_FragColor = vec4(c, alpha); }`,
   });
   scene.add(new THREE.Mesh(g, waterMat));
 }
@@ -637,10 +879,16 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
         const h = k === 0 ? -0.15 : bankH(i, ob, sgn);
         pos.push(p.x, y0 + h, p.z);
         const patch = vnoise(i * 0.045 + sgn * 31, ob * 0.4);
-        if (ob < 0.8) cTmp.set(0xcdb98a);                                     // wet sand lip
-        else if (ob < 2) cTmp.set(0xb9a878).lerp(new THREE.Color(0x7aa85e), patch);
-        else if (nearFalls && ob > 6) cTmp.set(0x8d9298).offsetHSL(0, 0, (patch - .5) * .1);  // rock walls at the gorge
-        else cTmp.setHSL(0.26 + patch * 0.05, 0.42, 0.30 + patch * 0.14 - Math.min(1, ob / 26) * 0.06);
+        const zw = zoneW(i);
+        // per-biome ground hue/sat/light: forest, gorge, canyon, meadow
+        const gh = 0.28*zw[0] + 0.30*zw[1] + 0.045*zw[2] + 0.145*zw[3];
+        const gs = 0.42*zw[0] + 0.14*zw[1] + 0.48*zw[2] + 0.52*zw[3];
+        const gl = 0.32*zw[0] + 0.38*zw[1] + 0.38*zw[2] + 0.44*zw[3];
+        if (ob < 0.8) cTmp.setHSL(0.10 - zw[2] * 0.035, 0.32 + zw[2] * 0.15, 0.62);          // sand lip, redder in canyon
+        else if (ob < 2) cTmp.setHSL(gh, gs * 0.7, gl + 0.14).lerp(new THREE.Color(0xb9a878), 0.35 * (1 - patch));
+        else if ((nearFalls || zw[1] > 0.5) && ob > 6) cTmp.set(0x8d9298).offsetHSL(0, 0, (patch - .5) * .12);  // gorge rock walls
+        else if (zw[2] > 0.5 && ob > 8) cTmp.setHSL(0.035, 0.5, 0.34 + (patch - .5) * 0.12); // canyon mesa bands
+        else cTmp.setHSL(gh + patch * 0.045, gs, gl - 0.02 + patch * 0.14 - Math.min(1, ob / 26) * 0.06);
         col.push(cTmp.r, cTmp.g, cTmp.b);
         vi++;
       }
@@ -687,20 +935,63 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     return p;
   };
 
-  // trees — alternate banks so BOTH sides read
-  const nT = 220;
+  // pines — forest & gorge only, alternating banks
+  const nT = 190;
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.22, 0.32, 1.6, 5),
     new THREE.MeshLambertMaterial({ color: 0x6b4a2f }), nT);
   const crowns = new THREE.InstancedMesh(new THREE.ConeGeometry(1.5, 3.6, 6),
     new THREE.MeshLambertMaterial({ color: 0x3f7a3c }), nT);
   for (let k = 0; k < nT; k++) {
-    const i = Math.floor(rand() * NSAMP);
+    const i = k < 140 ? Math.floor(rand() * 0.34 * NSAMP)                       // forest: dense
+                      : Math.floor((0.34 + rand() * 0.28) * NSAMP);             // gorge: sparse, darker
     const sgn = (k % 2) * 2 - 1;
     const ob = randRange(3.5, 15);
     const y = groundAt(i, ob, sgn), s = randRange(0.8, 1.7);
     const p = place(trunks, k, i, ob, sgn, y + 0.8 * s, s);
     m.compose(_tmpA.set(p.x, y + 3.0 * s, p.z), q, sc.set(s, s, s)); crowns.setMatrixAt(k, m);
-    crowns.setColorAt(k, cCol.setHSL(0.30 + rand() * 0.08, 0.45, 0.26 + rand() * 0.14));
+    crowns.setColorAt(k, k < 140 ? cCol.setHSL(0.30 + rand() * 0.08, 0.45, 0.26 + rand() * 0.14)
+                                 : cCol.setHSL(0.34 + rand() * 0.05, 0.30, 0.18 + rand() * 0.08));
+  }
+  // meadow trees — round golden-green crowns near the finish
+  const nMT = 45;
+  const mTrunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.24, 0.34, 2.0, 5),
+    new THREE.MeshLambertMaterial({ color: 0x7a5a38 }), nMT);
+  const mCrowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1.7, 0),
+    new THREE.MeshLambertMaterial({ color: 0xffffff }), nMT);
+  for (let k = 0; k < nMT; k++) {
+    const i = Math.floor((0.78 + rand() * 0.21) * NSAMP);
+    const sgn = (k % 2) * 2 - 1, ob = randRange(3, 14);
+    const y = groundAt(i, ob, sgn), s = randRange(0.8, 1.5);
+    const p = place(mTrunks, k, i, ob, sgn, y + 1.0 * s, s);
+    m.compose(_tmpA.set(p.x, y + 2.8 * s, p.z), q, sc.set(s, s, s)); mCrowns.setMatrixAt(k, m);
+    mCrowns.setColorAt(k, cCol.setHSL(0.16 + rand() * 0.06, 0.5, 0.36 + rand() * 0.12));
+  }
+  // canyon cacti + red slab rocks
+  const nC = 30;
+  const cacti = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.35, 1.6, 3, 6),
+    new THREE.MeshLambertMaterial({ color: 0x4e7a45 }), nC);
+  for (let k = 0; k < nC; k++) {
+    const i = Math.floor((0.60 + rand() * 0.22) * NSAMP);
+    const sgn = (k % 2) * 2 - 1, ob = randRange(2, 12);
+    place(cacti, k, i, ob, sgn, groundAt(i, ob, sgn) + 1.0, randRange(0.7, 1.4));
+  }
+  const nSl = 34;
+  const slabs = new THREE.InstancedMesh(new THREE.BoxGeometry(1.6, 1.0, 1.1),
+    new THREE.MeshLambertMaterial({ color: 0xa8593c }), nSl);
+  for (let k = 0; k < nSl; k++) {
+    const i = Math.floor((0.58 + rand() * 0.26) * NSAMP);
+    const sgn = (k % 2) * 2 - 1, ob = randRange(2, 13);
+    place(slabs, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.4, randRange(0.6, 1.8), rand() * 6);
+    slabs.setColorAt(k, cCol.setHSL(0.03 + rand() * 0.03, 0.45, 0.32 + rand() * 0.1));
+  }
+  // gorge spires — jagged gray teeth around the falls
+  const nSp = 26;
+  const spires = new THREE.InstancedMesh(new THREE.ConeGeometry(0.9, 3.4, 5),
+    new THREE.MeshLambertMaterial({ color: 0x81868c }), nSp);
+  for (let k = 0; k < nSp; k++) {
+    const i = Math.floor((0.36 + rand() * 0.26) * NSAMP);
+    const sgn = (k % 2) * 2 - 1, ob = randRange(1.6, 10);
+    place(spires, k, i, ob, sgn, groundAt(i, ob, sgn) + 1.2, randRange(0.6, 1.6), rand() * 6);
   }
   // bushes
   const nB = 150;
@@ -711,13 +1002,15 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     place(bushes, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.3, randRange(0.5, 1.3), rand() * 6);
     bushes.setColorAt(k, cCol.setHSL(0.24 + rand() * 0.1, 0.5, 0.3 + rand() * 0.12));
   }
-  // flowers
-  const nF = 240;
+  // flowers — thick in the meadow finale, scattered through the forest
+  const nF = 260;
   const flowers = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 5, 4),
     new THREE.MeshLambertMaterial({ color: 0xffffff }), nF);
   const petals = [0xfff8e7, 0xffd23f, 0xff6b6b, 0xc084fc, 0xff9ff3];
   for (let k = 0; k < nF; k++) {
-    const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.2, 9);
+    const i = k < 170 ? Math.floor((0.76 + rand() * 0.23) * NSAMP)
+                      : Math.floor(rand() * 0.32 * NSAMP);
+    const sgn = (k % 2) * 2 - 1, ob = randRange(1.2, 9);
     place(flowers, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.15, randRange(0.7, 1.3));
     flowers.setColorAt(k, cCol.set(petals[Math.floor(rand() * petals.length)]));
   }
@@ -748,17 +1041,23 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     m.compose(_tmpA, q, sc.set(s, s, s));
     reedsIM.setMatrixAt(k, m);
   }
-  // distant mountains
-  const nM = 26;
+  // distant mountains — tinted by the biome they stand in
+  const nM = 30;
   const mountains = new THREE.InstancedMesh(new THREE.ConeGeometry(14, 20, 7),
-    new THREE.MeshLambertMaterial({ color: 0x6f8a80 }), nM);
+    new THREE.MeshLambertMaterial({ color: 0xffffff }), nM);
   for (let k = 0; k < nM; k++) {
     const i = Math.floor((k / nM) * NSAMP), sgn = (k % 2) * 2 - 1;
     const ob = randRange(30, 48), s = randRange(0.7, 1.6);
     place(mountains, k, i, ob, sgn, waterHeightAt(i) + 4 + s * 6, s, rand() * 6);
-    mountains.setColorAt(k, cCol.setHSL(0.36 + rand() * 0.06, 0.18, 0.42 + rand() * 0.1));
+    const zw = zoneW(i);
+    mountains.setColorAt(k, cCol.setHSL(
+      0.38*zw[0] + 0.40*zw[1] + 0.04*zw[2] + 0.20*zw[3],
+      0.18*zw[0] + 0.10*zw[1] + 0.40*zw[2] + 0.25*zw[3],
+      0.44 + rand() * 0.08));
   }
-  scene.add(trunks, crowns, bushes, flowers, boulders, reedsIM, mountains);
+  window.SCATTER = [trunks, crowns, mTrunks, mCrowns, cacti, slabs, spires, bushes, flowers, boulders, reedsIM];
+  SCATTER.forEach(im => { im._full = im.count; });
+  scene.add(...SCATTER, mountains);
 }
 
 // ---------- rocks, pilings + bridge, logs, whirlpool
@@ -969,14 +1268,16 @@ function updateSplashes(dt) {
 
 // ============================================================ CAMERA
 const camState = { pos: new THREE.Vector3(0, 70, 20), look: new THREE.Vector3() };
+const CAMS = { near: [7, 4.2], std: [9, 5.2], far: [12, 6.6] };
 function updateCamera(dt) {
   const d = ducks[0];
+  const [camBack, camH] = CAMS[SETTINGS.camDist] || CAMS.std;
   // once you've finished, hold the camera at the finish line instead of drifting into the runout
   const si = Math.min(d.si, Math.round(FINISH_T * NSAMP) + 30);
   const anchor = d.si > si ? S.pos[si] : d.p;
-  const back = S.tan[si].clone().multiplyScalar(-9);
+  const back = S.tan[si].clone().multiplyScalar(-camBack);
   const target = _tmpA.set(anchor.x, 0, anchor.z).add(back);
-  target.y = d.y + 5.2;
+  target.y = d.y + camH;
   // over the falls, pull the camera up and back so you see the drop
   const t01 = si / NSAMP;
   if (t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4; target.add(S.tan[si].clone().multiplyScalar(-4)); }
@@ -986,12 +1287,24 @@ function updateCamera(dt) {
   camState.look.lerp(lookT, 1 - Math.pow(0.0002, dt));
   camera.position.copy(camState.pos);
   camera.lookAt(camState.look);
-  // splash shake
+  // splash + collision shake
   if (G.playerSplashT > 0) {
     G.playerSplashT -= dt;
     camera.position.x += (rand() - 0.5) * 0.3;
     camera.position.y += (rand() - 0.5) * 0.3;
   }
+  if (G.camShake > 0) {
+    G.camShake -= dt;
+    camera.position.x += (rand() - 0.5) * G.camShake * 1.6;
+    camera.position.y += (rand() - 0.5) * G.camShake * 1.6;
+  }
+}
+function snapCam() {
+  const pd = ducks[0];
+  camState.pos.copy(pd.p).addScaledVector(S.tan[pd.si], -9);
+  camState.pos.y = waterHeightAt(pd.si) + 5.2;
+  camState.look.copy(pd.p).addScaledVector(S.tan[pd.si], 6);
+  camState.look.y = waterHeightAt(pd.si) + 1.2;
 }
 
 // ============================================================ RENDER SYNC
@@ -1076,6 +1389,7 @@ function drawMap() {
 function onPlayerFinish() {
   const d = ducks[0];
   toast(`P${d.place}!`, 1600);
+  SFX.fanfare();
   setTimeout(showResults, 1800);
 }
 function showResults() {
@@ -1096,30 +1410,74 @@ function showResults() {
 }
 
 // ============================================================ GAME FLOW
-function startRace() {
+function startRace() {   // kept as the headless-hook entry: straight to countdown
+  prepRace(true);
+}
+function prepRace(skipFly) {
   seed = (Math.floor(performance.now()) % 100000) + 7;
-  G.mode = 'countdown'; G.countdown = 3.2; G.raceT = 0;
-  G.finishedCount = 0; G.results = [];
+  G.raceT = 0; G.finishedCount = 0; G.results = []; G.tutStep = 0;
   resetDucks();
-  // snap camera straight to the chase position so we never lerp through scenery
-  const pd = ducks[0];
-  camState.pos.copy(pd.p).addScaledVector(S.tan[pd.si], -9);
-  camState.pos.y = waterHeightAt(pd.si) + 5.2;
-  camState.look.copy(pd.p).addScaledVector(S.tan[pd.si], 6);
-  camState.look.y = waterHeightAt(pd.si) + 1.2;
+  snapCam();
+  if (skipFly || G.seenFly) { G.mode = 'countdown'; G.countdown = 3.2; }
+  else { G.mode = 'flyover'; G.flyT = 0; G.seenFly = true; eventToast('THE COURSE — SPACE to skip'); }
   el('screen').classList.add('hidden');
+  el('settingsPanel').classList.add('hidden');
+  el('results').style.display = 'none';
   el('hudTop').style.display = 'flex';
   el('minimap').style.display = 'block';
 }
+function toTitle() {
+  G.mode = 'title';
+  resetDucks();
+  el('results').style.display = 'none';
+  el('settingsPanel').classList.add('hidden');
+  el('title').classList.remove('hidden');
+  el('screen').classList.remove('hidden');
+  el('hudTop').style.display = 'none';
+  el('minimap').style.display = 'none';
+}
+function openSettings() {
+  el('title').classList.add('hidden');
+  el('results').style.display = 'none';
+  el('settingsPanel').classList.remove('hidden');
+  el('screen').classList.remove('hidden');
+}
+function closeSettings() {
+  el('settingsPanel').classList.add('hidden');
+  if (G.mode === 'title') { el('title').classList.remove('hidden'); }
+  else if (ducks[0].finished) { el('results').style.display = 'block'; }
+  else el('screen').classList.add('hidden');
+}
+function setDiff(dv) {
+  G.difficulty = dv; SETTINGS.difficulty = dv; saveSettings();
+  document.querySelectorAll('#diffRow button').forEach(b => b.classList.toggle('sel', b.dataset.d === dv));
+}
+function tutToast(msg) {
+  const t = el('tutToast'); t.textContent = msg; t.style.opacity = 1;
+  clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 5200);
+}
+G.tutOn = !localStorage.getItem('spillway-tut');
+
 addEventListener('keydown', e => {
+  auInit();
   const k = e.key.toLowerCase();
   if (k === 'w' || k === 'arrowup') input.up = true;
   if (k === 's' || k === 'arrowdown') input.down = true;
   if (k === 'a' || k === 'arrowleft') input.left = true;
   if (k === 'd' || k === 'arrowright') input.right = true;
-  if (k === ' ' && G.mode === 'title') { e.preventDefault(); startRace(); }
-  if (k === 'r' && (G.mode === 'race' || G.mode === 'countdown')) startRace();
-  if (k === 'r' && el('results').style.display === 'block') { el('results').style.display = 'none'; startRace(); }
+  const settingsOpen = !el('settingsPanel').classList.contains('hidden');
+  if (k === ' ') {
+    e.preventDefault();
+    if (G.mode === 'title' && !settingsOpen) prepRace();
+    else if (G.mode === 'flyover') { G.mode = 'countdown'; G.countdown = 3.2; snapCam(); }
+  }
+  if (k === 'r' && G.mode !== 'title') prepRace();
+  if (k === '1' || k === '2' || k === '3') setDiff(['easy', 'medium', 'hard'][+k - 1]);
+  if (k === 'escape') {
+    if (settingsOpen) closeSettings();
+    else if (el('results').style.display === 'block') toTitle();
+    else openSettings();
+  }
 });
 addEventListener('keyup', e => {
   const k = e.key.toLowerCase();
@@ -1128,6 +1486,44 @@ addEventListener('keyup', e => {
   if (k === 'a' || k === 'arrowleft') input.left = false;
   if (k === 'd' || k === 'arrowright') input.right = false;
 });
+addEventListener('pointerdown', auInit, { once: false });
+
+// ---- menu & settings wiring
+el('raceBtn').addEventListener('click', () => prepRace());
+el('againBtn').addEventListener('click', () => prepRace());
+el('settingsBtn').addEventListener('click', openSettings);
+el('settingsClose').addEventListener('click', closeSettings);
+document.querySelectorAll('#diffRow button').forEach(b => b.addEventListener('click', () => setDiff(b.dataset.d)));
+function segWire(id, key, after) {
+  document.querySelectorAll('#' + id + ' button').forEach(b => b.addEventListener('click', () => {
+    SETTINGS[key] = b.dataset.v; saveSettings(); refreshSettingsUI(); if (after) after();
+  }));
+}
+segWire('setQuality', 'quality', () => applyQuality());
+segWire('setCam', 'camDist');
+document.querySelectorAll('#setAssist button').forEach(b => b.addEventListener('click', () => {
+  SETTINGS.assist = b.dataset.v === 'on'; saveSettings(); refreshSettingsUI();
+}));
+el('setMusic').addEventListener('input', e2 => { SETTINGS.music = +e2.target.value / 100; saveSettings(); applyVolumes(); });
+el('setSfx').addEventListener('input', e2 => { SETTINGS.sfx = +e2.target.value / 100; saveSettings(); applyVolumes(); SFX.quack(); });
+el('setFov').addEventListener('input', e2 => { SETTINGS.fov = +e2.target.value; saveSettings(); applyQuality(); });
+function refreshSettingsUI() {
+  el('setMusic').value = SETTINGS.music * 100;
+  el('setSfx').value = SETTINGS.sfx * 100;
+  el('setFov').value = SETTINGS.fov;
+  document.querySelectorAll('#setQuality button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.quality));
+  document.querySelectorAll('#setCam button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.camDist));
+  document.querySelectorAll('#setAssist button').forEach(b => b.classList.toggle('sel', (b.dataset.v === 'on') === SETTINGS.assist));
+}
+function applyQuality() {
+  const qmap = { low: [1, 0.4], medium: [1.5, 0.75], high: [Math.min(devicePixelRatio, 2), 1] };
+  const [pr, frac] = qmap[SETTINGS.quality] || qmap.high;
+  renderer.setPixelRatio(pr);
+  if (window.SCATTER) SCATTER.forEach(im => { im.count = Math.max(1, Math.floor(im._full * frac)); });
+  camera.fov = SETTINGS.fov; camera.updateProjectionMatrix();
+  resize();
+}
+refreshSettingsUI(); setDiff(SETTINGS.difficulty); applyQuality();
 
 // ============================================================ MAIN LOOP
 function resize() {
@@ -1157,6 +1553,19 @@ function frame(now) {
     const c0 = S.pos[25];
     camera.position.set(c0.x + Math.sin(sway) * 15, c0.y + 7.5, c0.z + Math.cos(sway) * 15);
     camera.lookAt(S.pos[70].x, S.pos[70].y + 1, S.pos[70].z);
+  } else if (G.mode === 'flyover') {
+    // intro: fly the whole course upstream, finish → gates
+    G.flyT += dt / 7.5;
+    const ft = Math.min(1, G.flyT);
+    const e2 = ft < 0.5 ? 2 * ft * ft : 1 - Math.pow(-2 * ft + 2, 2) / 2;
+    const fi = Math.max(0, Math.min(NSAMP, Math.round((0.93 - 0.90 * e2) * NSAMP)));
+    camera.position.set(
+      S.pos[fi].x + S.side[fi].x * Math.sin(now / 900) * 3,
+      waterHeightAt(fi) + 11,
+      S.pos[fi].z + S.side[fi].z * Math.sin(now / 900) * 3);
+    const li = Math.min(NSAMP, fi + 50);
+    camera.lookAt(S.pos[li].x, S.pos[li].y + 1, S.pos[li].z);
+    if (G.flyT >= 1) { G.mode = 'countdown'; G.countdown = 3.2; snapCam(); }
   } else updateCamera(dt);
   syncDucks(now / 1000);
   skyMesh.position.copy(camera.position);
@@ -1169,9 +1578,32 @@ function frame(now) {
     el('speedo').firstChild.textContent = Math.round(Math.hypot(ducks[0].v.x, ducks[0].v.z) * 3.1);
     if (G.mode === 'countdown') {
       const c = Math.ceil(G.countdown);
-      if (c !== G._lastC) { G._lastC = c; if (c > 0 && c <= 3) toast(String(c), 700); }
+      if (c !== G._lastC) { G._lastC = c; if (c > 0 && c <= 3) { toast(String(c), 700); SFX.beep(false); } }
     }
     drawMap();
+    // first-race tips
+    if (G.tutOn && G.mode === 'race') {
+      const steps = [[1, 'PADDLE — WASD or arrow keys'], [9, 'The dark fast water is your friend. Reeds and eddies are not.'], [19, 'Rocks, logs, a whirlpool… and THE FALLS. Good luck.']];
+      if (G.tutStep < 3 && G.raceT > steps[G.tutStep][0]) {
+        tutToast(steps[G.tutStep][1]); G.tutStep++;
+        if (G.tutStep === 3) { localStorage.setItem('spillway-tut', '1'); G.tutOn = false; }
+      }
+    }
+  }
+  // biome atmosphere follows the player down the valley
+  {
+    const zw = zoneW(ducks[0].si);
+    const FOGS = [[0.66, 0.85, 0.88], [0.60, 0.70, 0.78], [0.90, 0.78, 0.66], [0.86, 0.85, 0.70]];
+    scene.fog.color.setRGB(
+      FOGS[0][0]*zw[0] + FOGS[1][0]*zw[1] + FOGS[2][0]*zw[2] + FOGS[3][0]*zw[3],
+      FOGS[0][1]*zw[0] + FOGS[1][1]*zw[1] + FOGS[2][1]*zw[2] + FOGS[3][1]*zw[3],
+      FOGS[0][2]*zw[0] + FOGS[1][2]*zw[1] + FOGS[2][2]*zw[2] + FOGS[3][2]*zw[3]);
+    waterMat.uniforms.uFog.value.copy(scene.fog.color);
+    if (AU.ctx) {
+      const spd2 = Math.hypot(ducks[0].v.x, ducks[0].v.z);
+      const target = G.mode === 'race' || G.mode === 'countdown' ? Math.min(0.5, 0.06 + (spd2 / 20) * 0.4) : 0.05;
+      AU.amb.gain.value += (target - AU.amb.gain.value) * 0.06;
+    }
   }
   renderer.render(scene, camera);
 }
