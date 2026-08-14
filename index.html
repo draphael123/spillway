@@ -112,6 +112,41 @@
   .swatches { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; max-width:230px; }
   .swatches button { width:26px; height:26px; border-radius:50%; border:2px solid var(--ink); cursor:pointer; padding:0; }
   .swatches button.sel { outline:3px solid var(--rush); }
+  /* ---- 2.0 hub polish: press feel, tab transitions, framed duck ---- */
+  .diffRow button, .segRow button, #hubTabs button, .go, .lvlCard, .swatches button {
+    transition: transform .12s ease, box-shadow .12s ease, background .15s ease; }
+  .diffRow button:hover, .segRow button:hover, #hubTabs button:hover, .go:hover, .lvlCard:hover {
+    transform: translateY(-2px); box-shadow: 0 5px 0 rgba(14,42,51,.4); }
+  .diffRow button:active, .segRow button:active, #hubTabs button:active, .go:active, .lvlCard:active {
+    transform: translateY(1px); box-shadow: 0 1px 0 rgba(14,42,51,.4); }
+  .swatches button:hover { transform: scale(1.18); }
+  @keyframes paneIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+  .hubPane, #results { animation: paneIn .22s ease; }
+  #duckPrev { box-shadow: inset 0 0 0 3px rgba(255,255,255,.35), 0 4px 0 rgba(14,42,51,.35);
+    background: radial-gradient(circle at 50% 35%, #d4f0f4, #9fd3dd 70%); }
+  /* results podium */
+  #resultsList .p1 { background: linear-gradient(90deg, #ffd23f55, transparent); border-radius:6px; padding:0 8px; }
+  #resultsList .p2 { background: linear-gradient(90deg, #c9d3d855, transparent); border-radius:6px; padding:0 8px; }
+  #resultsList .p3 { background: linear-gradient(90deg, #d9945955, transparent); border-radius:6px; padding:0 8px; }
+  .btnRow { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
+  .btnRow .go { font-size:15px; padding:8px 18px; }
+  /* HUD cluster + place-change pulse + final-lap banner */
+  #hudTop { background: rgba(14,42,51,.22); padding:7px 12px; border-radius:999px; gap:10px; }
+  @keyframes placePop { 0% { transform: scale(1); } 45% { transform: scale(1.22); } 100% { transform: scale(1); } }
+  .pill.bump { animation: placePop .35s ease; }
+  .pill.gain { background:#d9f7e8; }
+  .pill.lose { background:#ffe3dc; }
+  #lapBanner { top:16%; left:50%; transform:translateX(-50%); font-size:44px; font-weight:bold; letter-spacing:4px;
+    color:var(--cream); background:linear-gradient(90deg, transparent, rgba(217,79,48,.92) 18%, rgba(217,79,48,.92) 82%, transparent);
+    padding:10px 70px; opacity:0; transition:opacity .25s; text-shadow:0 3px 0 rgba(14,42,51,.5); }
+  #minimap canvas { box-shadow: 0 4px 0 rgba(14,42,51,.35), inset 0 0 0 2px rgba(46,196,182,.25); }
+  .statGrid { display:flex; gap:22px; flex-wrap:wrap; justify-content:center; text-align:left; }
+  .statGrid > div { min-width:200px; }
+  .statGrid h3 { font-size:15px; letter-spacing:1.5px; border-bottom:2px solid var(--ink); margin-bottom:6px; }
+  .statGrid p, .statGrid li { font-size:14px; line-height:1.65; list-style:none; }
+  .statGrid .big { font-size:26px; font-weight:bold; }
+  .statGrid .lockDone { color:#2a8a5f; }
+  .statGrid .lockTodo { opacity:.6; }
 </style>
 </head>
 <body>
@@ -126,6 +161,7 @@
 <div class="hud" id="minimap" style="display:none"><canvas id="mapC" width="160" height="160"></canvas></div>
 <div class="hud" id="toast"></div>
 <div class="hud" id="eventToast"></div>
+<div class="hud" id="lapBanner"></div>
 
 <div id="screen">
  <div id="hub">
@@ -134,7 +170,7 @@
     <div class="sub">a rubber duck derby &mdash; eighty ducks, one river, no engines</div>
   </div>
   <div id="hubTabs">
-    <button data-tab="title" class="sel">RACE</button><button data-tab="duckPanel">YOUR DUCK</button><button data-tab="levelPanel">COURSES</button><button data-tab="guidePanel">GUIDE</button><button data-tab="settingsPanel">SETTINGS</button>
+    <button data-tab="title" class="sel">RACE</button><button data-tab="duckPanel">YOUR DUCK</button><button data-tab="levelPanel">COURSES</button><button data-tab="statsPanel">STATS</button><button data-tab="guidePanel">GUIDE</button><button data-tab="settingsPanel">SETTINGS</button>
   </div>
   <div class="panel hubPane hidden" id="guidePanel">
     <h2>HOW TO RACE</h2>
@@ -168,7 +204,15 @@
   <div class="panel" id="results">
     <h2 id="resultsTitle">RACE RESULTS</h2>
     <div id="resultsList"></div>
-    <div class="go" id="againBtn">Press <b>R</b> to race again &nbsp;&middot;&nbsp; <b>ESC</b> menu</div>
+    <div class="btnRow">
+      <div class="go" id="againBtn">RACE AGAIN <small>(R)</small></div>
+      <div class="go" id="courseBtn" style="background:#fff">CHANGE COURSE</div>
+      <div class="go" id="menuBtn" style="background:#fff">MENU <small>(ESC)</small></div>
+    </div>
+  </div>
+  <div class="panel hubPane hidden" id="statsPanel">
+    <h2>STATS</h2>
+    <div class="statGrid" id="statGrid"></div>
   </div>
   <div class="panel hubPane hidden" id="settingsPanel">
     <h2>SETTINGS</h2>
@@ -1413,8 +1457,9 @@ function step(dt) {
           if (d.idx === 0) onPlayerFinish();
           else if (G.finishedCount <= 3 && !ducks[0].finished) eventToast(`${d.name} takes P${d.place}!`);
         } else if (d.idx === 0) {
-          toast(d.lap === G.laps - 1 ? 'FINAL LAP!' : `LAP ${d.lap + 1}/${G.laps}`, 1400);
-          SFX.beep(true); SFX.splash();
+          if (d.lap === G.laps - 1) { lapBanner('⚑ FINAL LAP ⚑'); SFX.fanfare(); }
+          else { lapBanner(`LAP ${d.lap + 1} / ${G.laps}`); SFX.beep(true); }
+          SFX.splash();
         }
       }
     }
@@ -3145,6 +3190,11 @@ function eventToast(msg) {
   clearTimeout(eventTimer);
   eventTimer = setTimeout(() => eventEl.style.opacity = 0, 2200);
 }
+function lapBanner(msg) {
+  const b = el('lapBanner');
+  b.textContent = msg; b.style.opacity = 1;
+  clearTimeout(b._t); b._t = setTimeout(() => b.style.opacity = 0, 2100);
+}
 function fmtTime(t) {
   const m = Math.floor(t / 60), s = t - m * 60;
   return `${m}:${s < 10 ? '0' : ''}${s.toFixed(1)}`;
@@ -3292,10 +3342,13 @@ function showResults() {
     + (G.nemesisNote ? ` · ${G.nemesisNote}` : '');
   list.innerHTML = rows.join('');
   el('results').style.display = 'block';
-  el('title').classList.add('hidden');
+  for (const p of ['title', 'duckPanel', 'levelPanel', 'statsPanel', 'settingsPanel', 'guidePanel']) el(p).classList.add('hidden');
+  document.querySelectorAll('#hubTabs button').forEach(b => b.classList.remove('sel'));
   el('screen').classList.remove('hidden');
   function row(d) {
-    return `<div class="${d.idx === 0 ? 'you' : ''}">P${d.place} &nbsp;${d.name}<span class="t">${fmtTime(d.finishTime)}</span></div>`;
+    const cls = d.idx === 0 ? 'you' : d.place <= 3 ? `p${d.place}` : '';
+    const medal = d.place === 1 ? '🥇 ' : d.place === 2 ? '🥈 ' : d.place === 3 ? '🥉 ' : '';
+    return `<div class="${cls}">P${d.place} &nbsp;${medal}${d.name}<span class="t">${fmtTime(d.finishTime)}</span></div>`;
   }
 }
 
@@ -3327,12 +3380,37 @@ function prepRace(skipFly) {
   G.playerShove = false;
 }
 function showTab(id) {
-  for (const p of ['title', 'duckPanel', 'levelPanel', 'settingsPanel', 'guidePanel']) el(p).classList.toggle('hidden', p !== id);
+  for (const p of ['title', 'duckPanel', 'levelPanel', 'statsPanel', 'settingsPanel', 'guidePanel']) el(p).classList.toggle('hidden', p !== id);
   document.querySelectorAll('#hubTabs button').forEach(b => b.classList.toggle('sel', b.dataset.tab === id));
   G.hubTab = id;
   el('results').style.display = 'none';
   if (id === 'duckPanel') refreshDuckUI();
   if (id === 'levelPanel') refreshLevelCards();
+  if (id === 'statsPanel') refreshStatsUI();
+}
+function refreshStatsUI() {
+  const host = el('statGrid');
+  const wins = Object.entries(STATS.wins || {}).map(([k, v]) => `${k.toUpperCase()}: <b>${v}</b>`).join(' &middot; ') || 'none yet';
+  const courseRows = Object.keys(LEVELS).map(id => {
+    const w = (STATS.winsByLevel || {})[id] || 0;
+    const best = BEST[`${id}-${SETTINGS.difficulty}-${SETTINGS.laps}`];
+    return `<li>${LEVELS[id].name} — wins <b>${w}</b><span style="float:right;opacity:.7">${best ? fmtTime(best) : '—'}</span></li>`;
+  }).join('');
+  const lockRows = [];
+  for (const [slot, defs] of Object.entries(LOCKS)) {
+    for (const [val, l] of Object.entries(defs)) {
+      const done = l.ok();
+      lockRows.push(`<li class="${done ? 'lockDone' : 'lockTodo'}">${done ? '✓' : '🔒'} ${l.req}</li>`);
+    }
+  }
+  host.innerHTML = `
+    <div><h3>CAREER</h3>
+      <p class="big">${STATS.races || 0}</p><p style="margin-top:-6px">races swum</p>
+      <p>wins — ${wins}</p>
+      <p>nemeses bested: <b>${STATS.nemesisBeaten || 0}</b></p></div>
+    <div><h3>COURSES <small style="opacity:.6">(best @ ${SETTINGS.difficulty.toUpperCase()} · ${SETTINGS.laps} lap${SETTINGS.laps > 1 ? 's' : ''})</small></h3>
+      <ul>${courseRows}</ul></div>
+    <div><h3>UNLOCKS</h3><ul>${lockRows.join('')}</ul></div>`;
 }
 function showHub(tab) { el('screen').classList.remove('hidden'); showTab(tab || 'title'); }
 function toTitle() {
@@ -3469,6 +3547,26 @@ addEventListener('pointerdown', auInit, { once: false });
 // ---- menu & settings wiring
 el('raceBtn').addEventListener('click', () => prepRace());
 el('againBtn').addEventListener('click', () => prepRace());
+el('courseBtn').addEventListener('click', () => { toTitle(); showTab('levelPanel'); });
+el('menuBtn').addEventListener('click', () => toTitle());
+// UI sounds: hover ticks + confirm plops on every interactive control in the hub
+function uiTick() { if (AU.ctx && SETTINGS.sfx > 0) pluck(1560, 0.05, AU.sfx, 0.12); }
+function uiPlop() {
+  if (!AU.ctx || SETTINGS.sfx <= 0) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const o = ctx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(430, t); o.frequency.exponentialRampToValueAtTime(180, t + 0.09);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.22, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+  o.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + 0.15);
+}
+document.addEventListener('mouseover', e => {
+  if (el('screen').classList.contains('hidden')) return;
+  if (e.target.closest && e.target.closest('button, .go, .lvlCard')) uiTick();
+});
+document.addEventListener('click', e => {
+  if (el('screen').classList.contains('hidden')) return;
+  if (e.target.closest && e.target.closest('button, .go, .lvlCard')) uiPlop();
+});
 document.querySelectorAll('#lapRow button').forEach(b => b.addEventListener('click', () => setLaps(+b.dataset.l)));
 document.querySelectorAll('#lvlRow button').forEach(b => {
   b.classList.toggle('sel', b.dataset.lvl === LVL.id);
@@ -3685,7 +3783,18 @@ function frame(now) {
   fallsMat.uniforms.uT.value = now / 1000;
   if (whirlMesh) whirlMesh.rotation.y = -now / 1000 * 1.6;
   if (G.mode === 'race' || G.mode === 'countdown') {
-    el('place').firstChild.textContent = `P${placeOf(ducks[0])}/${N_DUCKS}`;
+    const pNow = placeOf(ducks[0]);
+    const placeEl = el('place');
+    if (G.mode === 'race' && G._lastP !== undefined && pNow !== G._lastP) {
+      placeEl.classList.remove('bump', 'gain', 'lose');
+      void placeEl.offsetWidth;   // restart the pop animation
+      placeEl.classList.add('bump', pNow < G._lastP ? 'gain' : 'lose');
+      clearTimeout(G._placeT);
+      G._placeT = setTimeout(() => placeEl.classList.remove('gain', 'lose'), 900);
+      if (pNow < G._lastP && AU.ctx && SETTINGS.sfx > 0) pluck(1180, 0.07, AU.sfx, 0.18);
+    }
+    G._lastP = pNow;
+    placeEl.firstChild.textContent = `P${pNow}/${N_DUCKS}`;
     el('lapPill').style.display = G.laps > 1 ? '' : 'none';
     if (G.laps > 1) el('lapPill').firstChild.textContent = `${Math.min(ducks[0].lap + 1, G.laps)}/${G.laps}`;
     el('timer').firstChild.textContent = fmtTime(G.raceT || 0);
@@ -3783,6 +3892,11 @@ function frame(now) {
       const roar = Math.max(0, 1 - Math.abs(ducks[0].si - _fI0) / 150) * 0.34;   // the falls announce themselves
       const target = G.mode === 'race' || G.mode === 'countdown' ? Math.min(0.75, 0.06 + (spd2 / 20) * 0.4 + roar) : 0.05;
       AU.amb.gain.value += (target - AU.amb.gain.value) * 0.06;
+      // music treatment: full-throttle in the race, tucked back in the hub
+      if (AU.track) {
+        const mvT = Math.min(1, SETTINGS.music * (G.mode === 'race' || G.mode === 'countdown' ? 0.8 : 0.34));
+        AU.track.volume += (mvT - AU.track.volume) * 0.04;
+      }
     }
   }
   // moving scenery & wildlife
