@@ -98,9 +98,12 @@
     <div class="diffRow" id="lapRow">
       <button data-l="1">1 LAP</button><button data-l="2">2 LAPS</button><button data-l="3">3 LAPS</button>
     </div>
+    <div class="diffRow" id="lvlRow">
+      <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button>
+    </div>
     <div class="go" id="raceBtn">RACE &mdash; press <b>SPACE</b></div>
     <div class="mini" id="duckBtn">&#129414; your duck</div>
-    <div class="mini" id="courseBtn">course: <b>SPILLWAY RUN</b> &mdash; change</div>
+    <div class="mini" id="courseBtn">all courses &amp; best times</div>
     <div class="keys">
       <kbd>W A S D</kbd> or <kbd>&larr;&uarr;&darr;&rarr;</kbd> paddle &mdash; you can't beat the river, only read it<br>
       Forest &rarr; gorge &rarr; canyon &rarr; meadow. Survive the falls.
@@ -217,18 +220,18 @@ const LEVELS = {
     ctrl: [
       { x:   0, z:    0, y: 60.0, w: 9,   s: 0.5  },  // start pool
       { x:   6, z:  -35, y: 58.8, w: 7,   s: 0.9  },
-      { x: -18, z:  -70, y: 57.2, w: 6,   s: 1.3  },  // timber zigzag
-      { x:  18, z: -105, y: 55.6, w: 6,   s: 1.3  },
-      { x: -16, z: -140, y: 54.0, w: 6,   s: 1.4  },
-      { x:  -2, z: -165, y: 53.4, w: 7,   s: 1.0  },
-      { x:   2, z: -183, y: 52.6, w: 6,   s: 1.5  },  // weir 1 lip
-      { x:   3, z: -190, y: 49.6, w: 6,   s: 1.6  },  // WEIR 1 (3u step)
-      { x:  -4, z: -225, y: 48.6, w: 5,   s: 1.8  },  // gate alley
-      { x:   6, z: -265, y: 47.2, w: 5.5, s: 1.6  },
-      { x:  26, z: -300, y: 46.0, w: 6,   s: 1.4  },  // boom bend
-      { x:  10, z: -335, y: 44.8, w: 7,   s: 1.2  },
-      { x:  -8, z: -370, y: 43.6, w: 6,   s: 1.5  },  // sawmill straight
-      { x: -14, z: -410, y: 42.8, w: 10,  s: 0.5  },  // millpond
+      { x: -14, z:  -78, y: 57.2, w: 6,   s: 1.3  },  // timber zigzag (gentle — legs stay apart)
+      { x:  14, z: -118, y: 55.6, w: 6,   s: 1.3  },
+      { x: -12, z: -155, y: 54.0, w: 6,   s: 1.4  },
+      { x:  -2, z: -178, y: 53.4, w: 7,   s: 1.0  },
+      { x:   2, z: -195, y: 52.6, w: 6,   s: 1.5  },  // weir 1 lip
+      { x:   3, z: -202, y: 49.6, w: 6,   s: 1.6  },  // WEIR 1 (3u step)
+      { x:  -4, z: -236, y: 48.6, w: 5,   s: 1.8  },  // gate alley
+      { x:   6, z: -272, y: 47.2, w: 5.5, s: 1.6  },
+      { x:  22, z: -306, y: 46.0, w: 6,   s: 1.4  },  // boom bend
+      { x:  10, z: -338, y: 44.8, w: 7,   s: 1.2  },
+      { x:  -8, z: -372, y: 43.6, w: 6,   s: 1.5  },  // sawmill straight
+      { x: -12, z: -412, y: 42.8, w: 10,  s: 0.5  },  // millpond
       { x:  -6, z: -450, y: 42.2, w: 11,  s: 0.45 },
       { x:   6, z: -478, y: 41.6, w: 5,   s: 1.9  },  // pond exit
       { x:   9, z: -486, y: 41.0, w: 5,   s: 2.0  },  // weir 2 lip
@@ -435,7 +438,9 @@ function updateMDYN() {
     bm.dir = dir;
   }
   for (const tr of MDYN.traffic) {
-    tr.s += 0.00016 * (0.8 + 0.4 * Math.sin(tr.s * 40));      // ride the current, roughly
+    // logs ride the actual current: fast in the run, lazy across the millpond
+    const ci = Math.min(NSAMP, Math.round(tr.s * NSAMP));
+    tr.s += (BASE_FLOW * S.sMul[ci] * 0.85 * FIXED) / COURSE_LEN;
     if (tr.s > 0.945) tr.s = 0.695;
     const i = Math.round(tr.s * NSAMP);
     const c = S.pos[i].clone().addScaledVector(S.side[i], tr.lat * Math.min(1, S.w[i] / 5));
@@ -1275,7 +1280,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   return base + n * Math.min(1, t * 2.5) - 0.35;
 }
 {
-  const OFFS = [0.15, 1.1, 3.5, 8, 16, 26];
+  const OFFS = LVL.id === 'spillway' ? [0.15, 1.1, 3.5, 8, 16, 26] : [0.15, 1.1, 3.5, 7, 12, 17];
   const pos = [], col = [], idx = [];
   const cTmp = new THREE.Color();
   let vi = 0;
@@ -1477,6 +1482,14 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   for (let k = 0; k < nM; k++) {
     const i = Math.floor((k / nM) * NSAMP), sgn = (k % 2) * 2 - 1;
     const ob = randRange(30, 48), s = randRange(0.7, 1.6);
+    // never let a mountain land on ANOTHER leg of the course (zigzag courses!)
+    const mp2 = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+    let clear = true;
+    for (let ci = 0; ci <= NSAMP; ci += 25) {
+      const dx2 = mp2.x - S.pos[ci].x, dz2 = mp2.z - S.pos[ci].z;
+      if (dx2 * dx2 + dz2 * dz2 < 26 * 26) { clear = false; break; }
+    }
+    if (!clear) { place(mountains, k, i, ob, sgn, -200, 0.001, 0); continue; }   // bury it
     place(mountains, k, i, ob, sgn, waterHeightAt(i) + 4 + s * 6, s, rand() * 6);
     const zw = zoneW(i);
     mountains.setColorAt(k, cCol.setHSL(
@@ -1515,27 +1528,34 @@ let whirlMesh;
   if (LVL.id === 'spillway') {
     const bi = Math.round(0.68 * NSAMP);
     const yaw = Math.atan2(S.tan[bi].x, S.tan[bi].z);
-    const wSpan = S.w[bi] * 2 + 9;   // long enough to land on both banks
+    const wSpan = S.w[bi] * 2 + 7;   // long enough to land on both banks
     const plankM = new THREE.MeshLambertMaterial({ color: 0x8a6a48 });
     const plankM2 = new THREE.MeshLambertMaterial({ color: 0x7a5a3a });
+    const deckY = waterHeightAt(bi) + 3.2;
     for (let pk = 0; pk < 7; pk++) {
-      const plank = new THREE.Mesh(new THREE.BoxGeometry(wSpan, 0.22, 0.32), pk % 2 ? plankM : plankM2);
-      plank.position.copy(S.pos[bi]).addScaledVector(S.tan[bi], (pk - 3) * 0.36);
-      plank.position.y = waterHeightAt(bi) + 3.2;
+      const plank = new THREE.Mesh(new THREE.BoxGeometry(wSpan, 0.22, 0.36), pk % 2 ? plankM : plankM2);
+      plank.position.set(
+        S.pos[bi].x + S.tan[bi].x * (pk - 3) * 0.35,
+        deckY,
+        S.pos[bi].z + S.tan[bi].z * (pk - 3) * 0.35);   // horizontal offsets only — no slope stagger
       plank.rotation.y = yaw + Math.PI / 2;
       scene.add(plank);
     }
     for (const sgn of [-1, 1]) {
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, wSpan), plankM2);
-      rail.position.copy(S.pos[bi]).addScaledVector(S.tan[bi], sgn * 1.15);
-      rail.position.y = waterHeightAt(bi) + 4.2;
+      // rails run ACROSS the river along the deck edges
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(wSpan, 0.16, 0.16), plankM2);
+      rail.position.set(
+        S.pos[bi].x + S.tan[bi].x * sgn * 1.15,
+        deckY + 1.0,
+        S.pos[bi].z + S.tan[bi].z * sgn * 1.15);
       rail.rotation.y = yaw + Math.PI / 2;
       scene.add(rail);
       for (let po = -2; po <= 2; po++) {
         const post = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.1, 0.14), plankM2);
-        post.position.copy(S.pos[bi]).addScaledVector(S.side[bi], po * (wSpan / 5) * 0.5)
-          .addScaledVector(S.tan[bi], sgn * 1.15);
-        post.position.y = waterHeightAt(bi) + 3.7;
+        post.position.set(
+          S.pos[bi].x + S.side[bi].x * po * (wSpan / 5) * 0.5 + S.tan[bi].x * sgn * 1.15,
+          deckY + 0.5,
+          S.pos[bi].z + S.side[bi].z * po * (wSpan / 5) * 0.5 + S.tan[bi].z * sgn * 1.15);
         scene.add(post);
       }
     }
@@ -2524,7 +2544,14 @@ addEventListener('pointerdown', auInit, { once: false });
 el('raceBtn').addEventListener('click', () => prepRace());
 el('againBtn').addEventListener('click', () => prepRace());
 document.querySelectorAll('#lapRow button').forEach(b => b.addEventListener('click', () => setLaps(+b.dataset.l)));
-el('courseBtn').innerHTML = `course: <b>${LVL.name}</b> — change`;
+document.querySelectorAll('#lvlRow button').forEach(b => {
+  b.classList.toggle('sel', b.dataset.lvl === LVL.id);
+  b.addEventListener('click', () => {
+    if (b.dataset.lvl === LVL.id) return;
+    localStorage.setItem('spillway-level', b.dataset.lvl);
+    location.reload();
+  });
+});
 el('courseBtn').addEventListener('click', () => {
   el('title').classList.add('hidden');
   document.querySelectorAll('.lvlCard[data-lvl]').forEach(card => {
