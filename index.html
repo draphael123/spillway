@@ -296,6 +296,9 @@ const LEVELS = {
     id: 'millrace', name: 'MILLRACE', sub: 'the working forest — mind the machines',
     weathers: ['mist', 'storm', 'mist', 'clear'],
     surge: [[0.815, 0.985]], surgeCol: [0.45, 0.75, 1.0],
+    // industrial timber: tea-stained water, worn olive banks, grey-green air
+    pal: { deep: [0.10, 0.24, 0.22], shal: [0.36, 0.42, 0.33], fog: [0.72, 0.76, 0.71],
+           ground: [0.10, 0.30, 0.30], tree: [0.24, 0.28, 0.21], skyMul: [0.90, 0.92, 0.88] },
     ctrl: [
       { x:   0, z:    0, y: 58.0, w: 8,   s: 0.7  },  // START/FINISH
       { x: -10, z:  -38, y: 56.8, w: 6,   s: 1.4  },  // timber zigzag
@@ -327,6 +330,9 @@ const LEVELS = {
     weathers: ['mist', 'storm', 'golden', 'mist'],
     dark: [[0.115, 0.26], [0.36, 0.60]],
     surge: [[0.815, 0.98]], surgeCol: [0.55, 1.0, 0.45],
+    // black-and-glow: ink water, twilight air, blue-dark moss
+    pal: { deep: [0.03, 0.10, 0.14], shal: [0.10, 0.24, 0.27], fog: [0.44, 0.47, 0.60],
+           ground: [0.40, 0.24, 0.19], tree: [0.44, 0.34, 0.17], skyMul: [0.55, 0.55, 0.75] },
     ctrl: [
       { x:   0, z:    0, y: 56.0, w: 8,   s: 0.7  },  // START/FINISH — twilight pool
       { x:   6, z:  -40, y: 54.8, w: 6.5, s: 1.2  },
@@ -355,6 +361,10 @@ const LEVELS = {
     id: 'canopy', name: 'CANOPY RUN', sub: 'the flooded forest — race the treetops',
     weathers: ['clear', 'golden', 'clear'],
     surge: [[0.83, 0.985]], surgeCol: [1.0, 0.75, 0.25],
+    airGrav: 15, airPop: 2.4,   // floatier launches — CANOPY is the airtime course
+    // bright altitude spring: vivid teal water, fresh green banks, washed bright air
+    pal: { deep: [0.08, 0.36, 0.35], shal: [0.44, 0.68, 0.53], fog: [0.80, 0.90, 0.86],
+           ground: [0.29, 0.52, 0.42], tree: [0.27, 0.55, 0.32], skyMul: [1.06, 1.05, 0.98] },
     ctrl: [
       { x:   0, z:    0, y: 76.0, w: 8,   s: 0.7  },  // START/FINISH — treetop pool
       { x:   4, z:  -38, y: 75.0, w: 6.5, s: 1.3  },
@@ -630,22 +640,22 @@ if (LVL.id === 'canopy') { addPike(0.34, -2.5); addTurtle(0.17, 2.6); }
 const MDYN = { gates: [], booms: [], traffic: [], saw: null };
 if (LVL.id === 'millrace') {
   // sluice gates: alternate halves of the channel, out of phase — read the rhythm
-  for (const [t, side2, phase] of [[0.275, -1, 0], [0.305, 1, Math.PI]]) {
+  for (const [t, side2, phase] of [[0.275, -1, 0], [0.305, 1, Math.PI], [0.335, -1, Math.PI / 2]]) {
     addLog(t, 0, 0.1, 1.55);                       // placeholder log entry, endpoints driven each tick
     const L = LOGS[LOGS.length - 1]; L.dyn = true;
     MDYN.gates.push({ L, i: Math.round(t * NSAMP), side: side2, phase, period: 6.5, open: 1, wasClosed: false });
   }
   // swinging booms: pivot on the bank, sweep the channel
-  for (const [t, sgn, phase] of [[0.360, -1, 0], [0.395, 1, 2.1]]) {
+  for (const [t, sgn, phase] of [[0.365, -1, 0], [0.395, 1, 2.1], [0.425, -1, 4.2]]) {
     addLog(t, 0, 0.1, 0.5);
     const L = LOGS[LOGS.length - 1]; L.dyn = true;
     MDYN.booms.push({ L, i: Math.round(t * NSAMP), sgn, phase, speed: 0.55, len: S.w[Math.round(t * NSAMP)] * 1.15 });
   }
   // log drive: floating timber that rides the current through the back half
-  for (let k = 0; k < 4; k++) {
+  for (let k = 0; k < 6; k++) {
     addLog(0.65, 0, 4, 0.06);
     const L = LOGS[LOGS.length - 1]; L.dyn = true;
-    MDYN.traffic.push({ L, s: 0.65 + k * 0.026, lat: ((k * 13) % 7) - 3 });
+    MDYN.traffic.push({ L, s: 0.65 + k * 0.018, lat: ((k * 13) % 7) - 3 });
   }
   MDYN.saw = { i: Math.round(0.465 * NSAMP), lat: 0.6, r: 2.3 };
 }
@@ -1357,7 +1367,7 @@ function step(dt) {
     const wh = waterHeightAt(d.si);
     if (d.air) {
       d.airT += dt;
-      d.vy -= 22 * dt; d.y += d.vy * dt;
+      d.vy -= (LVL.airGrav || 22) * dt; d.y += d.vy * dt;
       if (d.y <= wh && d.airT > 0.2) {
         d.air = false; d.y = wh;
         d.v.x *= 0.5; d.v.z *= 0.5; d.vy = 0;
@@ -1369,7 +1379,7 @@ function step(dt) {
       // launch when the bed ahead falls away (the falls) — you can't ride a cliff
       const whAhead = waterHeightAt(wrapI(d.si + 6));
       if (wh - whAhead > 1.4 && Math.hypot(d.v.x, d.v.z) > 3) {
-        d.air = true; d.vy = 1.2; d.airT = 0;
+        d.air = true; d.vy = LVL.airPop || 1.2; d.airT = 0;
         if (d.idx === 0 && Math.abs(d.si - _fI0) < 45 && G.slowmo <= 0 && G.mode === 'race') { G.slowmo = 1.15; SFX.splash(); }
       }
       else if (d.y - wh > 0.9) { d.air = true; d.vy = 0; d.airT = 0; }
@@ -1547,8 +1557,9 @@ let waterMat;
     surgeA.push(sgV, sgV);
     const zw = zoneW(i);
     for (let ch = 0; ch < 3; ch++) {
-      deepA.push(DEEPS[0][ch]*zw[0] + DEEPS[1][ch]*zw[1] + DEEPS[2][ch]*zw[2] + DEEPS[3][ch]*zw[3]);
-      shalA.push(SHALS[0][ch]*zw[0] + SHALS[1][ch]*zw[1] + SHALS[2][ch]*zw[2] + SHALS[3][ch]*zw[3]);
+      // per-course water palette wins; Spillway blends its four quarters
+      deepA.push(LVL.pal ? LVL.pal.deep[ch] : DEEPS[0][ch]*zw[0] + DEEPS[1][ch]*zw[1] + DEEPS[2][ch]*zw[2] + DEEPS[3][ch]*zw[3]);
+      shalA.push(LVL.pal ? LVL.pal.shal[ch] : SHALS[0][ch]*zw[0] + SHALS[1][ch]*zw[1] + SHALS[2][ch]*zw[2] + SHALS[3][ch]*zw[3]);
     }
     deepA.push(...deepA.slice(-3)); shalA.push(...shalA.slice(-3));   // second vertex of the pair
     if (i < NSAMP) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
@@ -1571,7 +1582,7 @@ let waterMat;
     uniforms: {
       uT: { value: 0 }, uFog: { value: new THREE.Color(0xa8d8e0) },
       uCamPos: { value: new THREE.Vector3() }, uSunDir: { value: new THREE.Vector3(-0.6, 0.7, -0.26) },
-      uSunCol: { value: new THREE.Color(0xfff2d0) }, uGlint: { value: 0.9 },
+      uSunCol: { value: new THREE.Color(0xfff2d0) }, uGlint: { value: 0.9 }, uDark: { value: 1.0 },
       uSurgeCol: { value: new THREE.Color((LVL.surgeCol || [0.2, 0.9, 0.85])[0], (LVL.surgeCol || [0.2, 0.9, 0.85])[1], (LVL.surgeCol || [0.2, 0.9, 0.85])[2]) },
     },
     vertexShader: `
@@ -1597,7 +1608,7 @@ let waterMat;
     fragmentShader: `
       uniform float uT; uniform vec3 uFog;
       uniform vec3 uCamPos; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uGlint;
-      uniform vec3 uSurgeCol;
+      uniform vec3 uSurgeCol; uniform float uDark;
       varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog; varying float vSlope;
       varying vec3 vDeep; varying vec3 vShal; varying vec3 vWorld;
       varying vec2 vChute; varying vec2 vShoal; varying float vKind; varying float vSurge;
@@ -1660,6 +1671,7 @@ let waterMat;
         float shore = min(vUv.x, 1. - vUv.x);
         float lace = smoothstep(0.09, 0.012, shore) * smoothstep(0.35, 0.75, noise(vec2(vUv.x * 30., flow * 40. + sin(uT * 1.3) * 0.6)));
         c = mix(c, vec3(0.95, 0.98, 0.97), clamp(foam + lace, 0., 1.));
+        c *= 0.3 + 0.7 * uDark;   // cave darkness reaches the river itself (foam included)
         c = mix(c, uFog, vFog);
         float alpha = mix(0.45, 0.95, smoothstep(0.0, 0.09, shore));
         gl_FragColor = vec4(c, alpha); }`,
@@ -1691,11 +1703,11 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
         pos.push(p.x, y0 + h, p.z);
         const patch = vnoise(i * 0.045 + sgn * 31, ob * 0.4);
         const zw = zoneW(i);
-        // per-biome ground hue/sat/light: forest, gorge, canyon, meadow
-        const gh = 0.28*zw[0] + 0.30*zw[1] + 0.045*zw[2] + 0.145*zw[3];
-        const gs = 0.42*zw[0] + 0.14*zw[1] + 0.48*zw[2] + 0.52*zw[3];
-        const gl = 0.32*zw[0] + 0.38*zw[1] + 0.38*zw[2] + 0.44*zw[3];
-        if (ob < 0.8) cTmp.setHSL(0.10 - zw[2] * 0.035, 0.32 + zw[2] * 0.15, 0.62);          // sand lip, redder in canyon
+        // per-biome ground hue/sat/light: forest, gorge, canyon, meadow — or the course's own palette
+        const gh = LVL.pal ? LVL.pal.ground[0] : 0.28*zw[0] + 0.30*zw[1] + 0.045*zw[2] + 0.145*zw[3];
+        const gs = LVL.pal ? LVL.pal.ground[1] : 0.42*zw[0] + 0.14*zw[1] + 0.48*zw[2] + 0.52*zw[3];
+        const gl = LVL.pal ? LVL.pal.ground[2] : 0.32*zw[0] + 0.38*zw[1] + 0.38*zw[2] + 0.44*zw[3];
+        if (ob < 0.8) { if (LVL.pal) cTmp.setHSL(gh, gs * 0.6, Math.min(0.7, gl + 0.10)); else cTmp.setHSL(0.10 - zw[2] * 0.035, 0.32 + zw[2] * 0.15, 0.62); }  // sand lip follows the course palette
         else if (ob < 2) cTmp.setHSL(gh, gs * 0.7, gl + 0.14).lerp(new THREE.Color(0xb9a878), 0.35 * (1 - patch));
         else if ((nearFalls || zw[1] > 0.5) && ob > 6) cTmp.set(0x8d9298).offsetHSL(0, 0, (patch - .5) * .12);  // gorge rock walls
         else if (zw[2] > 0.5 && ob > 8) cTmp.setHSL(0.035, 0.5, 0.34 + (patch - .5) * 0.12); // canyon mesa bands
@@ -1771,9 +1783,9 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const p = place(trunks, k, i, ob, sgn, y + 1.0 * s, s, ry);
     q.setFromAxisAngle(_tmpB.set(0, 1, 0), ry);
     m.compose(_tmpA.set(p.x, y, p.z), q, sc.set(s, s, s));
-    const baseH = forest ? 0.30 + rand() * 0.05 : 0.34 + rand() * 0.04;
-    const baseS = forest ? 0.42 : 0.28;
-    const baseL = forest ? 0.26 + rand() * 0.1 : 0.19 + rand() * 0.07;
+    const baseH = LVL.pal ? LVL.pal.tree[0] + rand() * 0.04 : forest ? 0.30 + rand() * 0.05 : 0.34 + rand() * 0.04;
+    const baseS = LVL.pal ? LVL.pal.tree[1] : forest ? 0.42 : 0.28;
+    const baseL = LVL.pal ? LVL.pal.tree[2] + rand() * 0.08 : forest ? 0.26 + rand() * 0.1 : 0.19 + rand() * 0.07;
     for (let tr = 0; tr < 3; tr++) {
       tiers[tr].setMatrixAt(k, m);
       tiers[tr].setColorAt(k, cCol.setHSL(baseH + tr * 0.012, baseS, baseL + tr * 0.045));  // tips catch light
@@ -2063,7 +2075,7 @@ if (LVL.id === 'millrace') {
   const emis = (c) => new THREE.MeshBasicMaterial({ color: c });
   // lantern buoys mark the line through the dark; glow-mushrooms crowd the banks
   for (const [d0, d1] of LVL.dark) {
-    for (let t2 = d0 + 0.015; t2 < d1; t2 += 0.028) {
+    for (let t2 = d0 + 0.012; t2 < d1; t2 += 0.02) {
       const i = Math.round(t2 * NSAMP);
       const lat = (Math.round(t2 * 100) % 2 ? 1 : -1) * (S.w[i] - 1.2);
       const p = S.pos[i].clone().addScaledVector(S.side[i], lat);
@@ -2073,7 +2085,7 @@ if (LVL.id === 'millrace') {
       lamp.position.set(p.x, waterHeightAt(i) + 1.25, p.z);
       scene.add(post, lamp);
     }
-    for (let m2 = 0; m2 < 26; m2++) {
+    for (let m2 = 0; m2 < 40; m2++) {
       const i = Math.round((d0 + rand() * (d1 - d0)) * NSAMP);
       const sgn = m2 % 2 ? 1 : -1, ob = randRange(0.5, 5);
       const gy = waterHeightAt(i) + bankH(i, ob, sgn);
@@ -3649,9 +3661,16 @@ function frame(now) {
     const ft = Math.min(1, G.flyT);
     const e2 = ft < 0.5 ? 2 * ft * ft : 1 - Math.pow(-2 * ft + 2, 2) / 2;
     const fi = wrapI(Math.round(e2 * (NSAMP - 30)));
+    // duck under the cave vaults (Undergrove) — the flyover must fly INSIDE the dark
+    let flyH = 11;
+    if (LVL.dark) {
+      const ftPos = fi / NSAMP;
+      for (const [c0, c1] of LVL.dark)
+        if (ftPos > c0 - 0.03 && ftPos < c1 + 0.03) flyH = 5.5;
+    }
     camera.position.set(
       S.pos[fi].x + S.side[fi].x * Math.sin(now / 900) * 3,
-      waterHeightAt(fi) + 11,
+      waterHeightAt(fi) + flyH,
       S.pos[fi].z + S.side[fi].z * Math.sin(now / 900) * 3);
     const li = wrapI(fi + 50);
     camera.lookAt(S.pos[li].x, S.pos[li].y + 1, S.pos[li].z);
@@ -3696,9 +3715,9 @@ function frame(now) {
     const td = (G.mode === 'race' && !ducks[0].finished) ? Math.min(1, G.raceT / (G.laps * 115))
              : (ducks[0].finished ? 1 : 0.1);
     const FOGS = [[0.66, 0.85, 0.88], [0.60, 0.70, 0.78], [0.90, 0.78, 0.66], [0.86, 0.85, 0.70]];
-    let fr = FOGS[0][0]*zw[0] + FOGS[1][0]*zw[1] + FOGS[2][0]*zw[2] + FOGS[3][0]*zw[3];
-    let fg = FOGS[0][1]*zw[0] + FOGS[1][1]*zw[1] + FOGS[2][1]*zw[2] + FOGS[3][1]*zw[3];
-    let fb = FOGS[0][2]*zw[0] + FOGS[1][2]*zw[1] + FOGS[2][2]*zw[2] + FOGS[3][2]*zw[3];
+    let fr = LVL.pal ? LVL.pal.fog[0] : FOGS[0][0]*zw[0] + FOGS[1][0]*zw[1] + FOGS[2][0]*zw[2] + FOGS[3][0]*zw[3];
+    let fg = LVL.pal ? LVL.pal.fog[1] : FOGS[0][1]*zw[0] + FOGS[1][1]*zw[1] + FOGS[2][1]*zw[2] + FOGS[3][1]*zw[3];
+    let fb = LVL.pal ? LVL.pal.fog[2] : FOGS[0][2]*zw[0] + FOGS[1][2]*zw[1] + FOGS[2][2]*zw[2] + FOGS[3][2]*zw[3];
     fr *= wx.tint[0]; fg *= wx.tint[1]; fb *= wx.tint[2];
     const dk = td * 0.35;
     fr = fr * (1 - dk) + DUSK.hor[0] * dk; fg = fg * (1 - dk) + DUSK.hor[1] * dk; fb = fb * (1 - dk) + DUSK.hor[2] * dk;
@@ -3712,6 +3731,7 @@ function frame(now) {
     scene.fog.color.setRGB(fr * cf, fg * cf, fb * cf);
     scene.fog.near = wx.fogNear * (1 - cave * 0.7); scene.fog.far = wx.fogFar * (1 - cave * 0.68);
     waterMat.uniforms.uFog.value.copy(scene.fog.color);
+    waterMat.uniforms.uDark.value = cf;
     sun.color.set(wx.sun).lerp(_duskSun.set(DUSK.sun), td * 0.8);
     sun.intensity = wx.sunInt * (1 - td * 0.3) * (1 - cave * 0.93);
     hemi.intensity = wx.hemi * (1 - td * 0.25) * (1 - cave * 0.8);
@@ -3752,9 +3772,11 @@ function frame(now) {
       }
       mpos.needsUpdate = true;
     }
+    const sm = LVL.pal ? LVL.pal.skyMul : null;
     skyMat.uniforms.uTop.value.setRGB(...wx.sky[0]).lerp(_c3.setRGB(...DUSK.top), td * 0.85).multiplyScalar(cf);
     skyMat.uniforms.uHor.value.setRGB(...wx.sky[1]).lerp(_c3.setRGB(...DUSK.hor), td * 0.85).multiplyScalar(cf);
     skyMat.uniforms.uLow.value.setRGB(...wx.sky[2]).lerp(_c3.setRGB(...DUSK.low), td * 0.85).multiplyScalar(cf);
+    if (sm) { const u = skyMat.uniforms; u.uTop.value.multiply(_c3.setRGB(...sm)); u.uHor.value.multiply(_c3.setRGB(...sm)); u.uLow.value.multiply(_c3.setRGB(...sm)); }
     waterMat.uniforms.uGlint.value *= cf;
     if (AU.ctx) {
       const spd2 = Math.hypot(ducks[0].v.x, ducks[0].v.z);
@@ -3828,8 +3850,12 @@ function frame(now) {
       fg.mesh.position.y = waterHeightAt(fg.i) + 0.15 + Math.sin(k2 * Math.PI) * 2.2;
       fg.mesh.visible = fg.t >= 0;
     }
-    // rainbow only shines in kind light
-    if (window._rainbow) _rainbow.visible = (G.weather === 'clear' || G.weather === 'golden');
+    // rainbow only shines in kind light — and never inside a cave
+    if (window._rainbow) {
+      let inDark = false;
+      if (LVL.dark) for (const [c0, c1] of LVL.dark) if (FALLS_T0 > c0 - 0.03 && FALLS_T0 < c1 + 0.03) inDark = true;
+      _rainbow.visible = !inDark && (G.weather === 'clear' || G.weather === 'golden');
+    }
     // pedestrians cross the bridge
     for (const pe of PEDS) {
       pe.u += pe.dir * pe.speed * dt;
