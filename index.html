@@ -59,6 +59,11 @@
   .go { cursor:pointer; }
   #shovePill { bottom:20px; left:20px; text-align:center; border-width:3px; transition:border-color .2s, opacity .2s; }
   #shovePill.cooling { opacity:.55; border-color:#8aa0a8; }
+  #tags { position:fixed; inset:0; pointer-events:none; }
+  .dtag { position:absolute; transform:translate(-50%, -100%); font-size:12px; font-weight:bold; letter-spacing:.5px;
+    background:rgba(255,248,231,.85); border:1.5px solid var(--ink); border-radius:999px; padding:2px 9px;
+    white-space:nowrap; color:var(--ink); }
+  .dtag.nem { background:#d94f30; color:var(--cream); border-color:#8e1f1f; }
   #wipe { position:fixed; inset:0; background:#eaf6f5; opacity:0; pointer-events:none; transition:opacity .55s; z-index:50; }
   #wipe.on { opacity:1; transition:opacity .12s; }
   .diffRow button[data-d="insane"] { border-color:#8e1f1f; color:#8e1f1f; }
@@ -69,6 +74,21 @@
   .lvlCard.locked { opacity:.45; }
   .lvlCard b { letter-spacing:1px; }
   .lvlCard span { font-size:13px; opacity:.75; }
+  #hub { display:flex; flex-direction:column; align-items:center; gap:14px; max-height:96vh; overflow-y:auto; padding:2vh 12px; }
+  #hubHead { text-align:center; color:var(--cream); text-shadow:0 3px 0 rgba(14,42,51,.5); }
+  #hubHead h1 { font-size:54px; letter-spacing:8px; }
+  #hubHead .sub { font-style:italic; opacity:.9; }
+  #hubTabs { display:flex; gap:8px; }
+  #hubTabs button { font-family:inherit; font-size:16px; font-weight:bold; letter-spacing:1px; padding:10px 22px;
+    border:2px solid var(--ink); border-radius:999px; background:rgba(255,248,231,.85); cursor:pointer;
+    box-shadow:0 3px 0 rgba(14,42,51,.4); color:var(--ink); }
+  #hubTabs button.sel { background:var(--sun); }
+  .hubPane { min-width:460px; max-width:min(880px, 94vw); }
+  #duckPanel { max-width:min(1020px, 96vw); }
+  .hubPane .setRow > span:first-child { font-weight:bold; }
+  #duckCols { display:flex; gap:22px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+  .dCol { width:290px; }
+  .wrapRow { flex-wrap:wrap; justify-content:flex-end; max-width:210px; }
   #duckPrev { border:2px solid var(--ink); border-radius:12px; background:#bfe4ea; display:block; margin:0 auto 8px; }
   .swatches { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; max-width:230px; }
   .swatches button { width:26px; height:26px; border-radius:50%; border:2px solid var(--ink); cursor:pointer; padding:0; }
@@ -89,33 +109,32 @@
 <div class="hud" id="eventToast"></div>
 
 <div id="screen">
-  <div class="panel" id="title">
+ <div id="hub">
+  <div id="hubHead">
     <h1>SPILLWAY</h1>
     <div class="sub">a rubber duck derby &mdash; eighty ducks, one river, no engines</div>
-    <div class="diffRow" id="diffRow">
-      <button data-d="easy">EASY</button><button data-d="medium">MEDIUM</button><button data-d="hard">HARD</button><button data-d="insane">INSANE</button>
-    </div>
-    <div class="diffRow" id="lapRow">
-      <button data-l="1">1 LAP</button><button data-l="2">2 LAPS</button><button data-l="3">3 LAPS</button>
-    </div>
-    <div class="diffRow" id="lvlRow">
-      <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button>
-    </div>
+  </div>
+  <div id="hubTabs">
+    <button data-tab="title" class="sel">RACE</button><button data-tab="duckPanel">YOUR DUCK</button><button data-tab="levelPanel">COURSES</button><button data-tab="settingsPanel">SETTINGS</button>
+  </div>
+  <div class="panel hubPane" id="title">
+    <div class="setRow"><span>Difficulty</span><div class="segRow" id="diffRow">
+      <button data-d="easy">EASY</button><button data-d="medium">MEDIUM</button><button data-d="hard">HARD</button><button data-d="insane">INSANE</button></div></div>
+    <div class="setRow"><span>Laps</span><div class="segRow" id="lapRow">
+      <button data-l="1">1</button><button data-l="2">2</button><button data-l="3">3</button></div></div>
+    <div class="setRow"><span>Course</span><div class="segRow" id="lvlRow">
+      <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button></div></div>
     <div class="go" id="raceBtn">RACE &mdash; press <b>SPACE</b></div>
-    <div class="mini" id="duckBtn">&#129414; your duck</div>
-    <div class="mini" id="courseBtn">all courses &amp; best times</div>
     <div class="keys">
-      <kbd>W A S D</kbd> or <kbd>&larr;&uarr;&darr;&rarr;</kbd> paddle &mdash; you can't beat the river, only read it<br>
-      Forest &rarr; gorge &rarr; canyon &rarr; meadow. Survive the falls.
+      <kbd>W A S D</kbd> paddle &middot; <kbd>SHIFT</kbd> shove &middot; controller supported &mdash; you can't beat the river, only read it
     </div>
-    <div class="mini" id="settingsBtn">&#9881; settings &mdash; ESC</div>
   </div>
   <div class="panel" id="results">
     <h2 id="resultsTitle">RACE RESULTS</h2>
     <div id="resultsList"></div>
     <div class="go" id="againBtn">Press <b>R</b> to race again &nbsp;&middot;&nbsp; <b>ESC</b> menu</div>
   </div>
-  <div class="panel hidden" id="settingsPanel">
+  <div class="panel hubPane hidden" id="settingsPanel">
     <h2>SETTINGS</h2>
     <div class="setRow"><span>Music</span><input type="range" id="setMusic" min="0" max="100"></div>
     <div class="setRow"><span>Sound</span><input type="range" id="setSfx" min="0" max="100"></div>
@@ -131,30 +150,43 @@
     <div class="setRow"><span>Field of view</span><input type="range" id="setFov" min="48" max="72"></div>
     <div class="setRow"><span>Steering assist</span><div class="segRow" id="setAssist">
       <button data-v="off">OFF</button><button data-v="on">ON</button></div></div>
-    <div class="go" id="settingsClose">DONE &mdash; ESC</div>
   </div>
-  <div class="panel hidden" id="duckPanel">
-    <h2>YOUR DUCK</h2>
-    <canvas id="duckPrev" width="300" height="200"></canvas>
-    <div class="setRow"><span>Body</span><div class="swatches" id="swBody"></div></div>
-    <div class="setRow"><span>Beak</span><div class="swatches" id="swBeak"></div></div>
-    <div class="setRow"><span>Hat</span><div class="segRow" id="swHat">
-      <button data-v="none">NONE</button><button data-v="tophat">TOP HAT</button><button data-v="cap">CAP</button><button data-v="bow">BOW</button><button data-v="crown">CROWN</button></div></div>
-    <div class="setRow"><span>Weight</span><div class="segRow" id="swWeight">
-      <button data-v="light">LIGHT</button><button data-v="medium">MEDIUM</button><button data-v="heavy">HEAVY</button></div></div>
-    <div class="mini" id="weightBlurb" style="cursor:default; text-decoration:none;"></div>
-    <div class="go" id="duckClose">DONE</div>
+  <div class="panel hubPane hidden" id="duckPanel">
+    <div id="duckCols">
+      <div class="dCol">
+        <div class="setRow"><span>Body</span><div class="swatches" id="swBody"></div></div>
+        <div class="setRow"><span>Beak</span><div class="swatches" id="swBeak"></div></div>
+        <div class="setRow"><span>Pattern</span><div class="segRow wrapRow" id="swPattern">
+          <button data-v="none">NONE</button><button data-v="spots">SPOTS</button><button data-v="stripes">STRIPES</button><button data-v="belly">BELLY</button><button data-v="blaze">BLAZE</button></div></div>
+        <div class="setRow"><span>Pattern color</span><div class="swatches" id="swPatCol"></div></div>
+        <div class="setRow"><span>Weight</span><div class="segRow" id="swWeight">
+          <button data-v="light">LIGHT</button><button data-v="medium">MEDIUM</button><button data-v="heavy">HEAVY</button></div></div>
+        <div class="mini" id="weightBlurb" style="cursor:default; text-decoration:none;"></div>
+      </div>
+      <canvas id="duckPrev" width="300" height="260"></canvas>
+      <div class="dCol">
+        <div class="setRow"><span>Eyes</span><div class="segRow wrapRow" id="swEyes">
+          <button data-v="classic">CLASSIC</button><button data-v="none">NONE</button><button data-v="sleepy">SLEEPY</button><button data-v="angry">ANGRY</button><button data-v="googly">GOOGLY</button></div></div>
+        <div class="setRow"><span>Hat</span><div class="segRow wrapRow" id="swHat">
+          <button data-v="none">NONE</button><button data-v="tophat">TOP HAT</button><button data-v="cap">CAP</button><button data-v="bow">BOW</button><button data-v="crown">CROWN</button><button data-v="pirate">PIRATE</button><button data-v="viking">VIKING</button><button data-v="beret">BERET</button><button data-v="prop">PROPELLER</button><button data-v="toque">CHEF</button></div></div>
+        <div class="setRow"><span>Face</span><div class="segRow wrapRow" id="swFace">
+          <button data-v="none">NONE</button><button data-v="shades">SHADES</button><button data-v="monocle">MONOCLE</button><button data-v="eyepatch">EYEPATCH</button><button data-v="snorkel">SNORKEL</button></div></div>
+        <div class="setRow"><span>Body gear</span><div class="segRow wrapRow" id="swBodyAcc">
+          <button data-v="none">NONE</button><button data-v="scarf">SCARF</button><button data-v="cape">CAPE</button><button data-v="ring">SWIM RING</button></div></div>
+      </div>
+    </div>
   </div>
-  <div class="panel hidden" id="levelPanel">
+  <div class="panel hubPane hidden" id="levelPanel">
     <h2>COURSES</h2>
     <div class="lvlCard" data-lvl="spillway"><div><b>SPILLWAY RUN</b><br><span>forest &middot; gorge &middot; canyon &middot; meadow</span></div><span class="bestLabel">best &mdash;</span></div>
     <div class="lvlCard" data-lvl="millrace"><div><b>MILLRACE</b><br><span>the working forest &mdash; mind the machines</span></div><span class="bestLabel">best &mdash;</span></div>
     <div class="lvlCard locked"><div><b>UNDERGROVE</b><br><span>coming soon</span></div><span>&#128274;</span></div>
     <div class="lvlCard locked"><div><b>CANOPY RUN</b><br><span>coming soon</span></div><span>&#128274;</span></div>
-    <div class="go" id="levelClose">BACK</div>
   </div>
+ </div>
 </div>
 <div class="hud" id="tutToast"></div>
+<div id="tags"></div>
 <div class="hud pill" id="shovePill" style="display:none">SHOVE<small>SHIFT</small></div>
 <div id="wipe"></div>
 
@@ -552,6 +584,26 @@ const DUCK_NAMES = ['Sir Quacksalot','Quackie Chan','Bill Murray','Duck Norris',
 const N_DUCKS = 80;
 const DUCK_R = 0.5;
 
+// the rogues' gallery: 15 signature rivals — fixed looks, matching personalities.
+// skill/aggr/scale feed the AI; gear feeds their rig. They race in every event.
+const ROGUES = [
+  { name: 'Duck Vader',        color: '#1c2126', beak: '#8a8f94', gear: { eyes: 'angry', cape: 1 },            skill: 1.35, aggr: 2.0, scale: 1.05 },
+  { name: 'Sir Quacksalot',    color: '#f5f5f0', beak: '#f2c032', gear: { hat: 'crown' },                      skill: 1.4,  aggr: 0.4, scale: 1.0  },
+  { name: 'Puddles',           color: '#ff9ff3', beak: '#ff8c1a', gear: { eyes: 'googly' },                    skill: 0.65, aggr: 0.8, scale: 1.0  },
+  { name: 'Duck Norris',       color: '#8a6544', beak: '#e05252', gear: { eyes: 'angry' },                     skill: 1.2,  aggr: 2.4, scale: 1.08 },
+  { name: 'Bill Murray',       color: '#9aa0a6', beak: '#ff8c1a', gear: { eyes: 'sleepy' },                    skill: 1.1,  aggr: 0.2, scale: 1.0  },
+  { name: 'The Yellow Baron',  color: '#ffd23f', beak: '#e05252', gear: { hat: 'pirate' },                     skill: 1.3,  aggr: 1.2, scale: 1.0  },
+  { name: 'Quackie Chan',      color: '#ff5a5a', beak: '#f2c032', gear: { hat: 'cap' },                        skill: 1.35, aggr: 0.9, scale: 0.95 },
+  { name: 'Floaty McFloatface',color: '#4dd6c1', beak: '#ff8c1a', gear: { body: 'ring' },                      skill: 0.8,  aggr: 0.3, scale: 1.0  },
+  { name: 'Pond James Pond',   color: '#243a5e', beak: '#f2c032', gear: { hat: 'tophat' },                     skill: 1.35, aggr: 0.8, scale: 1.0  },
+  { name: 'Duckzilla',         color: '#3f7a3c', beak: '#5a6068', gear: { eyes: 'angry' },                     skill: 1.1,  aggr: 1.8, scale: 1.22 },
+  { name: 'Squirt',            color: '#53a6ff', beak: '#ff8c1a', gear: { eyes: 'googly' },                    skill: 1.15, aggr: 0.3, scale: 0.8  },
+  { name: 'Mother Clucker',    color: '#ffa14a', beak: '#e05252', gear: { eyes: 'angry', body: 'scarf' },      skill: 1.2,  aggr: 1.9, scale: 1.0  },
+  { name: 'Eddy Current',      color: '#2ec4b6', beak: '#ff8c1a', gear: { face: 'snorkel' },                   skill: 1.25, aggr: 0.5, scale: 1.0  },
+  { name: 'Riverdance',        color: '#53d769', beak: '#f2c032', gear: { hat: 'toque' },                      skill: 1.3,  aggr: 0.6, scale: 1.0  },
+  { name: 'Rubber Soul',       color: '#a78bfa', beak: '#ff8c1a', gear: { hat: 'beret' },                     skill: 1.05, aggr: 0.4, scale: 1.0  },
+];
+
 const ducks = [];
 function makeDuckState(idx) {
   return {
@@ -569,8 +621,17 @@ function makeDuckState(idx) {
 }
 function resetDucks() {
   ducks.length = 0;
+  const nem = JSON.parse(localStorage.getItem('spillway-nemesis') || 'null');
   for (let i = 0; i < N_DUCKS; i++) {
     const d = makeDuckState(i);
+    if (i >= 1 && i <= ROGUES.length) {
+      const rg = ROGUES[i - 1];
+      d.name = rg.name; d.rogue = rg;
+      d.skill = rg.skill * randRange(0.92, 1.08);
+      d.isNemesis = !!(nem && nem.name === rg.name);
+      if (d.isNemesis) d.skill *= 1.06;   // your nemesis shows up sharp
+    }
+    d.nemPts = 0;
     // packed into the start pool in rows
     const row = Math.floor(i / 10), col = i % 10;
     const si = 6 + row * 5;
@@ -609,9 +670,10 @@ const SETTINGS = Object.assign(
   { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', camView: 'behind', fov: 58, assist: false,
     difficulty: 'medium', laps: 1,
     keys: { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' },
-    duck: { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium' } },
+    duck: { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium', eyes: 'classic', pattern: 'none', patternColor: '#fff8e7', face: 'none', body: 'none' } },
   JSON.parse(localStorage.getItem('spillway-settings') || '{}'));
 if (!SETTINGS.duck) SETTINGS.duck = { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium' };
+SETTINGS.duck = Object.assign({ eyes: 'classic', pattern: 'none', patternColor: '#fff8e7', face: 'none', body: 'none' }, SETTINGS.duck);
 if (!SETTINGS.keys) SETTINGS.keys = { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' };
 if (!SETTINGS.camView) SETTINGS.camView = 'behind';
 const PAD = { up: false, down: false, left: false, right: false, on: false, name: '' };
@@ -622,7 +684,7 @@ const WEIGHTS = {
   heavy:  { scale: 1.18, paddle: 0.92, mass: 1.45, blurb: 'slow to wind up, hits like a barge' },
 };
 function playerW() { return WEIGHTS[SETTINGS.duck.weight] || WEIGHTS.medium; }
-function massOf(d) { return d.idx === 0 ? playerW().mass : 1; }
+function massOf(d) { return d.idx === 0 ? playerW().mass : (d.rogue ? d.rogue.scale * d.rogue.scale : 1); }
 const BEST = JSON.parse(localStorage.getItem('spillway-best') || '{}');
 G.difficulty = SETTINGS.difficulty;
 function saveSettings() { localStorage.setItem('spillway-settings', JSON.stringify(SETTINGS)); }
@@ -734,7 +796,8 @@ function doShove(d) {
       o.spinV += (rand() - 0.5) * 16 * f;
       o._sq = Math.max(o._sq || 0, 0.2);
       splash({ x: o.p.x, y: o.y, z: o.p.z }, 4);
-      if (o.idx === 0) { G.camShake = 0.42; SFX.thud(5); }
+      if (d.idx === 0) o.nemPts = (o.nemPts || 0) + 1;          // grudges go both ways
+      if (o.idx === 0) { G.camShake = 0.42; SFX.thud(5); d.nemPts = (d.nemPts || 0) + 1.5; }
     }
   }
   d.v.x *= 0.8; d.v.z *= 0.8;   // the slam costs you a beat
@@ -850,11 +913,12 @@ function step(dt) {
       d.v.x += side.x * wob * dt; d.v.z += side.z * wob * dt;
       // dirty racing: shoulder into the player — and shove in close quarters
       d.shoveT = (d.shoveT || 0) - dt;
-      if (D.aggr > 0 && !ducks[0].finished && d.skill > 1.0) {
+      const aggrMul = d.rogue ? d.rogue.aggr : (d.skill > 1.0 ? 1 : 0);
+      if (D.aggr > 0 && aggrMul > 0 && !ducks[0].finished) {
         const px = ducks[0].p.x - d.p.x, pz = ducks[0].p.z - d.p.z;
         const pd = Math.hypot(px, pz);
-        if (pd < 4 && pd > 0.01) { d.v.x += (px / pd) * D.aggr * dt * 2; d.v.z += (pz / pd) * D.aggr * dt * 2; }
-        if (pd < 2.6 && d.shoveT <= 0 && !d.air && rand() < dt * D.aggr * 0.45) doShove(d);
+        if (pd < 4 && pd > 0.01) { d.v.x += (px / pd) * D.aggr * aggrMul * dt * 2; d.v.z += (pz / pd) * D.aggr * aggrMul * dt * 2; }
+        if (pd < 2.6 && d.shoveT <= 0 && !d.air && rand() < dt * D.aggr * aggrMul * 0.45) doShove(d);
       }
       // rubber-band: keep the show close
       const lead = d.progress - ducks[0].progress;
@@ -2107,10 +2171,160 @@ const ring = new THREE.Mesh(new THREE.TorusGeometry(DUCK_R * 1.5, 0.06, 8, 24),
 ring.rotation.x = Math.PI / 2;
 scene.add(ring);
 
-// ---------- hats (player customization)
+// ---------- duck gear: hats, eyes, face & body accessories, patterns
+function makeEyes(style) {
+  const g = new THREE.Group();
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const bk = 0x14222a;
+  if (style === 'none') return g;
+  if (style === 'googly') {
+    for (const sx of [-1, 1]) {
+      const white = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 6), lam(0xffffff));
+      white.position.set(sx * 0.13, 0.09, 0.13);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.042, 6, 5), new THREE.MeshBasicMaterial({ color: bk }));
+      pupil.position.set(sx * 0.13, 0.08, 0.20);
+      g.add(white, pupil);
+    }
+  } else if (style === 'sleepy') {
+    for (const sx of [-1, 1]) {
+      const lid = new THREE.Mesh(new THREE.SphereGeometry(0.05, 7, 5), new THREE.MeshBasicMaterial({ color: bk }));
+      lid.scale.set(1.3, 0.35, 1); lid.position.set(sx * 0.13, 0.06, 0.14);
+      g.add(lid);
+    }
+  } else if (style === 'angry') {
+    for (const sx of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.048, 7, 5), new THREE.MeshBasicMaterial({ color: bk }));
+      eye.position.set(sx * 0.13, 0.055, 0.14);
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.028, 0.02), new THREE.MeshBasicMaterial({ color: bk }));
+      brow.position.set(sx * 0.12, 0.115, 0.15); brow.rotation.z = sx * -0.5;
+      g.add(eye, brow);
+    }
+  }
+  return g;
+}
+function makeFace(type) {
+  const g = new THREE.Group();
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  if (type === 'shades') {
+    for (const sx of [-1, 1]) {
+      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.08, 0.03), lam(0x14181e));
+      lens.position.set(sx * 0.12, 0.06, 0.16); g.add(lens);
+    }
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.02), lam(0x14181e));
+    bridge.position.set(0, 0.07, 0.17); g.add(bridge);
+  } else if (type === 'monocle') {
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 6, 14), lam(0xd6b44c));
+    rim.position.set(0.12, 0.06, 0.165); g.add(rim);
+  } else if (type === 'eyepatch') {
+    const patch = new THREE.Mesh(new THREE.SphereGeometry(0.055, 7, 5), new THREE.MeshBasicMaterial({ color: 0x14181e }));
+    patch.scale.set(1.2, 1.1, 0.5); patch.position.set(-0.12, 0.06, 0.15); g.add(patch);
+  } else if (type === 'snorkel') {
+    const mask = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.1, 0.05), lam(0x53a6ff));
+    mask.position.set(0, 0.06, 0.16);
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.34, 6), lam(0xff8c1a));
+    tube.position.set(0.18, 0.16, 0.05); tube.rotation.x = 0.3;
+    g.add(mask, tube);
+  }
+  return g;
+}
+function makeBodyAcc(type) {
+  const g = new THREE.Group();
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  if (type === 'scarf') {
+    const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.055, 8, 16), lam(0xd94f30));
+    wrap.rotation.x = Math.PI / 2; wrap.position.set(0, 0.22, 0.16);
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.22, 0.03), lam(0xd94f30));
+    tail.position.set(0.1, 0.08, -0.02); tail.rotation.x = 0.3;
+    g.add(wrap, tail);
+  } else if (type === 'cape') {
+    const cape = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.03), lam(0x8e1f5b));
+    cape.position.set(0, 0.05, -0.42); cape.rotation.x = 0.55;
+    g.add(cape);
+  } else if (type === 'ring') {
+    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.13, 8, 18), lam(0xff5a5a));
+    ring2.rotation.x = Math.PI / 2; ring2.position.y = -0.12;
+    const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.135, 8, 18, Math.PI / 3), lam(0xfff8e7));
+    stripe.rotation.x = Math.PI / 2; stripe.position.y = -0.12;
+    g.add(ring2, stripe);
+  }
+  return g;
+}
+function makePattern(type, colorHex) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: colorHex });
+  if (type === 'spots') {
+    const P = [[0.28, 0.1, 0.28], [-0.3, 0.05, 0.1], [0.18, 0.18, -0.25], [-0.2, 0.12, -0.32], [0.05, 0.24, 0.05]];
+    for (const [px, py, pz] of P) {
+      const spot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 7, 5), mat);
+      spot.scale.setScalar(1); spot.position.set(px, py, pz);
+      const len = Math.hypot(px, py, pz);
+      spot.position.multiplyScalar(0.5 * 0.98 / Math.max(0.35, len) * (len / 0.5) || 1);
+      g.add(spot);
+    }
+  } else if (type === 'stripes') {
+    for (const off of [-0.14, 0.08, 0.3]) {
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.48 - Math.abs(off) * 0.35, 0.045, 6, 18), mat);
+      band.rotation.x = Math.PI / 2; band.position.y = off;
+      g.add(band);
+    }
+  } else if (type === 'belly') {
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.505, 12, 8, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.45), mat);
+    belly.scale.set(1.01, 0.79, 1.16);
+    g.add(belly);
+  } else if (type === 'blaze') {
+    const blaze = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), mat);
+    blaze.scale.set(1, 1.5, 0.45); blaze.position.set(0, 0.12, 0.48);
+    g.add(blaze);
+  }
+  return g;
+}
 function makeHat(type) {
   const g = new THREE.Group();
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  if (type === 'pirate') {
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.3, 0.06, 10), lam(0x22262b));
+    const front = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.16, 0.05), lam(0x22262b));
+    front.position.set(0, 0.1, 0.16); front.rotation.x = -0.35;
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 5), lam(0xfff8e7));
+    skull.position.set(0, 0.11, 0.185);
+    g.add(brim, front, skull);
+    return g;
+  }
+  if (type === 'viking') {
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x8a9096));
+    for (const sx of [-1, 1]) {
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 6), lam(0xf2ecd8));
+      horn.position.set(sx * 0.22, 0.12, 0); horn.rotation.z = sx * -0.7;
+      g.add(horn);
+    }
+    g.add(dome);
+    return g;
+  }
+  if (type === 'beret') {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.2, 9, 6), lam(0x8e1f1f));
+    puff.scale.set(1.25, 0.5, 1.25); puff.position.set(0.04, 0.05, 0);
+    const nub = new THREE.Mesh(new THREE.SphereGeometry(0.035, 5, 4), lam(0x6e1717));
+    nub.position.set(0.04, 0.15, 0);
+    g.add(puff, nub);
+    return g;
+  }
+  if (type === 'prop') {
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), lam(0xd94f30));
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.1, 5), lam(0x22262b));
+    stick.position.y = 0.2;
+    const blades = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.02, 0.06), lam(0xffd23f));
+    blades.position.y = 0.26; blades.name = 'prop';
+    g.add(dome, stick, blades);
+    return g;
+  }
+  if (type === 'toque') {
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.2, 10), lam(0xf7f7f2));
+    base.position.y = 0.1;
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.19, 9, 6), lam(0xffffff));
+    puff.scale.y = 0.6; puff.position.y = 0.24;
+    g.add(base, puff);
+    return g;
+  }
   if (type === 'tophat') {
     const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.16, 0.26, 10), lam(0x22262b));
     crown.position.y = 0.16;
@@ -2142,7 +2356,30 @@ function makeHat(type) {
   }
   return g;
 }
-const playerHat = new THREE.Group();
+// full gear rig: positioned/rotated/scaled with the duck each frame
+const HEAD_OFF = [0, DUCK_R * 0.64, DUCK_R * 0.72];   // head centre in duck-local space
+function buildRig(dk) {
+  const rig = new THREE.Group();
+  if (dk.hat !== 'none') {
+    const h = makeHat(dk.hat);
+    h.position.set(HEAD_OFF[0], HEAD_OFF[1] + DUCK_R * 0.5, HEAD_OFF[2]);
+    rig.add(h);
+  }
+  if (dk.eyes && dk.eyes !== 'classic') {
+    const e = makeEyes(dk.eyes);
+    e.position.set(...HEAD_OFF);
+    rig.add(e);
+  }
+  if (dk.face && dk.face !== 'none') {
+    const f = makeFace(dk.face);
+    f.position.set(...HEAD_OFF);
+    rig.add(f);
+  }
+  if (dk.body && dk.body !== 'none') rig.add(makeBodyAcc(dk.body));
+  if (dk.pattern && dk.pattern !== 'none') rig.add(makePattern(dk.pattern, dk.patternColor || '#fff8e7'));
+  return rig;
+}
+const playerHat = new THREE.Group();   // legacy name — now the full player rig
 scene.add(playerHat);
 // soft cream outline (inverted hull) so you never lose your duck in the pack
 const outlineMesh = new THREE.Mesh(duckBodyG,
@@ -2150,16 +2387,33 @@ const outlineMesh = new THREE.Mesh(duckBodyG,
 outlineMesh.geometry = duckBodyG.clone();
 outlineMesh.geometry.scale(1.07, 1.07, 1.07);
 scene.add(outlineMesh);
-let playerHatType = null;
+// the rogues wear their signatures
+const rogueRigs = {};
+{
+  const rc2 = new THREE.Color();
+  for (let ri = 0; ri < ROGUES.length; ri++) {
+    const rg = ROGUES[ri], idx = ri + 1;
+    bodyIM.setColorAt(idx, rc2.set(rg.color));
+    beakIM.setColorAt(idx, new THREE.Color(rg.beak));
+    const dk = { hat: rg.gear.hat || 'none', eyes: rg.gear.eyes || 'classic',
+      face: rg.gear.face || 'none', body: rg.gear.cape ? 'cape' : (rg.gear.body || 'none'), pattern: 'none' };
+    const rig = buildRig(dk);
+    rogueRigs[idx] = rig;
+    scene.add(rig);
+  }
+  bodyIM.instanceColor.needsUpdate = true;
+}
+let playerGearKey = null;
 function applyDuck() {
   const dk = SETTINGS.duck;
   const c = new THREE.Color(dk.color);
   bodyIM.setColorAt(0, c); bodyIM.instanceColor.needsUpdate = true;
   beakIM.setColorAt(0, new THREE.Color(dk.beak)); beakIM.instanceColor.needsUpdate = true;
-  if (playerHatType !== dk.hat) {
-    playerHatType = dk.hat;
+  const key = JSON.stringify(dk);
+  if (playerGearKey !== key) {
+    playerGearKey = key;
     while (playerHat.children.length) playerHat.remove(playerHat.children[0]);
-    if (dk.hat !== 'none') playerHat.add(makeHat(dk.hat));
+    playerHat.add(buildRig(dk));
   }
 }
 
@@ -2293,18 +2547,31 @@ function syncDucks(t) {
     _e.set(rockX, d.heading, rockZ);
     _q.setFromEuler(_e);
     const q2 = d._sq || 0;
-    const wsc = d.idx === 0 ? playerW().scale : 1;
+    const wsc = d.idx === 0 ? playerW().scale : (d.rogue ? d.rogue.scale : 1);
     _s.set((1 + q2 * 0.35) * wsc, (1 - q2 * 0.55) * wsc, (1 + q2 * 0.35) * wsc);
     _m4.compose(_tmpA.set(d.p.x, d.y + bob - q2 * 0.15, d.p.z), _q, _s);
-    if (d.idx === 0 && playerHat.children.length) {
-      // hat rides the head: local offset rotated by the duck's orientation
-      playerHat.position.set(d.p.x, d.y + bob - q2 * 0.15, d.p.z)
-        .add(_tmpB.set(0, DUCK_R * 1.14 * wsc, DUCK_R * 0.72 * wsc).applyQuaternion(_q));
+    if (d.idx === 0) {
+      // the whole gear rig rides the duck
+      playerHat.position.set(d.p.x, d.y + bob - q2 * 0.15, d.p.z);
       playerHat.quaternion.copy(_q);
       playerHat.scale.setScalar(wsc);
+      const prop = playerHat.getObjectByName('prop');
+      if (prop) prop.rotation.y = t * 14;
+    } else if (d.rogue && rogueRigs[d.idx]) {
+      const rr = rogueRigs[d.idx];
+      rr.position.set(d.p.x, d.y + bob - q2 * 0.15, d.p.z);
+      rr.quaternion.copy(_q);
+      rr.scale.setScalar(wsc);
     }
-    bodyIM.setMatrixAt(d.idx, _m4); beakIM.setMatrixAt(d.idx, _m4); eyeIM.setMatrixAt(d.idx, _m4);
-    eyeShineIM.setMatrixAt(d.idx, _m4);
+    bodyIM.setMatrixAt(d.idx, _m4); beakIM.setMatrixAt(d.idx, _m4);
+    const customEyes = (d.idx === 0 && SETTINGS.duck.eyes && SETTINGS.duck.eyes !== 'classic')
+                    || (d.rogue && d.rogue.gear.eyes);
+    if (customEyes) {
+      _s.setScalar(0.0001);   // custom eye style replaces the stock instanced eyes
+      _m4.compose(_tmpA, _q, _s);
+      eyeIM.setMatrixAt(d.idx, _m4); eyeShineIM.setMatrixAt(d.idx, _m4);
+      _s.set(1, 1, 1);
+    } else { eyeIM.setMatrixAt(d.idx, _m4); eyeShineIM.setMatrixAt(d.idx, _m4); }
     if (d.idx === 0) { outlineMesh.matrix.copy(_m4); outlineMesh.matrixAutoUpdate = false; }
   }
   _s.set(1, 1, 1);
@@ -2347,6 +2614,46 @@ const mapPts = [];
     mapPts.push([10 + (S.pos[i].x - minX) * sc, 10 + (S.pos[i].z - minZ) * sc * -1 + 270 * ((maxZ - minZ) * sc / 270)]);
   // z decreases downstream; flip so start is at top
 }
+// floating name tags: race leaders + anyone near you (nemesis runs red)
+const TAG_POOL = [];
+{
+  const host = el('tags');
+  for (let i = 0; i < 7; i++) {
+    const t = document.createElement('div');
+    t.className = 'dtag'; t.style.display = 'none';
+    host.appendChild(t); TAG_POOL.push(t);
+  }
+}
+const _tagV = new THREE.Vector3();
+function updateTags() {
+  let used = 0;
+  if (G.mode === 'race' && !el('screen').classList.contains('hidden')) { /* menu overlay open — skip */ }
+  else if (G.mode === 'race') {
+    const byProg = ducks.filter(d2 => d2.idx !== 0 && !d2.finished).sort((a, b) => b.progress - a.progress);
+    const cands = new Set(byProg.slice(0, 3));
+    for (const d2 of ducks) {
+      if (d2.idx === 0 || d2.finished) continue;
+      const dx = d2.p.x - ducks[0].p.x, dz = d2.p.z - ducks[0].p.z;
+      if (dx * dx + dz * dz < 64) cands.add(d2);
+    }
+    for (const d2 of cands) {
+      if (used >= TAG_POOL.length) break;
+      _tagV.set(d2.p.x, d2.y + 1.1, d2.p.z).project(camera);
+      if (_tagV.z > 1 || Math.abs(_tagV.x) > 1.05 || Math.abs(_tagV.y) > 1.05) continue;
+      const dx = d2.p.x - ducks[0].p.x, dz = d2.p.z - ducks[0].p.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 70) continue;   // far tags read as clutter through terrain
+      const tag = TAG_POOL[used++];
+      tag.style.display = '';
+      tag.textContent = d2.name;
+      tag.classList.toggle('nem', !!d2.isNemesis);
+      tag.style.left = ((_tagV.x + 1) / 2 * innerWidth) + 'px';
+      tag.style.top = ((1 - _tagV.y) / 2 * innerHeight) + 'px';
+      tag.style.opacity = Math.max(0.25, Math.min(0.95, 1.2 - dist / 60));
+    }
+  }
+  for (let i = used; i < TAG_POOL.length; i++) TAG_POOL[i].style.display = 'none';
+}
 function drawMap() {
   mapCtx.clearRect(0, 0, 120, 290);
   mapCtx.strokeStyle = '#2ec4b6'; mapCtx.lineWidth = 4; mapCtx.lineCap = 'round';
@@ -2376,6 +2683,14 @@ function onPlayerFinish() {
   const d = ducks[0];
   toast(`P${d.place}!`, 1600);
   SFX.fanfare();
+  // settle the grudge: who was your nemesis this race?
+  if (d.place > 1) { const ahead = G.results[d.place - 2]; if (ahead && ahead.idx !== 0) ahead.nemPts = (ahead.nemPts || 0) + 2; }
+  let worst = null;
+  for (const o of ducks) if (o.idx !== 0 && (o.nemPts || 0) > 0 && (!worst || o.nemPts > worst.nemPts)) worst = o;
+  if (worst && worst.nemPts >= 2) {
+    localStorage.setItem('spillway-nemesis', JSON.stringify({ name: worst.name }));
+    G.nemesisNote = `your nemesis: ${worst.name}`;
+  } else G.nemesisNote = '';
   setTimeout(showResults, 1800);
 }
 function showResults() {
@@ -2394,7 +2709,8 @@ function showResults() {
       bestNote = ' — NEW BEST!';
     }
   }
-  el('resultsTitle').textContent = (me.place === 1 ? '🏆 CHAMPION DUCK' : `RACE RESULTS — P${me.place || '—'}`) + bestNote;
+  el('resultsTitle').textContent = (me.place === 1 ? '🏆 CHAMPION DUCK' : `RACE RESULTS — P${me.place || '—'}`) + bestNote
+    + (G.nemesisNote ? ` · ${G.nemesisNote}` : '');
   list.innerHTML = rows.join('');
   el('results').style.display = 'block';
   el('title').classList.add('hidden');
@@ -2428,26 +2744,26 @@ function prepRace(skipFly) {
   el('shovePill').style.display = '';
   G.playerShove = false;
 }
+function showTab(id) {
+  for (const p of ['title', 'duckPanel', 'levelPanel', 'settingsPanel']) el(p).classList.toggle('hidden', p !== id);
+  document.querySelectorAll('#hubTabs button').forEach(b => b.classList.toggle('sel', b.dataset.tab === id));
+  G.hubTab = id;
+  el('results').style.display = 'none';
+  if (id === 'duckPanel') refreshDuckUI();
+  if (id === 'levelPanel') refreshLevelCards();
+}
+function showHub(tab) { el('screen').classList.remove('hidden'); showTab(tab || 'title'); }
 function toTitle() {
   G.mode = 'title';
   resetDucks();
-  el('results').style.display = 'none';
-  el('settingsPanel').classList.add('hidden');
-  el('title').classList.remove('hidden');
-  el('screen').classList.remove('hidden');
+  showHub('title');
   el('hudTop').style.display = 'none';
   el('minimap').style.display = 'none';
   el('shovePill').style.display = 'none';
 }
-function openSettings() {
-  el('title').classList.add('hidden');
-  el('results').style.display = 'none';
-  el('settingsPanel').classList.remove('hidden');
-  el('screen').classList.remove('hidden');
-}
+function openSettings() { showHub('settingsPanel'); }
 function closeSettings() {
-  el('settingsPanel').classList.add('hidden');
-  if (G.mode === 'title') { el('title').classList.remove('hidden'); }
+  if (G.mode === 'title') showTab('title');
   else if (ducks[0].finished) { el('results').style.display = 'block'; }
   else el('screen').classList.add('hidden');
 }
@@ -2486,20 +2802,18 @@ addEventListener('keydown', e => {
   if (k === K.left || k === 'arrowleft') input.left = true;
   if (k === K.right || k === 'arrowright') input.right = true;
   if (k === K.shove && G.mode === 'race') G.playerShove = true;
-  const settingsOpen = !el('settingsPanel').classList.contains('hidden');
   if (k === ' ') {
     e.preventDefault();
-    if (G.mode === 'title' && !settingsOpen) prepRace();
+    if (G.mode === 'title') prepRace();
     else if (G.mode === 'flyover') { G.mode = 'countdown'; G.countdown = 3.2; snapCam(); }
   }
   if (k === 'r' && G.mode !== 'title') prepRace();
   if (G.mode === 'title' && (k === '1' || k === '2' || k === '3' || k === '4')) setDiff(['easy', 'medium', 'hard', 'insane'][+k - 1]);
   if (k === 'escape') {
-    if (!el('levelPanel').classList.contains('hidden')) { el('levelPanel').classList.add('hidden'); el('title').classList.remove('hidden'); }
-    else if (!el('duckPanel').classList.contains('hidden')) { el('duckPanel').classList.add('hidden'); el('title').classList.remove('hidden'); }
-    else if (settingsOpen) closeSettings();
-    else if (el('results').style.display === 'block') toTitle();
-    else openSettings();
+    if (el('results').style.display === 'block') toTitle();
+    else if (G.mode === 'title') showTab('title');
+    else if (el('screen').classList.contains('hidden')) showHub('settingsPanel');
+    else el('screen').classList.add('hidden');
   }
 });
 addEventListener('keyup', e => {
@@ -2552,26 +2866,19 @@ document.querySelectorAll('#lvlRow button').forEach(b => {
     location.reload();
   });
 });
-el('courseBtn').addEventListener('click', () => {
-  el('title').classList.add('hidden');
+function refreshLevelCards() {
   document.querySelectorAll('.lvlCard[data-lvl]').forEach(card => {
     card.classList.toggle('sel', card.dataset.lvl === LVL.id);
     const best = BEST[`${card.dataset.lvl}-${SETTINGS.difficulty}-${SETTINGS.laps}`];
     card.querySelector('.bestLabel').textContent = best ? `best ${fmtTime(best)}` : 'best —';
   });
-  el('levelPanel').classList.remove('hidden');
-});
+}
+document.querySelectorAll('#hubTabs button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 document.querySelectorAll('.lvlCard[data-lvl]').forEach(card => card.addEventListener('click', () => {
-  if (card.dataset.lvl === LVL.id) { el('levelPanel').classList.add('hidden'); el('title').classList.remove('hidden'); return; }
+  if (card.dataset.lvl === LVL.id) { showTab('title'); return; }
   localStorage.setItem('spillway-level', card.dataset.lvl);
   location.reload();
 }));
-el('levelClose').addEventListener('click', () => {
-  el('levelPanel').classList.add('hidden');
-  el('title').classList.remove('hidden');
-});
-el('settingsBtn').addEventListener('click', openSettings);
-el('settingsClose').addEventListener('click', closeSettings);
 document.querySelectorAll('#diffRow button').forEach(b => b.addEventListener('click', () => setDiff(b.dataset.d)));
 function segWire(id, key, after) {
   document.querySelectorAll('#' + id + ' button').forEach(b => b.addEventListener('click', () => {
@@ -2637,13 +2944,19 @@ document.querySelectorAll('#swHat button').forEach(b => b.addEventListener('clic
   SETTINGS.duck.hat = b.dataset.v; saveSettings(); applyDuck(); refreshDuckUI(); }));
 document.querySelectorAll('#swWeight button').forEach(b => b.addEventListener('click', () => {
   SETTINGS.duck.weight = b.dataset.v; saveSettings(); refreshDuckUI(); }));
-el('duckBtn').addEventListener('click', () => { el('title').classList.add('hidden'); el('duckPanel').classList.remove('hidden'); refreshDuckUI(); });
-el('duckClose').addEventListener('click', () => { el('duckPanel').classList.add('hidden'); el('title').classList.remove('hidden'); });
+function duckSeg(id, key) {
+  document.querySelectorAll('#' + id + ' button').forEach(b => b.addEventListener('click', () => {
+    SETTINGS.duck[key] = b.dataset.v; saveSettings(); applyDuck(); refreshDuckUI();
+  }));
+}
+duckSeg('swEyes', 'eyes'); duckSeg('swPattern', 'pattern'); duckSeg('swFace', 'face'); duckSeg('swBodyAcc', 'body');
+buildSwatches(el('swPatCol'), ['#fff8e7', '#14222a', '#ff5a5a', '#53a6ff', '#ffd23f', '#e14a76', '#53d769'], 'patternColor');
 function refreshDuckUI() {
   document.querySelectorAll('#swBody button').forEach(b => b.classList.toggle('sel', b.dataset.c === SETTINGS.duck.color));
   document.querySelectorAll('#swBeak button').forEach(b => b.classList.toggle('sel', b.dataset.c === SETTINGS.duck.beak));
-  document.querySelectorAll('#swHat button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.duck.hat));
-  document.querySelectorAll('#swWeight button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.duck.weight));
+  document.querySelectorAll('#swPatCol button').forEach(b => b.classList.toggle('sel', b.dataset.c === SETTINGS.duck.patternColor));
+  for (const [id, key] of [['swHat', 'hat'], ['swWeight', 'weight'], ['swEyes', 'eyes'], ['swPattern', 'pattern'], ['swFace', 'face'], ['swBodyAcc', 'body']])
+    document.querySelectorAll('#' + id + ' button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.duck[key]));
   el('weightBlurb').textContent = playerW().blurb;
   syncPreviewDuck();
 }
@@ -2654,7 +2967,7 @@ prevRenderer.setSize(300, 200, false);
 const prevScene = new THREE.Scene();
 prevScene.background = new THREE.Color(0xbfe4ea);
 const prevCam = new THREE.PerspectiveCamera(38, 1.5, 0.1, 20);
-prevCam.position.set(1.0, 0.8, 1.7); prevCam.lookAt(0, 0.28, 0);
+prevCam.position.set(1.25, 0.95, 2.1); prevCam.lookAt(0, 0.22, 0);
 prevScene.add(new THREE.HemisphereLight(0xdfeef2, 0x7a9a6a, 1.1));
 const prevSun = new THREE.DirectionalLight(0xfff2d0, 1.2); prevSun.position.set(2, 3, 2);
 prevScene.add(prevSun);
@@ -2672,12 +2985,9 @@ prevScene.add(prevPool);
 function syncPreviewDuck() {
   prevBody.material.color.set(SETTINGS.duck.color);
   prevBeak.material.color.set(SETTINGS.duck.beak);
+  prevEyes.visible = !SETTINGS.duck.eyes || SETTINGS.duck.eyes === 'classic';
   while (prevHat.children.length) prevHat.remove(prevHat.children[0]);
-  if (SETTINGS.duck.hat !== 'none') {
-    const h = makeHat(SETTINGS.duck.hat);
-    h.position.set(0, DUCK_R * 1.14, DUCK_R * 0.72);
-    prevHat.add(h);
-  }
+  prevHat.add(buildRig(SETTINGS.duck));
   prevDuck.scale.setScalar(playerW().scale);
 }
 refreshSettingsUI(); setDiff(SETTINGS.difficulty); setLaps(SETTINGS.laps); applyQuality(); applyDuck(); refreshDuckUI();
@@ -2715,7 +3025,7 @@ function frame(now) {
   }
   updateSplashes(dt);
   updateWaves(dt);
-  if (!el('duckPanel').classList.contains('hidden')) {
+  if (!el('screen').classList.contains('hidden') && !el('duckPanel').classList.contains('hidden')) {
     prevDuck.rotation.y += dt * 0.9;
     prevDuck.position.y = Math.sin(now / 500) * 0.03;
     prevRenderer.render(prevScene, prevCam);
@@ -2762,6 +3072,7 @@ function frame(now) {
       if (c !== G._lastC) { G._lastC = c; if (c > 0 && c <= 3) { toast(String(c), 700); SFX.beep(false); } }
     }
     drawMap();
+    updateTags();
     // first-race tips
     if (G.tutOn && G.mode === 'race') {
       const steps = [[1, 'PADDLE — WASD or arrows · SHIFT to shove'], [9, 'The dark fast water is your friend. Reeds and eddies are not.'], [19, 'Rocks, logs, a whirlpool… and THE FALLS. Good luck.']];
