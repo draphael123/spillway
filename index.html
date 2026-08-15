@@ -3812,11 +3812,17 @@ if (LVL.id === 'millrace') {
     const plinth=new THREE.Mesh(new THREE.BoxGeometry(15,2.2,8),concrete);plinth.position.y=1.0;g.add(plinth);
     const hall=new THREE.Mesh(new THREE.BoxGeometry(9,5.5,6),dark);hall.position.set(-1.8,4.5,0);g.add(hall);
     const roof2=new THREE.Mesh(new THREE.BoxGeometry(10,.55,6.8),orange);roof2.position.set(-1.8,7.45,0);g.add(roof2);
-    for(const x of [-5.2,-1.8,1.6]){const gate=new THREE.Mesh(new THREE.BoxGeometry(2.2,2.7,.35),lam(0x162f37));gate.position.set(x,3.6,-3.18);g.add(gate);}
+    const heroGates=[],heroFalls=[];
+    for(const x of [-5.2,-1.8,1.6]){
+      const gate=new THREE.Mesh(new THREE.BoxGeometry(2.2,2.7,.35),lam(0x162f37));gate.position.set(x,3.6,-3.18);g.add(gate);heroGates.push(gate);
+      const fall=new THREE.Mesh(new THREE.PlaneGeometry(2.05,5.5,1,8),new THREE.MeshBasicMaterial({color:0x8eefff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));
+      fall.position.set(x,2.6,-3.35);g.add(fall);heroFalls.push(fall);
+    }
     const tower=new THREE.Mesh(new THREE.BoxGeometry(2.6,9,2.6),concrete);tower.position.set(5.2,5.4,1.2);g.add(tower);
     const beacon=new THREE.Mesh(new THREE.SphereGeometry(.28,8,6),new THREE.MeshBasicMaterial({color:0xffb23e}));beacon.position.set(5.2,10.1,1.2);g.add(beacon);
+    const beaconLight=new THREE.PointLight(0xff9a3c,0,24,2);beaconLight.position.copy(beacon.position);g.add(beaconLight);
     for(const x of [-4,0,4]){const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,8,8),orange);pipe.rotation.z=Math.PI/2;pipe.position.set(x,-.1,3.4);g.add(pipe);}
-    g.position.set(p.x,gy,p.z);g.rotation.y=yaw;scene.add(g);window._spillwayStation=g;
+    g.position.set(p.x,gy,p.z);g.rotation.y=yaw;scene.add(g);window._spillwayStation={g,gates:heroGates,falls:heroFalls,beacon,light:beaconLight};
   }
   // Canyon fire lookout gives the middle distance a human-scale vertical landmark.
   {
@@ -4635,6 +4641,14 @@ const outlineMesh = new THREE.Mesh(duckBodyG,
 outlineMesh.geometry = duckBodyG.clone();
 outlineMesh.geometry.scale(1.07, 1.07, 1.07);
 scene.add(outlineMesh);
+// A real paddle makes the player's input readable in-world, especially on phones without a keyboard prompt.
+const playerPaddle=new THREE.Group();
+{
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,1.5,8),new THREE.MeshStandardMaterial({color:0xe8d1a5,roughness:.72}));
+  shaft.rotation.x=Math.PI/2;shaft.position.z=.05;
+  const blade=new THREE.Mesh(new THREE.BoxGeometry(.34,.07,.52),new THREE.MeshStandardMaterial({color:0xd94f30,roughness:.58}));blade.position.z=.93;
+  playerPaddle.add(shaft,blade);playerPaddle.visible=false;scene.add(playerPaddle);
+}
 // the rogues wear their signatures
 const rogueRigs = {};
 {
@@ -4992,6 +5006,12 @@ function syncDucks(t) {
       playerHat.scale.setScalar(wsc);
       const prop = playerHat.getObjectByName('prop');
       if (prop) prop.rotation.y = t * 14;
+      playerPaddle.visible=G.mode==='race'||G.mode==='countdown';
+      playerPaddle.position.set(d.p.x,d.y+bob+.28,d.p.z);
+      playerPaddle.quaternion.copy(_q);
+      playerPaddle.translateX(.72*wsc);playerPaddle.translateZ(.08*wsc);
+      playerPaddle.rotateZ(-.42+(d._stroking?stroke*.48:0)+(d.shoveT>0?.65:0));
+      playerPaddle.scale.setScalar(wsc);
     } else if (d.rogue && rogueRigs[d.idx]) {
       const rr = rogueRigs[d.idx];
       rr.position.set(d.p.x, d.y + bob - q2 * 0.15, d.p.z);
@@ -6252,6 +6272,12 @@ function frame(now) {
         else sp.grp.rotation.y+=Math.sin(t+sp.ph)*dt*.08;
       }
       if(CLIMB_FX.length){const pulse=.24+.09*Math.sin(t*SURGE_STYLE.pulse);for(const fx of CLIMB_FX)if(fx.kind==='ribbon')fx.mesh.material.opacity=pulse;for(const fx of CLIMB_FX)if(fx.light)fx.light.intensity=.9+Math.sin(t*SURGE_STYLE.pulse+fx.ph)*.3;}
+      // Spillway's flood-control station becomes the authored hero moment: warning beacon,
+      // rising gates, and three water curtains that build with the course transformation.
+      if(window._spillwayStation){const st=_spillwayStation,on=G.transformed?1:0,live=G.courseEventT>0?1:.58;
+        st.beacon.scale.setScalar(1+(on?.28:0)*(.5+.5*Math.sin(t*8)));st.light.intensity=on?2.2*live*(.55+.45*Math.sin(t*8)):0;
+        st.gates.forEach((gate,k)=>{gate.position.y+=(3.6+on*2.8-gate.position.y)*Math.min(1,dt*2.4);const f=st.falls[k];f.material.opacity+=(on*(.34+.12*Math.sin(t*5+k))-f.material.opacity)*Math.min(1,dt*2.8);f.material.map&&(f.material.map.offset.y-=dt*1.4);f.scale.y=.82+.18*Math.sin(t*4+k);});
+      }
     }
     // surge wall sweeps
     if (G.surge >= 0 && G.surge <= 1) {
