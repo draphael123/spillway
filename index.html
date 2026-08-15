@@ -1018,6 +1018,7 @@ if (LVL.id === 'undergrove') { addPike(0.45, -3.0); addPike(0.63, 2.2); }
 if (LVL.id === 'canopy') { addPike(0.34, -2.5); addTurtle(0.17, 2.6); }
 // millrace machinery: gates, booms, saw, and log traffic live in MDYN (updated per tick)
 const MDYN = { gates: [], booms: [], traffic: [], saw: null };
+const HARBOR_DYN = { containers: [], boat: null };
 if (LVL.id === 'millrace') {
   // sluice gates: alternate halves of the channel, out of phase — read the rhythm
   for (const [t, side2, phase] of [[0.275, -1, 0], [0.305, 1, Math.PI], [0.335, -1, Math.PI / 2]]) {
@@ -1038,6 +1039,12 @@ if (LVL.id === 'millrace') {
     MDYN.traffic.push({ L, s: 0.65 + k * 0.018, lat: ((k * 13) % 7) - 3 });
   }
   MDYN.saw = { i: Math.round(0.465 * NSAMP), lat: 0.6, r: 2.3 };
+}
+if(LVL.id==='harbor'){
+  for(const [t2,phase,col] of [[.535,0,0xd95d39],[.575,2.1,0x167d87],[.615,4.2,0xe2a93b]]){
+    addLog(t2,0,.1,0);const L=LOGS[LOGS.length-1];L.dyn=true;L.r=.82;HARBOR_DYN.containers.push({L,i:Math.round(t2*NSAMP),phase,col});
+  }
+  addLog(.57,0,.1,0);const L=LOGS[LOGS.length-1];L.dyn=true;L.r=1.05;HARBOR_DYN.boat={L,i:Math.round(.57*NSAMP)};
 }
 function updateMDYN() {
   const t = G.time;
@@ -1075,6 +1082,12 @@ function updateMDYN() {
     tr.L.i = i; tr.L.latC = tr.lat; tr.L.latHalf = 1.2;
     tr.c = c; tr.tan = S.tan[i];
   }
+}
+
+function updateHarborDyn(){
+  const t=G.time,hot=G.transformed?1.45:1;
+  for(const c of HARBOR_DYN.containers){const i=c.i,w=S.w[i],lat=Math.sin(t*.55*hot+c.phase)*w*.56,mid=S.pos[i].clone().addScaledVector(S.side[i],lat),half=2.25;c.L.a.copy(mid).addScaledVector(S.tan[i],-half);c.L.b.copy(mid).addScaledVector(S.tan[i],half);c.L.i=i;c.L.latC=lat;c.L.latHalf=1.25;c.mid=mid;}
+  if(HARBOR_DYN.boat){const b=HARBOR_DYN.boat,i=b.i,w=S.w[i],lat=Math.sin(t*.24)*(w*.7),mid=S.pos[i].clone().addScaledVector(S.side[i],lat),half=3.2;b.L.a.copy(mid).addScaledVector(S.tan[i],-half);b.L.b.copy(mid).addScaledVector(S.tan[i],half);b.L.i=i;b.L.latC=lat;b.L.latHalf=1.5;b.mid=mid;}
 }
 
 // baked foam intensity along the course (rocks, logs, eddies, the falls)
@@ -1593,6 +1606,7 @@ function step(dt) {
   const racing = G.mode === 'race';
 
   if (LVL.id === 'millrace') updateMDYN();
+  if (LVL.id === 'harbor') updateHarborDyn();
   // race-wide lap (the leader's) drives the lap mutators
   if (racing) {
     let maxLap = 0;
@@ -3449,6 +3463,21 @@ if (LVL.id === 'millrace') {
     const i=Math.round(t*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],-(S.w[i]+5));
     const tower=new THREE.Mesh(new THREE.BoxGeometry(3,10,3),lam(0x50595b));tower.position.set(p.x,waterHeightAt(i)+5,p.z);const light=new THREE.Mesh(new THREE.BoxGeometry(2.2,.35,2.2),new THREE.MeshBasicMaterial({color:0xff7a2f}));light.position.set(p.x,waterHeightAt(i)+9,p.z);scene.add(tower,light);
   }
+  window._harborScene={cranes:[],doors:[],gauges:[],containers:[],boat:null};
+  for(const [t2,sgn] of [[.51,1],[.60,1]]){
+    const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+8)),g=new THREE.Group(),mast=new THREE.Mesh(new THREE.BoxGeometry(.7,11,.7),metal(0x31565a)),boom=new THREE.Group();mast.position.y=5.5;const arm=new THREE.Mesh(new THREE.BoxGeometry(10,.45,.55),metal(0xff6b21));arm.position.x=-4.5;const cable=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,5,4),lam(0x202a2d));cable.position.set(-8.5,-2.6,0);const hook=new THREE.Mesh(new THREE.TorusGeometry(.22,.07,5,8,Math.PI*1.5),metal(0x252b2c));hook.position.set(-8.5,-5.1,0);boom.position.y=10.4;boom.add(arm,cable,hook);g.add(mast,boom);g.position.set(p.x,waterHeightAt(i),p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(g);_harborScene.cranes.push({g,boom,cable,hook,ph:t2*20});
+  }
+  {
+    const i=Math.round(.39*NSAMP),w=S.w[i],p=S.pos[i],g=new THREE.Group();
+    for(const sgn of [-1,1]){const door=new THREE.Mesh(new THREE.BoxGeometry(w*.94,4.8,.65),metal(0x35565b));door.position.set(sgn*w*.48,2.35,0);g.add(door);_harborScene.doors.push({door,baseY:2.35,sgn});}
+    g.position.set(p.x,waterHeightAt(i),p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(g);
+  }
+  for(const t2 of [.34,.48,.68]){
+    const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],-(S.w[i]+1.6)),g=new THREE.Group(),post=new THREE.Mesh(new THREE.BoxGeometry(.35,5,.35),lam(0xf1e3c5));post.position.y=2.5;g.add(post);
+    for(let k=0;k<5;k++){const tick=new THREE.Mesh(new THREE.BoxGeometry(.8,.08,.12),new THREE.MeshBasicMaterial({color:k<2?0xff6b21:0x18333c}));tick.position.set(.3,.7+k*.85,.2);g.add(tick);}g.position.set(p.x,waterHeightAt(i),p.z);scene.add(g);_harborScene.gauges.push({g,post,baseY:g.position.y,ph:t2*12});
+  }
+  for(const c of HARBOR_DYN.containers){const mesh=new THREE.Mesh(new THREE.BoxGeometry(4.5,1.45,2.1),new THREE.MeshStandardMaterial({color:c.col,roughness:.72,metalness:.18}));scene.add(mesh);c.mesh=mesh;_harborScene.containers.push(c);}
+  if(HARBOR_DYN.boat){const g=new THREE.Group(),hull=new THREE.Mesh(new THREE.BoxGeometry(6.5,1.05,2.5),lam(0x203f4a)),cab=new THREE.Mesh(new THREE.BoxGeometry(2.1,1.6,1.8),lam(0xf0e1bd)),lamp=new THREE.Mesh(new THREE.SphereGeometry(.16,6,5),new THREE.MeshBasicMaterial({color:0xffb23e}));cab.position.set(1.1,1.15,0);lamp.position.set(1.1,2.15,0);g.add(hull,cab,lamp);scene.add(g);HARBOR_DYN.boat.mesh=g;_harborScene.boat=g;}
   for(let n=0;n<9;n++){
     const i=Math.round((.59+n*.026)*NSAMP),sgn=-1,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+2.2));
     const buoy=new THREE.Mesh(new THREE.CylinderGeometry(.3,.48,1.15,9),lam(n%2?0xff6b21:0xf3e7c9));buoy.position.set(p.x,waterHeightAt(i)+.5,p.z);scene.add(buoy);
@@ -4820,6 +4849,10 @@ function updateRaceRead() {
   for (const s of SHOALS) offer(s.i0, `${s.latC < 0 ? 'RIGHT' : 'LEFT'} LINE · ${s.mud ? 'MUD' : 'SHALLOWS'} AHEAD`, 'hazard');
   for (const e of EDDIES) offer(e.i, `${e.lat < 0 ? 'KEEP RIGHT' : 'KEEP LEFT'} · ${e.whirl ? 'WHIRLPOOL' : 'EDDY'}`, 'hazard');
   for (const r of ROCKS) offer(r.i, `ROCKS AHEAD · READ THE GAP`, 'hazard');
+  if(LVL.id==='harbor'){
+    for(const c of HARBOR_DYN.containers)offer(c.i,'CONTAINER SHIFT · WATCH THE SWING','hazard');
+    if(HARBOR_DYN.boat)offer(HARBOR_DYN.boat.i,'WORKBOAT CROSSING · TAKE THE WAKE','hazard');
+  }
   const inFast = CHUTES.some(c => (!c.lapMin || d.lap >= c.lapMin) && d.si >= c.i0 && d.si <= c.i1);
   if (S.surge[d.si]) best = { ahead:0, msg:`${SURGE_STYLE.name} · RIDE THE PULSE`, cls:'fast' };
   else if (inFast) best = { ahead:0, msg:'FAST WATER · HOLD THIS LINE', cls:'fast' };
@@ -5902,6 +5935,11 @@ function frame(now) {
     const t = now / 1000;
     if(LVL.id==='harbor'){
       for(const g of (window._harborGulls||[])){const a=t*g.spd+g.ph;g.bird.position.x=g.home.x+Math.cos(a)*g.r;g.bird.position.z=g.home.z+Math.sin(a)*g.r;g.bird.position.y=g.home.y+Math.sin(a*2.4)*.8;g.bird.rotation.y=-a;g.bird.scale.y=.65+Math.sin(a*5)*.3;}
+      for(const c of HARBOR_DYN.containers)if(c.mesh&&c.mid){c.mesh.position.set(c.mid.x,waterHeightAt(c.i)+.55+Math.sin(t*2+c.phase)*.08,c.mid.z);c.mesh.rotation.y=Math.atan2(S.tan[c.i].x,S.tan[c.i].z);c.mesh.rotation.z=Math.sin(t*.7+c.phase)*.035;}
+      if(HARBOR_DYN.boat?.mesh&&HARBOR_DYN.boat.mid){const b=HARBOR_DYN.boat,i=b.i;b.mesh.position.set(b.mid.x,waterHeightAt(i)+.48+Math.sin(t*1.5)*.08,b.mid.z);b.mesh.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);}
+      for(const c of (window._harborScene?.cranes||[])){c.boom.rotation.y=Math.sin(t*.22+c.ph)*.48;c.hook.position.y=-5.1+Math.sin(t*.48+c.ph)*1.6;c.cable.scale.y=Math.max(.45,1-c.hook.position.y*.05);}
+      const lockOpen=G.transformed?1:.5+.5*Math.sin(t*.32);for(const d2 of (window._harborScene?.doors||[])){d2.door.position.y=d2.baseY+lockOpen*5.2;d2.door.position.x=d2.sgn*S.w[Math.round(.39*NSAMP)]*(.48+lockOpen*.18);}
+      for(const g of (window._harborScene?.gauges||[])){const rise=G.transformed?.22:G.courseEventT>0?.35:0;g.g.scale.y+=(1+rise-g.g.scale.y)*Math.min(1,dt*2.5);}
       const racing=G.mode==='race'||G.mode==='countdown',pt=ducks[0].si/NSAMP;
       if(racing&&AU.ctx){
         if(!AU.nextHorn)AU.nextHorn=t+5;if(!AU.nextGull)AU.nextGull=t+2;if(!AU.nextThunder)AU.nextThunder=t+8;
