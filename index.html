@@ -1715,7 +1715,7 @@ function saveSettings() { localStorage.setItem('spillway-settings', JSON.stringi
 const AU = { ctx: null };
 window.AU = AU;   // debug/headless access
 function auInit() {
-  if (AU.ctx) return;
+  if (AU.ctx) { if(AU.ctx.state==='suspended')AU.ctx.resume().catch(()=>{}); return; }
   const ctx = AU.ctx = new (window.AudioContext || window.webkitAudioContext)();
   AU.sfx = ctx.createGain(); AU.sfx.connect(ctx.destination);
   AU.music = ctx.createGain(); AU.music.connect(ctx.destination);
@@ -1879,7 +1879,7 @@ function doShove(d) {
 }
 let harborStep = 0;
 function harborThemeVoice(preview=false) {
-  if(!AU.ctx||SETTINGS.music<=0)return;const k=harborStep++%32,g=SETTINGS.music*(preview?1.05:1),bass=[73.4,73.4,87.3,98,73.4,110,98,87.3],lead=[293.7,370,440,370,493.9,440,370,329.6],chords=[[146.8,185,220],[130.8,164.8,196],[146.8,185,220],[164.8,207.7,246.9]],bar=Math.floor(k/8)%4;
+  if(!AU.ctx||SETTINGS.music<=0)return;const k=harborStep++%32,g=preview?1.12:1,bass=[73.4,73.4,87.3,98,73.4,110,98,87.3],lead=[293.7,370,440,370,493.9,440,370,329.6],chords=[[146.8,185,220],[130.8,164.8,196],[146.8,185,220],[164.8,207.7,246.9]],bar=Math.floor(k/8)%4;
   if(k%2===0)pluck(bass[(k/2)%8],.14*g,AU.music,.38);
   if(k%4===1||k%8===6)pluck(lead[(k+bar*2)%8],.075*g,AU.music,.2);
   if(k%8===0)for(const n of chords[bar])pluck(n,.025*g,AU.music,.72);
