@@ -43,7 +43,7 @@
   kbd { background:#fff; border:1px solid var(--ink); border-bottom-width:3px; border-radius:6px; padding:1px 7px;
         font-family:inherit; font-size:13px; }
   #results { display:none; }
-  #resultsList { text-align:left; margin:10px auto 16px; font-size:16px; line-height:1.75; max-height:290px; overflow:hidden; }
+  #resultsList { text-align:left; margin:10px auto 16px; font-size:16px; line-height:1.75; max-height:48vh; overflow-y:auto; }
   #resultsList .you { background:var(--sun); border-radius:6px; padding:0 8px; font-weight:bold; }
   #resultsList span.t { float:right; opacity:.65; font-variant-numeric:tabular-nums; margin-left:24px; }
   .hidden { display:none !important; }
@@ -268,13 +268,19 @@
     </div>
   </div>
   <div class="panel hubPane" id="title">
+    <div class="mini kart" id="gpBanner" style="display:none;cursor:default;text-decoration:none;font-size:17px;margin:0 0 12px;color:#b3541e"></div>
     <div class="setRow"><span>Difficulty</span><div class="segRow" id="diffRow">
       <button data-d="easy">EASY</button><button data-d="medium">MEDIUM</button><button data-d="hard">HARD</button><button data-d="insane">INSANE</button></div></div>
     <div class="setRow"><span>Laps</span><div class="segRow" id="lapRow">
       <button data-l="1">1</button><button data-l="2">2</button><button data-l="3">3</button></div></div>
+    <div class="setRow"><span>Field</span><div class="segRow" id="duckRow">
+      <button data-n="20">20</button><button data-n="40">40</button><button data-n="80">80</button></div></div>
     <div class="setRow"><span>Course</span><div class="segRow wrapRow" id="lvlRow" style="max-width:300px">
       <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button><button data-lvl="undergrove">UNDERGROVE</button><button data-lvl="canopy">CANOPY RUN</button></div></div>
-    <div class="go" id="raceBtn">RACE &mdash; press <b>SPACE</b></div>
+    <div class="btnRow" style="margin-top:14px">
+      <div class="go" id="raceBtn">RACE <small>(SPACE)</small></div>
+      <div class="go" id="gpBtn" style="background:linear-gradient(180deg,#ffe886,#ff9a3c 60%,#e05a2a)">🏆 GRAND PRIX</div>
+    </div>
     <div class="keys">
       <kbd>W A S D</kbd> paddle &middot; <kbd>SHIFT</kbd> shove &middot; controller supported &mdash; you can't beat the river, only read it
     </div>
@@ -918,7 +924,7 @@ function waterHeightAt(si) { return S.pos[si].y + 0.55; }
 
 // ============================================================ DUCKS
 const DUCK_NAMES = ['Sir Quacksalot','Quackie Chan','Bill Murray','Duck Norris','Featherweight','The Yellow Baron','Puddles','Cap\'n Squeak','Waddlesworth','Beaker','Old Mallard','Duckota Fanning','Quack Sparrow','Floaty McFloatface','Ducky Balboa','The Drifter','Sudsy','Bathtub Bandit','Rubber Soul','Pond James Pond','Squeakquel','Duck Vader','Mother Clucker','Bobbin','Downstream Dan','Eddy Current','Whitewater Walt','Plucky','Soggy Bottom','Sink or Swim','Duckleberry Finn','Marsh Mellow','Ripples','Splashdance','Wet Willie','Drybones','The Undertoad','Foam Ranger','Buoy Wonder','Gushy','Torrent Tina','Rapid Roy','Cascade Kid','Drizzle','Misty','Chute Star','Flume Rider','Weir-do','Duck Duck Goose','Portage Patty','Bailer','Keelhaul Kate','Ottertube','Galosh','Puddle Jumper','Storm Drain Stan','Gutterball','Monsoon Moe','Sprinkler','Hosewater Hank','Tidepool Ted','Duckzilla','Quackpot','Waverly','Bubbles LaRue','Dew Drop','Squirt','The Big Leak','Faucet','Drainpipe Dave','Wash Out','Ducktape','Mildew Mike','Damp Dana','Sog','Riverdance','Paddlin\' Madeline','Duck Season','Wabbit Season'];
-const N_DUCKS = 80;
+const N_DUCKS = Math.min(80, Math.max(20, +(localStorage.getItem('spillway-ducks') || 80)));   // field size: 20 / 40 / 80
 const DUCK_R = 0.5;
 
 // the rogues' gallery: 15 signature rivals — fixed looks, matching personalities.
@@ -2035,7 +2041,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     }
     const y = groundAt(i, ob, sgn), s = randRange(0.75, 1.6);
     const ry = rand() * 6;
-    const p = place(trunks, k, i, ob, sgn, y + 1.0 * s, s, ry);
+    const p = place(trunks, k, i, ob, sgn, y + 0.86 * s, s, ry);   // sunk slightly: no floating bases on slopes
     blobAt(i, ob, sgn, 1.7 * s);
     q.setFromAxisAngle(_tmpB.set(0, 1, 0), ry);
     m.compose(_tmpA.set(p.x, y, p.z), q, sc.set(s, s, s));
@@ -2061,7 +2067,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const i = Math.floor((0.72 + rand() * 0.27) * NSAMP);
     const sgn = (k % 2) * 2 - 1, ob = randRange(3, 14);
     const y = groundAt(i, ob, sgn), s = randRange(0.8, 1.5);
-    const p = place(mTrunks, k, i, ob, sgn, y + 1.0 * s, s);
+    const p = place(mTrunks, k, i, ob, sgn, y + 0.86 * s, s);
     if (LVL.id === 'spillway') blobAt(i, ob, sgn, 1.5 * s);
     m.compose(_tmpA.set(p.x, y + 2.8 * s, p.z), q, sc.set(s, s, s)); mCrowns.setMatrixAt(k, m);
     mCrowns.setColorAt(k, cCol.setHSL(0.16 + rand() * 0.06, 0.5, 0.36 + rand() * 0.12));
@@ -2192,6 +2198,22 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
       bough.position.y = waterHeightAt(i) + 6.2;
       bough.quaternion.setFromUnitVectors(_tmpB.set(0, 1, 0), S.side[i]);
       scene.add(bough);
+      // a nest with eggs perches on every other bough
+      if (bt < 0.5) {
+        const nLat = randRange(-0.5, 0.5) * S.w[i];
+        const nx = S.pos[i].x + S.side[i].x * nLat, nz = S.pos[i].z + S.side[i].z * nLat;
+        const nest = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.13, 6, 12), boughM);
+        nest.rotation.x = Math.PI / 2;
+        nest.position.set(nx, waterHeightAt(i) + 6.62, nz);
+        scene.add(nest);
+        const eggM = new THREE.MeshLambertMaterial({ color: 0xf2ecd8 });
+        for (const ex of [-0.12, 0.13]) {
+          const egg = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 5), eggM);
+          egg.scale.y = 1.25;
+          egg.position.set(nx + ex, waterHeightAt(i) + 6.62, nz + ex * 0.5);
+          scene.add(egg);
+        }
+      }
       for (let v2 = 0; v2 < 3; v2++) {
         const lat = randRange(-0.7, 0.7) * S.w[i];
         const len = randRange(1.6, 3.2);
@@ -2368,7 +2390,7 @@ let whirlMesh;
     const tex = new THREE.CanvasTexture(c2d);
     const gDisc = new THREE.CircleGeometry(wp.r * 0.95, 28); gDisc.rotateX(-Math.PI / 2);
     whirlMesh = new THREE.Mesh(gDisc, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
-    whirlMesh.position.set(wp.pos.x, waterHeightAt(wp.i) + 0.12, wp.pos.z);
+    whirlMesh.position.set(wp.pos.x, waterHeightAt(wp.i) + 0.22, wp.pos.z);
     scene.add(whirlMesh);
   }
 }
@@ -2386,7 +2408,7 @@ const ARROWS = [];
       const mesh = new THREE.Mesh(aGeo, new THREE.MeshBasicMaterial({
         color: c.lapMin ? 0xaef2ff : 0xd8f4f2, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
       mesh.position.copy(S.pos[i]).addScaledVector(S.side[i], c.latC);
-      mesh.position.y = waterHeightAt(i) + 0.1;
+      mesh.position.y = waterHeightAt(i) + 0.28;   // above the wave chop — no flicker-clipping
       mesh.rotation.y = Math.atan2(S.tan[i].x, S.tan[i].z);
       mesh.userData.lapMin = c.lapMin || 0;
       ARROWS.push(mesh); scene.add(mesh);
@@ -2403,6 +2425,8 @@ if (LVL.id === 'millrace') {
     const mi = Math.round(0.55 * NSAMP), sgn = 1;
     const gy = waterHeightAt(mi) + bankH(mi, 2.2, sgn);
     const base = S.pos[mi].clone().addScaledVector(S.side[mi], sgn * (S.w[mi] + 2.6));
+    const shedPl = new THREE.Mesh(new THREE.BoxGeometry(5.3, 1.8, 4.3), lam(0x6a6f75));
+    shedPl.position.set(base.x, gy - 0.6, base.z); scene.add(shedPl);   // foundation — no floating corners
     const shed = new THREE.Mesh(new THREE.BoxGeometry(5, 3.2, 4), lam(0x8a6a48));
     shed.position.set(base.x, gy + 1.6, base.z); scene.add(shed);
     const roof = new THREE.Mesh(new THREE.ConeGeometry(3.8, 2, 4), lam(0x9c4a35));
@@ -2418,6 +2442,33 @@ if (LVL.id === 'millrace') {
     millWheel.position.set(wPos.x, waterHeightAt(mi) + 1.4, wPos.z);
     millWheel.rotation.y = Math.atan2(S.side[mi].x, S.side[mi].z);
     scene.add(millWheel);
+    // chimney + working smoke
+    const chim = new THREE.Mesh(new THREE.BoxGeometry(0.7, 2.2, 0.7), lam(0x6a6f75));
+    chim.position.set(base.x + 1.6, gy + 5.0, base.z + 1.2);
+    scene.add(chim);
+    window.SMOKE = window.SMOKE || [];
+    const smTex2 = (() => { const c2 = document.createElement('canvas'); c2.width = c2.height = 64;
+      const x2 = c2.getContext('2d'); const g3 = x2.createRadialGradient(32, 32, 4, 32, 32, 30);
+      g3.addColorStop(0, 'rgba(200,204,208,0.7)'); g3.addColorStop(1, 'rgba(200,204,208,0)');
+      x2.fillStyle = g3; x2.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c2); })();
+    for (let sm3 = 0; sm3 < 4; sm3++) {
+      const sp3 = new THREE.Sprite(new THREE.SpriteMaterial({ map: smTex2, transparent: true, opacity: 0, depthWrite: false }));
+      scene.add(sp3);
+      SMOKE.push({ sp: sp3, base: new THREE.Vector3(chim.position.x, chim.position.y + 1.1, chim.position.z), t: sm3 / 4, ph: rand() * 6 });
+    }
+  }
+  // barrels stacked along the working banks
+  for (let br = 0; br < 12; br++) {
+    const t2 = 0.24 + (br / 12) * 0.3;
+    const i = Math.round(t2 * NSAMP), sgn = br % 2 ? 1 : -1;
+    const obB = randRange(1.6, 4.5);
+    const gy = waterHeightAt(i) + Math.max(0.2, bankH(i, obB, sgn));
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + obB));
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.72, 9),
+      new THREE.MeshLambertMaterial({ color: br % 3 ? 0x7a5a3a : 0x8a6a48, map: WOODTEX }));
+    barrel.position.set(p.x, gy + 0.36, p.z);
+    if (br % 4 === 0) barrel.rotation.z = Math.PI / 2;   // a few tipped over
+    scene.add(barrel);
   }
   // log piles + crates along the banks — a working camp
   for (let lp = 0; lp < 6; lp++) {
@@ -2530,6 +2581,22 @@ if (LVL.id === 'millrace') {
       gwIM.frustumCulled = false;
       scene.add(gwIM);
     }
+    // crystal clusters catch what little light there is
+    for (let cr2 = 0; cr2 < 10; cr2++) {
+      const i = Math.round((d0 + 0.02 + rand() * (d1 - d0 - 0.04)) * NSAMP);
+      const sgn = cr2 % 2 ? 1 : -1, obX = randRange(0.6, 2.4);
+      const gy = waterHeightAt(i) + Math.max(0.1, bankH(i, obX, sgn));
+      const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + obX));
+      const colX = [0x6ee7f2, 0xc084fc, 0x8df26e][cr2 % 3];
+      for (let sh2 = 0; sh2 < 3; sh2++) {
+        const h2 = randRange(0.5, 1.3);
+        const shard = new THREE.Mesh(new THREE.ConeGeometry(randRange(0.12, 0.22), h2, 5),
+          new THREE.MeshBasicMaterial({ color: colX, transparent: true, opacity: 0.85 }));
+        shard.position.set(p.x + randRange(-0.4, 0.4), gy + h2 / 2 - 0.08, p.z + randRange(-0.4, 0.4));
+        shard.rotation.set(randRange(-0.3, 0.3), rand() * 6, randRange(-0.3, 0.3));
+        scene.add(shard);
+      }
+    }
   }
   // giant glowshroom groves light the open twilight stretches between the caves
   {
@@ -2571,6 +2638,25 @@ if (LVL.id === 'millrace') {
     const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(r * 2.2, 0), lam(0x3f7a3c));
     crown.position.set(p.x, waterHeightAt(i) + 32, p.z);
     scene.add(crown);
+    // one trunk carries a treehouse lookout
+    if (!window._treehouse) {
+      window._treehouse = true;
+      const py2 = waterHeightAt(i) + 10.5;
+      const deck = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.35, r * 1.35, 0.3, 9),
+        new THREE.MeshLambertMaterial({ color: 0x8a6a48, map: WOODTEX }));
+      deck.position.set(p.x, py2, p.z);
+      const rail = new THREE.Mesh(new THREE.TorusGeometry(r * 1.3, 0.09, 6, 14),
+        new THREE.MeshLambertMaterial({ color: 0x7a5a3a }));
+      rail.rotation.x = Math.PI / 2;
+      rail.position.set(p.x, py2 + 0.9, p.z);
+      const hut = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.9, 2.4),
+        new THREE.MeshLambertMaterial({ color: 0x9a7a52, map: WOODTEX }));
+      hut.position.set(p.x + r * 0.55, py2 + 1.1, p.z);
+      const hutRoof = new THREE.Mesh(new THREE.ConeGeometry(2.1, 1.4, 4), lam(0x9c4a35));
+      hutRoof.rotation.y = Math.PI / 4;
+      hutRoof.position.set(hut.position.x, py2 + 2.75, p.z);
+      scene.add(deck, rail, hut, hutRoof);
+    }
   }
   // leaf pads at the water's edge
   for (let lp = 0; lp < 16; lp++) {
@@ -2579,16 +2665,18 @@ if (LVL.id === 'millrace') {
     const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 1.0));
     const pad = new THREE.Mesh(new THREE.CircleGeometry(randRange(0.9, 1.7), 9), lam(0x53a64a));
     pad.rotation.x = -Math.PI / 2;
-    pad.position.set(p.x, waterHeightAt(i) + 0.08, p.z);
+    pad.position.set(p.x, waterHeightAt(i) + 0.15, p.z);
     scene.add(pad);
   }
 } else {
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
-  // watermill on the forest's left bank
+  // watermill on the forest's left bank (set back so the chase cam never grazes it)
   {
     const mi = Math.round(0.05 * NSAMP), sgn = -1;
-    const gy = waterHeightAt(mi) + bankH(mi, 2.4, sgn);
-    const base = S.pos[mi].clone().addScaledVector(S.side[mi], sgn * (S.w[mi] + 2.4));
+    const gy = waterHeightAt(mi) + bankH(mi, 5.2, sgn);
+    const base = S.pos[mi].clone().addScaledVector(S.side[mi], sgn * (S.w[mi] + 5.2));
+    const housePl = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1.8, 3.3), lam(0x6a6f75));
+    housePl.position.set(base.x, gy - 0.6, base.z); scene.add(housePl);
     const house = new THREE.Mesh(new THREE.BoxGeometry(3, 2.8, 3), lam(0x8a6a48));
     house.position.set(base.x, gy + 1.4, base.z); scene.add(house);
     const roof = new THREE.Mesh(new THREE.ConeGeometry(2.6, 1.8, 4), lam(0x9c4a35));
@@ -2669,6 +2757,8 @@ if (LVL.id === 'millrace') {
       const ob = 2.2 + (hse % 2) * 1.5;
       const gy = waterHeightAt(hi) + bankH(hi, ob, sgn);
       const p = S.pos[hi].clone().addScaledVector(S.side[hi], sgn * (S.w[hi] + ob));
+      const hhPl = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.5, 2.2), lam(0x6a6f75));
+      hhPl.position.set(p.x, gy - 0.5, p.z); scene.add(hhPl);
       const hh = new THREE.Mesh(new THREE.BoxGeometry(2, 1.9, 2), lam(cols[hse]));
       hh.position.set(p.x, gy + 0.95, p.z); scene.add(hh);
       const rf = new THREE.Mesh(new THREE.ConeGeometry(1.8, 1.3, 4), lam(0x6e4c2e));
@@ -2680,6 +2770,47 @@ if (LVL.id === 'millrace') {
     dock.position.set(dockP.x, waterHeightAt(di) + 0.35, dockP.z);
     dock.rotation.y = Math.atan2(S.side[di].x, S.side[di].z);
     scene.add(dock);
+  }
+  // meadow campsite: tents, a stone-ringed campfire, rising smoke
+  {
+    const ci2 = Math.round(0.815 * NSAMP), sgn = -1, obC = 4.5;
+    const gy = waterHeightAt(ci2) + bankH(ci2, obC, sgn);
+    const cp = S.pos[ci2].clone().addScaledVector(S.side[ci2], sgn * (S.w[ci2] + obC));
+    for (const [dx2, dz2, colT] of [[-1.8, 0.6, 0xd94f30], [1.7, -0.4, 0x53a6ff]]) {
+      const tent = new THREE.Mesh(new THREE.ConeGeometry(1.05, 1.25, 4), lam(colT));
+      tent.position.set(cp.x + dx2, gy + 0.6, cp.z + dz2);
+      tent.rotation.y = Math.PI / 4 + randRange(-0.3, 0.3);
+      scene.add(tent);
+    }
+    for (let st2 = 0; st2 < 6; st2++) {
+      const a2 = st2 / 6 * Math.PI * 2;
+      const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.14, 0), lam(0x8f949a));
+      stone.position.set(cp.x + Math.cos(a2) * 0.55, gy + 0.1, cp.z + Math.sin(a2) * 0.55);
+      scene.add(stone);
+    }
+    const ember = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), new THREE.MeshBasicMaterial({ color: 0xff9a3c }));
+    ember.scale.y = 0.6; ember.position.set(cp.x, gy + 0.16, cp.z);
+    scene.add(ember);
+    window.SMOKE = window.SMOKE || [];
+    const smTex = (() => { const c2 = document.createElement('canvas'); c2.width = c2.height = 64;
+      const x2 = c2.getContext('2d'); const g3 = x2.createRadialGradient(32, 32, 4, 32, 32, 30);
+      g3.addColorStop(0, 'rgba(230,230,225,0.7)'); g3.addColorStop(1, 'rgba(230,230,225,0)');
+      x2.fillStyle = g3; x2.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c2); })();
+    for (let sm3 = 0; sm3 < 3; sm3++) {
+      const sp3 = new THREE.Sprite(new THREE.SpriteMaterial({ map: smTex, transparent: true, opacity: 0, depthWrite: false }));
+      scene.add(sp3);
+      SMOKE.push({ sp: sp3, base: new THREE.Vector3(cp.x, gy + 0.5, cp.z), t: sm3 / 3, ph: rand() * 6 });
+    }
+  }
+  // checkered buoys line the start pool
+  for (let bu = 0; bu < 6; bu++) {
+    const i = 14 + bu * 9, sgn = bu % 2 ? 1 : -1;
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 0.9));
+    const buoy = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), lam(bu % 2 ? 0xd94f30 : 0xfff8e7));
+    buoy.position.set(p.x, waterHeightAt(i) + 0.18, p.z);
+    const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.1, 8), lam(bu % 2 ? 0xfff8e7 : 0xd94f30));
+    stripe.position.copy(buoy.position);
+    scene.add(buoy, stripe);
   }
 }
 
@@ -2696,7 +2827,7 @@ const RUNES = [];
         const p = S.pos[ii].clone().addScaledVector(S.side[ii], sgn * (S.w[ii] + 1.1));
         const h = 1.7 + ((i * 7) % 3) * 0.55;
         const stone = new THREE.Mesh(new THREE.BoxGeometry(0.6, h, 0.45), stoneM);
-        stone.position.set(p.x, waterHeightAt(ii) + h / 2 - 0.2, p.z);
+        stone.position.set(p.x, waterHeightAt(ii) + Math.max(0, bankH(ii, 1.1, sgn)) + h / 2 - 0.25, p.z);
         stone.rotation.y = Math.atan2(S.side[ii].x, S.side[ii].z) + randRange(-0.2, 0.2);
         const glyph = new THREE.Mesh(new THREE.PlaneGeometry(0.34, h * 0.55),
           new THREE.MeshBasicMaterial({ color: runeCol, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
@@ -3029,9 +3160,68 @@ let rainMesh, rainVel = [];
   const line = new THREE.Mesh(new THREE.PlaneGeometry(w * 2, 0.9),
     new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lineC), transparent: true, opacity: 0.85, depthWrite: false }));
   line.rotation.x = -Math.PI / 2;
-  line.position.copy(S.pos[fi]); line.position.y = waterHeightAt(fi) + 0.09;
+  line.position.copy(S.pos[fi]); line.position.y = waterHeightAt(fi) + 0.17;
   line.rotation.z = -Math.atan2(S.tan[fi].x, S.tan[fi].z);
   scene.add(line);
+
+  // ---------- the crowd: grandstands of spectator ducks + bunting at the line
+  const lamG = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const specPal = [0xffd23f, 0xff5a5a, 0x53d769, 0x53a6ff, 0xff9ff3, 0xffa14a, 0xa78bfa, 0x4dd6c1];
+  window.SPECS = [];
+  const gi = wrapI(NSAMP - 22);
+  for (const sgn of [-1, 1]) {
+    const obG = 3.4;
+    const base = S.pos[gi].clone().addScaledVector(S.side[gi], sgn * (S.w[gi] + obG));
+    const gy = waterHeightAt(gi) + Math.max(0.25, bankH(gi, obG, sgn));
+    const grp = new THREE.Group();
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(7.6, 1.2, 2.8), lamG(0x6a6f75));
+    plinth.position.set(0, -0.4, -0.5); grp.add(plinth);
+    for (let step2 = 0; step2 < 2; step2++) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.5, 1.15), new THREE.MeshLambertMaterial({ color: 0x8a6a48, map: WOODTEX }));
+      b.position.set(0, 0.25 + step2 * 0.6, -step2 * 1.1);
+      grp.add(b);
+    }
+    for (let sp2 = 0; sp2 < 12; sp2++) {
+      const row2 = sp2 % 2, col2 = sp2 >> 1;
+      const c2 = specPal[(sp2 * 3 + (sgn > 0 ? 1 : 0)) % specPal.length];
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), lamG(c2));
+      body.scale.set(1, 0.82, 1.12);
+      body.position.set(-2.9 + col2 * 1.18 + row2 * 0.45, 0.78 + row2 * 0.6, -row2 * 1.1);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 7, 5), lamG(c2));
+      head.position.copy(body.position); head.position.y += 0.3; head.position.z += 0.16;
+      const beak = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.14, 5), lamG(0xff8c1a));
+      beak.rotation.x = Math.PI / 2;
+      beak.position.copy(head.position); beak.position.z += 0.24;
+      grp.add(body, head, beak);
+      SPECS.push({ body, head, beak, ph: rand() * 6, baseY: body.position.y });
+    }
+    grp.position.set(base.x, gy, base.z);
+    grp.rotation.y = Math.atan2(-S.side[gi].x * sgn, -S.side[gi].z * sgn);
+    scene.add(grp);
+  }
+  // bunting: sagging pennant strings from the gantry posts to bank poles
+  for (const sgn of [-1, 1]) {
+    const pTop = S.pos[fi].clone().addScaledVector(S.side[fi], sgn * (w + 0.6));
+    pTop.y = waterHeightAt(fi) + 5.0;
+    const bi2 = wrapI(NSAMP - 14);
+    const pEnd = S.pos[bi2].clone().addScaledVector(S.side[bi2], sgn * (S.w[bi2] + 4.2));
+    pEnd.y = waterHeightAt(bi2) + Math.max(0.25, bankH(bi2, 4.2, sgn)) + 2.6;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 2.8, 6), lamG(0x7a5a3a));
+    pole.position.set(pEnd.x, pEnd.y - 1.4, pEnd.z);
+    scene.add(pole);
+    const flagCols = [0xd94f30, 0xffd23f, 0x2ec4b6, 0x53a6ff, 0xfff8e7];
+    for (let fp = 1; fp <= 7; fp++) {
+      const t2 = fp / 8;
+      const px2 = pTop.x + (pEnd.x - pTop.x) * t2;
+      const pz2 = pTop.z + (pEnd.z - pTop.z) * t2;
+      const py2 = pTop.y + (pEnd.y - pTop.y) * t2 - Math.sin(t2 * Math.PI) * 0.7;   // sag
+      const pen = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 3),
+        new THREE.MeshBasicMaterial({ color: flagCols[fp % flagCols.length], side: THREE.DoubleSide }));
+      pen.rotation.x = Math.PI;   // point down
+      pen.position.set(px2, py2 - 0.25, pz2);
+      scene.add(pen);
+    }
+  }
 }
 
 // ---------- waterfall curtain + mist
@@ -3524,6 +3714,20 @@ function updateCamera(dt) {
   if (t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4 * (1 - caveF); target.add(S.tan[si].clone().multiplyScalar(-4 * (1 - caveF * 0.6))); }
   const k = 1 - Math.pow(0.0004, dt);
   camState.pos.lerp(target, k);
+  // terrain guard: the chase camera must never swing through the channel walls
+  // (hairpins used to push it inside gorge/canyon/cave banks — see-through hills)
+  {
+    const ci = nearestSample(camState.pos, si);
+    const clat = (camState.pos.x - S.pos[ci].x) * S.side[ci].x + (camState.pos.z - S.pos[ci].z) * S.side[ci].z;
+    const maxLat = S.w[ci] + 2.2;
+    if (Math.abs(clat) > maxLat) {
+      const pull = Math.abs(clat) - maxLat, sgnL = Math.sign(clat);
+      camState.pos.x -= S.side[ci].x * sgnL * pull;
+      camState.pos.z -= S.side[ci].z * sgnL * pull;
+    }
+    const minY = waterHeightAt(ci) + 1.1;
+    if (camState.pos.y < minY) camState.pos.y = minY;
+  }
   const lookT = front
     ? _tmpB.set(d.p.x, d.y + 0.8, d.p.z).addScaledVector(S.tan[si], -2.5)   // broadcast view: watch your duck & the chasing pack
     : _tmpB.set(anchor.x, d.y + 1.2, anchor.z).addScaledVector(S.tan[si], 6);
@@ -3779,7 +3983,28 @@ function showResults() {
   }
   el('resultsTitle').textContent = (me.place === 1 ? '🏆 CHAMPION DUCK' : `RACE RESULTS — P${me.place || '—'}`) + bestNote
     + (G.nemesisNote ? ` · ${G.nemesisNote}` : '');
-  list.innerHTML = rows.join('');
+  // grand prix: award points, show standings, retitle the finale
+  let gpHTML = '';
+  if (GP && GP.active) {
+    gpAward();
+    const final = GP.stage >= 4;
+    gpHTML = gpStandingsHTML(final);
+    el('againBtn').innerHTML = final ? '🏁 FINISH GP' : 'NEXT RACE ▶';
+    el('courseBtn').style.display = 'none';
+    if (final) {
+      const champ = gpRows()[0];
+      el('resultsTitle').textContent = champ && champ.k === 'd0'
+        ? '🏆 GRAND PRIX CHAMPION — YOU!'
+        : `GRAND PRIX OVER — CHAMPION: ${champ ? champ.name : '—'}`;
+      if (champ && champ.k === 'd0') { confettiBurst(ducks[0].p, 260); SFX.fanfare(); setTimeout(() => SFX.fanfare(), 600); }
+    } else {
+      el('resultsTitle').textContent = `STAGE ${GP.stage}/4 — P${me.place || '—'}` + bestNote;
+    }
+  } else {
+    el('againBtn').innerHTML = 'RACE AGAIN <small>(R)</small>';
+    el('courseBtn').style.display = '';
+  }
+  list.innerHTML = rows.join('') + gpHTML;
   el('results').style.display = 'block';
   for (const p of ['title', 'duckPanel', 'levelPanel', 'statsPanel', 'settingsPanel', 'guidePanel']) el(p).classList.add('hidden');
   document.querySelectorAll('#hubTabs button').forEach(b => b.classList.remove('sel'));
@@ -3907,7 +4132,7 @@ addEventListener('keydown', e => {
     if (G.mode === 'title') prepRace();
     else if (G.mode === 'flyover') { G.mode = 'countdown'; G.countdown = 3.2; snapCam(); }
   }
-  if (k === 'r' && G.mode !== 'title') prepRace();
+  if (k === 'r' && G.mode !== 'title') { if (el('results').style.display === 'block') raceAgain(); else prepRace(); }
   if (G.mode === 'title' && (k === '1' || k === '2' || k === '3' || k === '4')) setDiff(['easy', 'medium', 'hard', 'insane'][+k - 1]);
   if (k === 'escape') {
     if (el('results').style.display === 'block') toTitle();
@@ -3985,9 +4210,75 @@ addEventListener('pointerdown', auInit, { once: false });
 
 // ---- menu & settings wiring
 el('raceBtn').addEventListener('click', () => prepRace());
-el('againBtn').addEventListener('click', () => prepRace());
+el('againBtn').addEventListener('click', () => raceAgain());
 el('courseBtn').addEventListener('click', () => { toTitle(); showTab('levelPanel'); });
-el('menuBtn').addEventListener('click', () => toTitle());
+el('menuBtn').addEventListener('click', () => { if (GP && GP.active) clearGP(); toTitle(); });
+// ---- GRAND PRIX: four courses, kart points, one champion. Survives the per-course
+// page reloads by living in localStorage.
+const GP_COURSES = ['spillway', 'millrace', 'undergrove', 'canopy'];
+const GP_PTS = [15, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+let GP = JSON.parse(localStorage.getItem('spillway-gp') || 'null');
+if (GP && (!GP.active || GP.stage >= 4 || GP_COURSES[GP.stage] !== LVL.id)) { GP = null; localStorage.removeItem('spillway-gp'); }
+function saveGP() { localStorage.setItem('spillway-gp', JSON.stringify(GP)); }
+function clearGP() { GP = null; localStorage.removeItem('spillway-gp'); refreshGPUI(); }
+function startGP() {
+  GP = { active: true, stage: 0, pts: {}, names: {}, counted: -1 };
+  saveGP();
+  if (LVL.id !== GP_COURSES[0]) { localStorage.setItem('spillway-level', GP_COURSES[0]); location.reload(); return; }
+  refreshGPUI();
+  prepRace();
+}
+function gpAward() {
+  if (!GP || GP.counted >= GP.stage) return;
+  GP.counted = GP.stage;
+  const unfinished = ducks.filter(d => !d.finished).sort((a, b) => b.progress - a.progress);
+  const ranked = [...G.results, ...unfinished];
+  ranked.forEach((d, ri) => {
+    const key = 'd' + d.idx;
+    GP.pts[key] = (GP.pts[key] || 0) + (GP_PTS[ri] || 0);
+    GP.names[key] = d.idx === 0 ? 'YOU' : d.name;
+  });
+  GP.stage++;
+  saveGP();
+}
+function gpRows() { return Object.entries(GP.pts).map(([k, v]) => ({ k, v, name: GP.names[k] })).sort((a, b) => b.v - a.v); }
+function gpStandingsHTML(final) {
+  const rows = gpRows();
+  const top = rows.slice(0, 8);
+  const meIx = rows.findIndex(r => r.k === 'd0');
+  let html = `<div style="margin-top:12px;border-top:2.5px solid var(--ink);padding-top:8px"><b class="kart" style="font-size:17px">${final ? '🏆 FINAL STANDINGS' : `STANDINGS — STAGE ${GP.stage}/4`}</b>`;
+  top.forEach((r, ri2) => html += `<div class="${r.k === 'd0' ? 'you' : ri2 < 3 ? 'p' + (ri2 + 1) : ''}">${ri2 + 1}. ${r.name}<span class="t">${r.v} pts</span></div>`);
+  if (meIx >= 8) html += `<div style="opacity:.5">…</div><div class="you">${meIx + 1}. YOU<span class="t">${rows[meIx].v} pts</span></div>`;
+  return html + '</div>';
+}
+function refreshGPUI() {
+  const b = el('gpBanner');
+  if (GP && GP.active && GP.stage < 4) {
+    b.style.display = '';
+    b.innerHTML = `🏆 GRAND PRIX — STAGE ${GP.stage + 1}/4: ${LVL.name} &nbsp;<span id="gpQuit" style="text-decoration:underline;cursor:pointer;font-size:12px">quit</span>`;
+    el('gpQuit').addEventListener('click', () => clearGP());
+  } else b.style.display = 'none';
+}
+function raceAgain() {
+  if (GP && GP.active) {
+    if (GP.stage >= 4) { clearGP(); toTitle(); return; }
+    const next = GP_COURSES[GP.stage];
+    if (next !== LVL.id) { localStorage.setItem('spillway-level', next); location.reload(); return; }
+    refreshGPUI(); prepRace(); return;
+  }
+  prepRace();
+}
+el('gpBtn').addEventListener('click', startGP);
+refreshGPUI();
+// field size: swap the flock and reload (the field is baked at load like the course)
+document.querySelectorAll('#duckRow button').forEach(b => {
+  b.classList.toggle('sel', +b.dataset.n === N_DUCKS);
+  b.addEventListener('click', () => {
+    if (+b.dataset.n === N_DUCKS) return;
+    localStorage.setItem('spillway-ducks', b.dataset.n);
+    location.reload();
+  });
+});
 // UI sounds: hover ticks + confirm plops on every interactive control in the hub
 function uiTick() { if (AU.ctx && SETTINGS.sfx > 0) pluck(1560, 0.05, AU.sfx, 0.12); }
 function uiPlop() {
@@ -4465,6 +4756,22 @@ function frame(now) {
       let inDark = false;
       if (LVL.dark) for (const [c0, c1] of LVL.dark) if (FALLS_T0 > c0 - 0.03 && FALLS_T0 < c1 + 0.03) inDark = true;
       _rainbow.visible = !inDark && (G.weather === 'clear' || G.weather === 'golden');
+    }
+    // spectators bob — and really get going during a race
+    for (const spc of (window.SPECS || [])) {
+      const b2 = Math.sin(t * 3.6 + spc.ph) * 0.07 + (G.mode === 'race' ? Math.max(0, Math.sin(t * 7 + spc.ph * 2)) * 0.12 : 0);
+      spc.body.position.y = spc.baseY + b2;
+      spc.head.position.y = spc.baseY + 0.3 + b2;
+      spc.beak.position.y = spc.head.position.y;
+    }
+    // chimney smoke drifts up and dissolves
+    for (const sm2 of (window.SMOKE || [])) {
+      sm2.t += dt * 0.35;
+      if (sm2.t > 1) sm2.t -= 1;
+      sm2.sp.position.set(sm2.base.x + Math.sin(sm2.t * 9 + sm2.ph) * 0.5, sm2.base.y + sm2.t * 5.5, sm2.base.z);
+      sm2.sp.material.opacity = 0.3 * Math.sin(sm2.t * Math.PI);
+      const ss3 = 1 + sm2.t * 2.2;
+      sm2.sp.scale.set(ss3, ss3 * 0.8, 1);
     }
     // pedestrians cross the bridge
     for (const pe of PEDS) {
