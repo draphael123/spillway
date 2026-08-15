@@ -115,6 +115,48 @@
   .swatches { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; max-width:230px; }
   .swatches button { width:26px; height:26px; border-radius:50%; border:2px solid var(--ink); cursor:pointer; padding:0; }
   .swatches button.sel { outline:3px solid var(--rush); }
+  /* ---- race-control menu rebuild: paddock tabs, garage bays, dedicated audio booth ---- */
+  #hubTabs { max-width:min(1120px,96vw); flex-wrap:wrap; justify-content:center; }
+  #hubTabs button { border-radius:8px; padding:9px 17px; background:#f7f2e4; }
+  #hubTabs button.sel { background:var(--sun); transform:translateY(2px); box-shadow:0 1px 0 rgba(14,42,51,.4); }
+  .paneEyebrow { color:#d94f30; font:900 12px 'Barlow Condensed',sans-serif; letter-spacing:2.5px; text-transform:uppercase; }
+  .paneIntro { margin:3px 0 16px; opacity:.72; font:700 14px 'Nunito Sans',sans-serif; }
+  #duckPanel { width:min(1080px,96vw); min-width:0; padding:22px; text-align:left; }
+  #duckPanel h2, #audioPanel h2 { font-family:'Lilita One',sans-serif; letter-spacing:2px; margin:0; }
+  #duckCols { display:grid; grid-template-columns:minmax(300px,410px) minmax(420px,1fr); gap:20px; align-items:start; }
+  .duckStage { position:sticky; top:0; border:3px solid var(--ink); border-radius:16px; overflow:hidden; background:#9fd3dd;
+    box-shadow:0 6px 0 rgba(14,42,51,.32); text-align:center; }
+  .duckStageHead { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; color:var(--cream); background:var(--ink);
+    font:900 13px 'Barlow Condensed',sans-serif; letter-spacing:1.5px; }
+  #duckPrev { width:100%; height:auto; border:0; border-radius:0; box-shadow:none; margin:0; touch-action:none; }
+  #duckLoadout { padding:10px 14px 13px; background:#f7f2e4; font:800 13px 'Nunito Sans',sans-serif; min-height:42px; }
+  .duckControls { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .duckGroup { border:2px solid var(--ink); border-radius:12px; padding:12px; background:#fffdf5; box-shadow:0 3px 0 rgba(14,42,51,.22); }
+  .duckGroup h3 { font:900 15px 'Barlow Condensed',sans-serif; letter-spacing:1.8px; color:#d94f30; border-bottom:2px solid #dbe7e6; padding-bottom:5px; margin-bottom:8px; }
+  .duckGroup .setRow { display:block; margin:9px 0; }
+  .duckGroup .setRow > span:first-child { display:block; margin-bottom:5px; font:800 12px 'Nunito Sans',sans-serif; }
+  .duckGroup .swatches, .duckGroup .segRow { justify-content:flex-start; max-width:none; }
+  .duckGroup .segRow button { padding:5px 9px; font-size:11px; border-radius:7px; }
+  #audioPanel { width:min(920px,94vw); min-width:0; text-align:left; }
+  .audioGrid { display:grid; grid-template-columns:1.35fr .85fr; gap:16px; }
+  .audioBay { border:2px solid var(--ink); border-radius:12px; background:#fffdf5; padding:14px; box-shadow:0 3px 0 rgba(14,42,51,.22); }
+  .audioBay h3 { font:900 15px 'Barlow Condensed',sans-serif; letter-spacing:1.8px; color:#d94f30; margin-bottom:8px; }
+  .musicDeck { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .musicDeck button, #soundPlay, #soundStop { font:900 12px 'Barlow Condensed',sans-serif; letter-spacing:1px; padding:9px; border:2px solid var(--ink); border-radius:8px; background:#fff; color:var(--ink); cursor:pointer; }
+  .musicDeck button.playing { background:var(--sun); }
+  .soundPicker { width:100%; padding:9px; border:2px solid var(--ink); border-radius:8px; background:#fff; color:var(--ink); font:800 13px 'Nunito Sans',sans-serif; }
+  @media (max-width:760px){
+    #hub { width:100%; padding:8px 4px; align-items:stretch; }
+    #hubHead { padding:0 8px; }
+    #hubTabs { gap:4px; padding:0 5px; }
+    #hubTabs button { font-size:11px; padding:6px 9px; }
+    #duckPanel,#audioPanel { width:calc(100vw - 10px); max-width:none; min-width:0; padding:13px; margin:0 auto; }
+    #duckCols,.audioGrid { grid-template-columns:1fr; }
+    .duckStage { position:relative; }
+    .duckControls { grid-template-columns:1fr; }
+    #duckPrev { width:100%; max-height:280px; }
+    .musicDeck { grid-template-columns:1fr; }
+  }
   /* ---- 2.0 hub polish: press feel, tab transitions, framed duck ---- */
   .diffRow button, .segRow button, #hubTabs button, .go, .lvlCard, .swatches button {
     transition: transform .12s ease, box-shadow .12s ease, background .15s ease; }
@@ -482,6 +524,23 @@
     <div class="setRow"><span>Large-field clarity</span><div class="segRow" id="setClarity"><button data-v="full">FULL</button><button data-v="clear">CLEAR</button></div></div>
     <div class="setRow"><span>Sound test</span><div class="segRow wrapRow" id="soundTest" style="max-width:290px">
       <button data-s="splash">SPLASH</button><button data-s="squeak">SQUEAK</button><button data-s="thud">THWACK</button><button data-s="cheer">CHEER</button><button data-s="fanfare">FANFARE</button><button data-s="whistle">WHISTLE</button></div></div>
+  </div>
+  <div class="panel hubPane hidden" id="audioPanel">
+    <div class="paneEyebrow">Spillway broadcast booth</div><h2>AUDIO</h2>
+    <div class="paneIntro">Set the mix, audition every course theme, or choose one sound from the effects library.</div>
+    <div class="audioGrid">
+      <div class="audioBay"><h3>COURSE MUSIC</h3><div class="musicDeck" id="musicTest">
+        <button data-m="menu">MENU THEME</button><button data-m="spillway">SPILLWAY RUN</button>
+        <button data-m="millrace">MILLRACE</button><button data-m="undergrove">UNDERGROVE</button>
+        <button data-m="canopy">CANOPY RUN</button><button data-m="porcelain">PORCELAIN RUN</button>
+        <button data-m="harbor">HARBOR RUSH</button><button id="soundStop" type="button">STOP PREVIEW</button>
+      </div></div>
+      <div class="audioBay"><h3>MIX</h3><div id="audioMix"></div>
+        <h3 style="margin-top:18px">SOUND SELECTION</h3>
+        <select class="soundPicker" id="soundSelect"><option value="splash">Splash</option><option value="squeak">Duck squeak</option><option value="thud">Collision thwack</option><option value="cheer">Crowd cheer</option><option value="fanfare">Winner fanfare</option><option value="whistle">Start whistle</option></select>
+        <button id="soundPlay" type="button" style="margin-top:8px;width:100%">PLAY SELECTED SOUND</button>
+      </div>
+    </div>
   </div>
   <div class="panel hubPane hidden" id="duckPanel">
     <div id="duckCols">
@@ -5257,7 +5316,7 @@ function refreshFlavour() {
   }
 }
 function showTab(id) {
-  for (const p of ['title', 'duckPanel', 'levelPanel', 'statsPanel', 'settingsPanel', 'guidePanel']) el(p).classList.toggle('hidden', p !== id);
+  for (const p of ['title', 'duckPanel', 'levelPanel', 'audioPanel', 'statsPanel', 'settingsPanel', 'guidePanel']) el(p).classList.toggle('hidden', p !== id);
   document.querySelectorAll('#hubTabs button').forEach(b => b.classList.toggle('sel', b.dataset.tab === id));
   G.hubTab = id;
   el('results').style.display = 'none';
@@ -5265,6 +5324,7 @@ function showTab(id) {
   if (id === 'levelPanel') refreshLevelCards();
   if (id === 'statsPanel') refreshStatsUI();
   if (id === 'title') refreshFlavour();
+  el('hub').scrollTop=0;
 }
 function refreshStatsUI() {
   const host = el('statGrid');
@@ -5468,6 +5528,36 @@ if (TOUCH.active) {
 addEventListener('pointerdown', auInit, { once: false });
 
 // ---- menu & settings wiring
+// Rebuild the hub as race control + paddock garage without duplicating the settings state.
+{
+  const labels = [['title','RACE'],['duckPanel','GARAGE'],['levelPanel','COURSES'],['statsPanel','RECORDS'],['guidePanel','GUIDE'],['settingsPanel','OPTIONS']];
+  for (const [tab,label] of labels) { const b=document.querySelector(`#hubTabs button[data-tab="${tab}"]`); if(b)b.textContent=label; }
+  const optBtn=document.querySelector('#hubTabs button[data-tab="settingsPanel"]');
+  const audioBtn=document.createElement('button');audioBtn.dataset.tab='audioPanel';audioBtn.textContent='AUDIO';
+  optBtn.parentNode.insertBefore(audioBtn,document.querySelector('#hubTabs button[data-tab="statsPanel"]'));
+  const tabs=el('hubTabs');for(const id of ['title','duckPanel','levelPanel','audioPanel','settingsPanel','statsPanel','guidePanel'])tabs.appendChild(tabs.querySelector(`[data-tab="${id}"]`));
+  const mix=el('audioMix');
+  for(const id of ['setMusic','setSfx']){const row=el(id)?.closest('.setRow');if(row)mix.appendChild(row);}
+  const oldSound=el('soundTest')?.closest('.setRow');if(oldSound)oldSound.remove();
+  const settingsTitle=el('settingsPanel').querySelector('h2');if(settingsTitle){settingsTitle.textContent='OPTIONS';settingsTitle.insertAdjacentHTML('beforebegin','<div class="paneEyebrow">Race control</div>');settingsTitle.insertAdjacentHTML('afterend','<div class="paneIntro">Display, camera, controls, and accessibility.</div>');}
+
+  const panel=el('duckPanel'),cols=el('duckCols'),canvas=el('duckPrev');
+  panel.insertAdjacentHTML('afterbegin','<div class="paneEyebrow">Paddock garage</div><h2>BUILD YOUR DUCK</h2><div class="paneIntro">Every choice appears on the inspection turntable. Mix finishes, expressions, headwear, and race gear.</div>');
+  const stage=document.createElement('div');stage.className='duckStage';stage.innerHTML='<div class="duckStageHead"><span>LIVE INSPECTION</span><span>DRAG TO ROTATE</span></div><div id="duckLoadout">Factory yellow · classic eyes · no gear</div>';
+  stage.insertBefore(canvas,stage.lastElementChild);cols.insertBefore(stage,cols.firstChild);
+  canvas.width=420;canvas.height=360;
+  const controls=document.createElement('div');controls.className='duckControls';cols.appendChild(controls);
+  const group=(title,ids)=>{const s=document.createElement('section');s.className='duckGroup';s.innerHTML=`<h3>${title}</h3>`;for(const id of ids){const row=el(id)?.closest('.setRow');if(row)s.appendChild(row);}controls.appendChild(s);};
+  group('BODY & FINISH',['swBody','swBeak','swPattern','swPatCol','swWeight']);
+  const wb=el('weightBlurb');if(wb)controls.firstElementChild.appendChild(wb);
+  group('EXPRESSION',['swEyes','swFace']);group('HATS & HEADWEAR',['swHat']);group('RACE GEAR',['swBodyAcc']);
+  cols.querySelectorAll('.dCol').forEach(c=>c.remove());
+  let drag=false,lastX=0;
+  canvas.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;canvas.setPointerCapture(e.pointerId);});
+  canvas.addEventListener('pointermove',e=>{if(!drag)return;prevDuck.rotation.y+=(e.clientX-lastX)*.018;lastX=e.clientX;});
+  canvas.addEventListener('pointerup',()=>drag=false);canvas.addEventListener('pointercancel',()=>drag=false);
+  audioBtn.addEventListener('click',()=>showTab('audioPanel'));
+}
 el('raceBtn').addEventListener('click', () => { ttMode = false; prepRace(); });
 {
   const fsBtn=el('fullscreenBtn'),root=document.documentElement;
@@ -5690,6 +5780,15 @@ document.querySelectorAll('#soundTest button').forEach(b => b.addEventListener('
   else if (s2 === 'fanfare') SFX.fanfare();
   else if (s2 === 'whistle') SFX.whistle();
 }));
+// Audio booth: every course theme plus one deliberately selected effect at a time.
+let audioPreview=null,audioPreviewTimer=null;
+const AUDIO_THEME_FILES={menu:'audio/menu-theme.mp3',spillway:'audio/race-theme.mp3',millrace:'audio/theme-millrace.mp3',undergrove:'audio/theme-undergrove.mp3',canopy:'audio/theme-canopy.mp3',porcelain:'audio/theme-porcelain.mp3'};
+function stopAudioPreview(){if(audioPreview){audioPreview.pause();audioPreview.currentTime=0;audioPreview=null;}if(audioPreviewTimer){clearInterval(audioPreviewTimer);audioPreviewTimer=null;}document.querySelectorAll('#musicTest [data-m]').forEach(b=>b.classList.remove('playing'));}
+function harborPreviewBeat(){if(!AU.ctx)return;const k=harborStep++%16,bass=[82.4,82.4,98,110,82.4,123.5,110,98],lead=[329.6,392,440,392,493.9,440,392,329.6];if(k%2===0)pluck(bass[(k/2)%8],.14*Math.max(.25,SETTINGS.music),AU.music,.34);if(k%4===2)pluck(lead[(k/2)%8],.09*Math.max(.25,SETTINGS.music),AU.music,.24);if(k%4===0)noiseTone(.045,2200,.04,AU.music);}
+document.querySelectorAll('#musicTest [data-m]').forEach(b=>b.addEventListener('click',()=>{auInit();stopAudioPreview();b.classList.add('playing');const id=b.dataset.m;if(id==='harbor'){harborPreviewBeat();audioPreviewTimer=setInterval(harborPreviewBeat,240);}else{audioPreview=new Audio(AUDIO_THEME_FILES[id]);audioPreview.loop=true;audioPreview.volume=Math.max(.2,SETTINGS.music*.85);audioPreview.play().catch(()=>tutToast('Audio preview could not start'));}}));
+el('soundStop').addEventListener('click',stopAudioPreview);
+function playSoundSelection(s2){auInit();if(s2==='splash')SFX.splash();else if(s2==='squeak')SFX.quack(true);else if(s2==='thud')SFX.thud(4.5);else if(s2==='cheer')playOnce('audio/cheer-burst.mp3',Math.max(.2,SETTINGS.sfx));else if(s2==='fanfare')SFX.fanfare();else if(s2==='whistle')SFX.whistle();}
+el('soundPlay').addEventListener('click',()=>playSoundSelection(el('soundSelect').value));
 el('setMusic').addEventListener('input', e2 => { SETTINGS.music = +e2.target.value / 100; saveSettings(); applyVolumes(); });
 el('setSfx').addEventListener('input', e2 => { SETTINGS.sfx = +e2.target.value / 100; saveSettings(); applyVolumes(); SFX.quack(); });
 el('setFov').addEventListener('input', e2 => { SETTINGS.fov = +e2.target.value; saveSettings(); applyQuality(); });
@@ -5759,16 +5858,17 @@ function refreshDuckUI() {
       b.textContent = locked ? '🔒 ' + base : base;
     });
   el('weightBlurb').textContent = playerW().blurb;
+  const loadout=el('duckLoadout');if(loadout){const d=SETTINGS.duck,parts=[`${d.pattern==='none'?'solid':d.pattern} body`,`${d.eyes||'classic'} eyes`];if(d.hat&&d.hat!=='none')parts.push(d.hat);if(d.face&&d.face!=='none')parts.push(d.face);if(d.body&&d.body!=='none')parts.push(d.body);loadout.textContent=parts.join(' · ').toUpperCase();}
   syncPreviewDuck();
 }
 // 3D preview: its own tiny renderer on the panel canvas
 const prevRenderer = new THREE.WebGLRenderer({ canvas: el('duckPrev'), antialias: true });
 prevRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-prevRenderer.setSize(300, 200, false);
+prevRenderer.setSize(420, 360, false);
 const prevScene = new THREE.Scene();
 prevScene.background = new THREE.Color(0xbfe4ea);
-const prevCam = new THREE.PerspectiveCamera(38, 1.5, 0.1, 20);
-prevCam.position.set(1.25, 0.95, 2.1); prevCam.lookAt(0, 0.22, 0);
+const prevCam = new THREE.PerspectiveCamera(34, 420/360, 0.1, 20);
+prevCam.position.set(1.15, 0.82, 2.35); prevCam.lookAt(0, 0.2, 0);
 prevScene.add(new THREE.HemisphereLight(0xdfeef2, 0x7a9a6a, 1.1));
 const prevSun = new THREE.DirectionalLight(0xfff2d0, 1.2); prevSun.position.set(2, 3, 2);
 prevScene.add(prevSun);
