@@ -226,6 +226,17 @@
   #resultsList .you { background: linear-gradient(90deg, var(--goldHi), var(--gold)); border: 2px solid var(--ink); }
   kbd { font-family: Georgia, serif; }
   @media (max-width: 860px) { #hubHead h1 { font-size: 44px; } #hubTabs button { font-size: 14px; padding: 8px 13px; } }
+  /* character pass: mascot ducks, hand-tilted panels, duck wisdom */
+  @keyframes duckBob { 0%, 100% { transform: translateY(0) rotate(-7deg); } 50% { transform: translateY(-8px) rotate(7deg); } }
+  .duckMark { display: inline-block; font-size: 44px; -webkit-text-stroke: 0;
+    animation: duckBob 2.7s ease-in-out infinite; filter: drop-shadow(0 4px 0 rgba(14,42,51,.35)); }
+  .duckMark.rev { animation-direction: reverse; }
+  .hubPane { transform: rotate(-0.45deg); }
+  #results { transform: rotate(0.4deg); }
+  @keyframes paneIn { from { opacity: 0; transform: translateY(10px) scale(.985) rotate(-0.45deg); } to { opacity: 1; transform: rotate(-0.45deg); } }
+  .wisdom { margin-top: 14px; font-size: 14px; opacity: .82; font-style: italic; line-height: 1.5;
+    border-top: 2px dashed rgba(14,42,51,.25); padding-top: 10px; }
+  .wisdom b { font-style: normal; }
 </style>
 </head>
 <body>
@@ -245,11 +256,11 @@
 <div id="screen">
  <div id="hub">
   <div id="hubHead">
-    <h1>SPILLWAY</h1>
-    <div class="sub">a rubber duck derby &mdash; eighty ducks, one river, no engines</div>
+    <h1><span class="duckMark">🦆</span> SPILLWAY <span class="duckMark rev">🦆</span></h1>
+    <div class="sub" id="tagline">a rubber duck derby &mdash; eighty ducks, one river, no engines</div>
   </div>
   <div id="hubTabs">
-    <button data-tab="title" class="sel">RACE</button><button data-tab="duckPanel">YOUR DUCK</button><button data-tab="levelPanel">COURSES</button><button data-tab="statsPanel">STATS</button><button data-tab="guidePanel">GUIDE</button><button data-tab="settingsPanel">SETTINGS</button>
+    <button data-tab="title" class="sel">🏁 RACE</button><button data-tab="duckPanel">🦆 YOUR DUCK</button><button data-tab="levelPanel">🗺️ COURSES</button><button data-tab="statsPanel">🏆 STATS</button><button data-tab="guidePanel">📖 GUIDE</button><button data-tab="settingsPanel">⚙️ SETTINGS</button>
   </div>
   <div class="panel hubPane hidden" id="guidePanel">
     <h2>HOW TO RACE</h2>
@@ -282,10 +293,12 @@
       <div class="go" id="raceBtn">RACE <small>(SPACE)</small></div>
       <div class="go" id="gpBtn" style="background:linear-gradient(180deg,#ffe886,#ff9a3c 60%,#e05a2a)">🏆 GRAND PRIX</div>
       <div class="go" id="ttBtn" style="background:linear-gradient(180deg,#b2fff2,#2ec4b6 60%,#1d8a80)">⏱ TIME TRIAL</div>
+      <div class="go" id="tutBtn" style="font-size:15px;background:linear-gradient(180deg,#fffef6,#ece1c2)">🎓 TUTORIAL</div>
     </div>
     <div class="keys">
-      <kbd>W A S D</kbd> paddle &middot; <kbd>SHIFT</kbd> shove &middot; controller supported &mdash; you can't beat the river, only read it
+      <kbd>W A S D</kbd> paddle &middot; <kbd>SHIFT</kbd> shove &middot; controller supported
     </div>
+    <div class="wisdom" id="wisdom"></div>
   </div>
   <div class="panel" id="results">
     <h2 id="resultsTitle">RACE RESULTS</h2>
@@ -316,6 +329,10 @@
     <div class="setRow"><span>Field of view</span><input type="range" id="setFov" min="48" max="72"></div>
     <div class="setRow"><span>Steering assist</span><div class="segRow" id="setAssist">
       <button data-v="off">OFF</button><button data-v="on">ON</button></div></div>
+    <div class="setRow"><span>Duck noises</span><div class="segRow" id="setDuckNoise">
+      <button data-v="on">ON</button><button data-v="off">OFF</button></div></div>
+    <div class="setRow"><span>Sound test</span><div class="segRow wrapRow" id="soundTest" style="max-width:290px">
+      <button data-s="splash">SPLASH</button><button data-s="squeak">SQUEAK</button><button data-s="thud">THWACK</button><button data-s="cheer">CHEER</button><button data-s="fanfare">FANFARE</button><button data-s="whistle">WHISTLE</button></div></div>
   </div>
   <div class="panel hubPane hidden" id="duckPanel">
     <div id="duckCols">
@@ -1074,7 +1091,7 @@ const DUSK = { top: [.28,.30,.55], hor: [.95,.55,.40], low: [1,.75,.5], sun: 0xf
 
 // ---- persisted settings
 const SETTINGS = Object.assign(
-  { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', camView: 'behind', fov: 58, assist: false,
+  { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', camView: 'behind', fov: 58, assist: false, duckNoises: true,
     difficulty: 'medium', laps: 1,
     keys: { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' },
     duck: { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium', eyes: 'classic', pattern: 'none', patternColor: '#fff8e7', face: 'none', body: 'none' } },
@@ -1228,8 +1245,9 @@ const SFX = {
     const g = ctx.createGain(); g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
     o.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + 0.2);
   },
-  quack() {   // a rubber duck doesn't quack — it SQUEAKS
+  quack(force) {   // a rubber duck doesn't quack — it SQUEAKS
     if (!AU.ctx) return;
+    if (SETTINGS.duckNoises === false && !force) return;
     if (playSmp('squeak' + (1 + Math.floor(Math.random() * 3)), 0.5, randRange(0.9, 1.18))) return;
     const ctx = AU.ctx, t = ctx.currentTime;
     const o = ctx.createOscillator(); o.type = 'sawtooth';
@@ -1306,6 +1324,13 @@ function step(dt) {
     if (G.surge >= 0) {
       G.surge += (22 / COURSE_LEN) * dt;
       if (G.surge > 1.05) { G.surge = -1; G.surgeLapT = G.raceT; }
+    }
+    // guided tutorial: the river explains itself, station by station
+    // (lives in the sim step so it works even when the tab throttles RAF)
+    if (G.guided && G.gStep < GUIDE_STEPS.length && ducks[0].tot / NSAMP >= GUIDE_STEPS[G.gStep][0]) {
+      tutToast('🎓 ' + GUIDE_STEPS[G.gStep][1]);
+      SFX.beep(true);
+      G.gStep++;
     }
   }
   // critters
@@ -2524,6 +2549,31 @@ let whirlMesh;
         S.pos[bi].z + S.tan[bi].z * (pk - 3) * 0.35);   // horizontal offsets only — no slope stagger
       plank.rotation.y = yaw;   // box X axis ⟂ tangent → the deck spans the river
       scene.add(plank);
+    }
+    // abutments: stepped stone footings that carry the deck onto both banks —
+    // a bridge has to land on something
+    {
+      const stoneM = new THREE.MeshLambertMaterial({ color: 0x7f858b, map: ROCKTEX });
+      for (const sgnA of [-1, 1]) {
+        const endLat = sgnA * (wSpan / 2 - 0.9);
+        const ob = Math.max(0.2, Math.abs(endLat) - S.w[bi]);
+        const p = S.pos[bi].clone().addScaledVector(S.side[bi], endLat);
+        const gy = waterHeightAt(bi) + bankH(bi, ob, sgnA);
+        const h = Math.max(1.0, deckY - gy + 0.4);
+        const ab = new THREE.Mesh(new THREE.BoxGeometry(2.6, h, 3.2), stoneM);
+        ab.position.set(p.x, gy + h / 2 - 0.35, p.z);
+        ab.rotation.y = yaw;
+        scene.add(ab);
+        // a lower step beyond it, easing the bridge into the hillside
+        const ob2 = ob + 2.2;
+        const p2 = S.pos[bi].clone().addScaledVector(S.side[bi], sgnA * (S.w[bi] + ob2));
+        const gy2 = waterHeightAt(bi) + bankH(bi, ob2, sgnA);
+        const h2 = Math.max(0.8, (deckY - 0.9) - gy2 + 0.4);
+        const step2 = new THREE.Mesh(new THREE.BoxGeometry(2.2, h2, 2.8), stoneM);
+        step2.position.set(p2.x, gy2 + h2 / 2 - 0.35, p2.z);
+        step2.rotation.y = yaw;
+        scene.add(step2);
+      }
     }
     for (const sgn of [-1, 1]) {
       // rails run ACROSS the river along the deck edges
@@ -4317,7 +4367,7 @@ function showResults() {
     if (nem && (!nem.finished || nem.finishTime > me.finishTime)) STATS.nemesisBeaten++;
     saveStats();
   }
-  if (me.finished) {
+  if (me.finished && !G.guided) {
     const key = G.tt ? `${LVL.id}-tt-${G.laps}` : `${LVL.id}-${G.difficulty}-${G.laps}`;
     if (!BEST[key] || me.finishTime < BEST[key]) {
       BEST[key] = me.finishTime;
@@ -4329,10 +4379,12 @@ function showResults() {
       }
     }
   }
-  el('resultsTitle').textContent = G.tt
-    ? `⏱ TIME TRIAL — ${fmtTime(me.finishTime)}` + bestNote
-    : (me.place === 1 ? '🏆 CHAMPION DUCK' : `RACE RESULTS — P${me.place || '—'}`) + bestNote
-      + (G.nemesisNote ? ` · ${G.nemesisNote}` : '');
+  el('resultsTitle').textContent = G.guided
+    ? '🎓 TUTORIAL COMPLETE — now go race!'
+    : G.tt
+      ? `⏱ TIME TRIAL — ${fmtTime(me.finishTime)}` + bestNote
+      : (me.place === 1 ? '🏆 CHAMPION DUCK' : `RACE RESULTS — P${me.place || '—'}`) + bestNote
+        + (G.nemesisNote ? ` · ${G.nemesisNote}` : '');
   // grand prix: award points, show standings, retitle the finale
   let gpHTML = '';
   if (GP && GP.active) {
@@ -4376,7 +4428,9 @@ function prepRace(skipFly) {
   G.laps = SETTINGS.laps;
   G.raceLap = 0; G.surge = -1; G.surgeLap = -1; G.surgeLapT = 0; G.slowmo = 0; G.statsCounted = false; G.podT = 0;
   G.tt = ttMode; G._recT = 0; G.ghostRec = [];
-  G.ghost = G.tt ? JSON.parse(localStorage.getItem(ttGhostKey()) || 'null') : null;
+  G.guided = !!G.guidedNext; G.guidedNext = false;
+  if (G.guided) { G.laps = 1; G.weather = 'clear'; G.gStep = 0; }
+  G.ghost = (G.tt && !G.guided) ? JSON.parse(localStorage.getItem(ttGhostKey()) || 'null') : null;
   if (G.tt) for (const rr of Object.values(rogueRigs)) rr.position.set(0, -500, 0);
   const wPool = LVL.weathers || ['clear', 'golden', 'mist', 'storm'];
   G.weather = wPool[Math.floor(rand() * wPool.length)];
@@ -4396,6 +4450,42 @@ function prepRace(skipFly) {
   if (window._showTouchUI) _showTouchUI(true);
   G.playerShove = false;
 }
+// flavour: rotating taglines + duck wisdom from the rogues' gallery
+const TAGLINES = [
+  'a rubber duck derby — eighty ducks, one river, no engines',
+  'you can\'t beat the river — you can only read it',
+  'the current is undefeated',
+  'may the best bath toy win',
+  'squeak softly and carry a big paddle',
+  'rubber side down, beak side forward',
+  'fear the drain',
+  'it\'s always duck season',
+  'hatched to race',
+  'no lifeguard on duty',
+];
+const WISDOM = [
+  ['Sir Quacksalot', 'The middle of the river runs fastest. So do I.'],
+  ['Duck Vader', 'I find your lack of paddling disturbing.'],
+  ['Old Mallard', 'Ducks have wedged on that log since \'09. Don\'t be ducks.'],
+  ['Puddles', 'BUBBLES!!!'],
+  ['Duck Norris', 'The whirlpool spins around ME.'],
+  ['Eddy Current', 'Slack water is for slackers. I would know — I live there.'],
+  ['Bill Murray', 'It\'s the same river. Every. Single. Day.'],
+  ['Floaty McFloatface', 'They named me by committee and I will still beat you.'],
+  ['The Yellow Baron', 'Watch your six. And your shove cooldown.'],
+  ['Duckzilla', 'Heavy is not a weight class. It is a lifestyle.'],
+  ['Pond James Pond', 'Shaken, stirred, and three seconds ahead of you.'],
+  ['Mother Clucker', 'I raised half this field. I will still shove them.'],
+];
+function refreshFlavour() {
+  const tg = el('tagline');
+  if (tg) tg.textContent = TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
+  const w2 = el('wisdom');
+  if (w2) {
+    const [who, quote] = WISDOM[Math.floor(Math.random() * WISDOM.length)];
+    w2.innerHTML = `&ldquo;${quote}&rdquo; &nbsp;&mdash; <b>${who}</b>`;
+  }
+}
 function showTab(id) {
   for (const p of ['title', 'duckPanel', 'levelPanel', 'statsPanel', 'settingsPanel', 'guidePanel']) el(p).classList.toggle('hidden', p !== id);
   document.querySelectorAll('#hubTabs button').forEach(b => b.classList.toggle('sel', b.dataset.tab === id));
@@ -4404,6 +4494,7 @@ function showTab(id) {
   if (id === 'duckPanel') refreshDuckUI();
   if (id === 'levelPanel') refreshLevelCards();
   if (id === 'statsPanel') refreshStatsUI();
+  if (id === 'title') refreshFlavour();
 }
 function refreshStatsUI() {
   const host = el('statGrid');
@@ -4432,7 +4523,7 @@ function refreshStatsUI() {
 function showHub(tab) { el('screen').classList.remove('hidden'); showTab(tab || 'title'); }
 function toTitle() {
   G.mode = 'title';
-  ttMode = false; G.tt = false;
+  ttMode = false; G.tt = false; G.guided = false;
   resetDucks();
   showHub('title');
   el('hudTop').style.display = 'none';
@@ -4467,6 +4558,35 @@ G.tutOn = !localStorage.getItem('spillway-tut');
 // ---- TIME TRIAL: you alone against the river — and against your best ghost
 let ttMode = false;
 function ttGhostKey() { return `spillway-ghost-${LVL.id}-${G.laps}`; }
+// ---- GUIDED TUTORIAL: a solo lap of Spillway Run with the river explained
+// station by station. Rides the time-trial machinery (no field, no pressure).
+const GUIDE_STEPS = [
+  [0.015, 'PADDLE — hold W (or ↑) to build speed. The current does the rest.'],
+  [0.075, 'STEER with A and D. The MIDDLE of the river runs fastest.'],
+  [0.095, 'A dark glassy tongue ahead — that\'s a FAST CHUTE. Ride it.'],
+  [0.14, 'ROCK GARDEN — rocks stop you dead. Weave, don\'t wrestle.'],
+  [0.20, 'Pale SANDBARS drag your hull. Brown mud is even stickier.'],
+  [0.30, 'See the side channel? Flood gates open on the FINAL lap of 3-lap races.'],
+  [0.375, 'THE FALLS — line up mid-channel and hang on!'],
+  [0.455, 'Islands split the river: one lane fast and mean, one safe and slow.'],
+  [0.56, 'Press SHIFT to SHOVE rivals away — 4 second cooldown.'],
+  [0.615, 'Bridge pilings — thread the needle.'],
+  [0.72, 'The WHIRLPOOL hungers. Skirt its edge or lose seconds.'],
+  [0.79, 'MAGIC SURGE CHANNEL — glowing water runs UPHILL at full race speed.'],
+  [0.95, 'The line ahead — cross it to finish a lap. That\'s everything. Go race!'],
+];
+function startTutorial() {
+  if (LVL.id !== 'spillway') {
+    localStorage.setItem('spillway-tutreq', '1');
+    localStorage.setItem('spillway-level', 'spillway');
+    location.reload();
+    return;
+  }
+  localStorage.removeItem('spillway-tutreq');
+  ttMode = true;
+  G.guidedNext = true;
+  prepRace(true);
+}
 
 addEventListener('keydown', e => {
   auInit();
@@ -4568,6 +4688,8 @@ addEventListener('pointerdown', auInit, { once: false });
 // ---- menu & settings wiring
 el('raceBtn').addEventListener('click', () => { ttMode = false; prepRace(); });
 el('ttBtn').addEventListener('click', () => { ttMode = true; prepRace(); });
+el('tutBtn').addEventListener('click', () => { auInit(); startTutorial(); });
+if (localStorage.getItem('spillway-tutreq') === '1') setTimeout(startTutorial, 400);
 el('againBtn').addEventListener('click', () => raceAgain());
 el('courseBtn').addEventListener('click', () => { toTitle(); showTab('levelPanel'); });
 el('menuBtn').addEventListener('click', () => { if (GP && GP.active) clearGP(); toTitle(); });
@@ -4747,6 +4869,21 @@ document.querySelectorAll('#keyBtns button').forEach(b => b.addEventListener('cl
 document.querySelectorAll('#setAssist button').forEach(b => b.addEventListener('click', () => {
   SETTINGS.assist = b.dataset.v === 'on'; saveSettings(); refreshSettingsUI();
 }));
+document.querySelectorAll('#setDuckNoise button').forEach(b => b.addEventListener('click', () => {
+  SETTINGS.duckNoises = b.dataset.v === 'on'; saveSettings(); refreshSettingsUI();
+  if (SETTINGS.duckNoises) SFX.quack(true);
+}));
+// sound test: audition every effect from the settings panel
+document.querySelectorAll('#soundTest button').forEach(b => b.addEventListener('click', () => {
+  auInit();
+  const s2 = b.dataset.s;
+  if (s2 === 'splash') SFX.splash();
+  else if (s2 === 'squeak') SFX.quack(true);
+  else if (s2 === 'thud') SFX.thud(4.5);
+  else if (s2 === 'cheer') playOnce('audio/cheer-burst.mp3', Math.max(0.2, SETTINGS.sfx));
+  else if (s2 === 'fanfare') SFX.fanfare();
+  else if (s2 === 'whistle') SFX.whistle();
+}));
 el('setMusic').addEventListener('input', e2 => { SETTINGS.music = +e2.target.value / 100; saveSettings(); applyVolumes(); });
 el('setSfx').addEventListener('input', e2 => { SETTINGS.sfx = +e2.target.value / 100; saveSettings(); applyVolumes(); SFX.quack(); });
 el('setFov').addEventListener('input', e2 => { SETTINGS.fov = +e2.target.value; saveSettings(); applyQuality(); });
@@ -4758,6 +4895,7 @@ function refreshSettingsUI() {
   document.querySelectorAll('#setCam button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.camDist));
   document.querySelectorAll('#setView button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.camView));
   document.querySelectorAll('#setAssist button').forEach(b => b.classList.toggle('sel', (b.dataset.v === 'on') === SETTINGS.assist));
+  document.querySelectorAll('#setDuckNoise button').forEach(b => b.classList.toggle('sel', (b.dataset.v === 'on') === (SETTINGS.duckNoises !== false)));
   refreshKeyBtns();
   el('padStatus').textContent = PAD.on || PAD.name ? `controller: ${(PAD.name || 'connected').slice(0, 40)}` : 'controller: none detected — plug in & press a button';
 }
@@ -4843,7 +4981,7 @@ function syncPreviewDuck() {
   prevHat.add(buildRig(SETTINGS.duck));
   prevDuck.scale.setScalar(playerW().scale);
 }
-refreshSettingsUI(); setDiff(SETTINGS.difficulty); setLaps(SETTINGS.laps); applyQuality(); applyDuck(); refreshDuckUI();
+refreshSettingsUI(); setDiff(SETTINGS.difficulty); setLaps(SETTINGS.laps); applyQuality(); applyDuck(); refreshDuckUI(); refreshFlavour();
 
 // ============================================================ MAIN LOOP
 function resize() {
