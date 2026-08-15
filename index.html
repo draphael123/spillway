@@ -2745,6 +2745,39 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   }));
   banksMesh.receiveShadow = true;
   scene.add(banksMesh);
+
+  // A separate wet erosion ribbon breaks the mathematical water/terrain seam.
+  // Its outer edge follows the actual noisy bank height, so it cannot float.
+  const wetPos=[],wetIdx=[];
+  for(const sgn of [-1,1]){
+    const rowStart=wetPos.length/3;
+    for(let i=0;i<=NSAMP;i++){
+      const w=S.w[i],inner=S.pos[i].clone().addScaledVector(S.side[i],sgn*(w+.08));
+      const outer=S.pos[i].clone().addScaledVector(S.side[i],sgn*(w+1.45));
+      wetPos.push(inner.x,waterHeightAt(i)-.11,inner.z,outer.x,waterHeightAt(i)+bankH(i,1.45,sgn)+.035,outer.z);
+      if(i<NSAMP){const j=rowStart+i*2;wetIdx.push(j,j+2,j+1,j+1,j+2,j+3);}
+    }
+  }
+  const wetG=new THREE.BufferGeometry();wetG.setAttribute('position',new THREE.Float32BufferAttribute(wetPos,3));wetG.setIndex(wetIdx);wetG.computeVertexNormals();
+  const wetCol=LVL.id==='porcelain'?0x8cb9c4:LVL.id==='harbor'?0x35575d:LVL.id==='undergrove'?0x162f2c:0x314a36;
+  const wetMesh=new THREE.Mesh(wetG,new THREE.MeshStandardMaterial({color:wetCol,roughness:.58,metalness:LVL.id==='harbor'?.12:0,transparent:true,opacity:.86,side:THREE.DoubleSide}));
+  wetMesh.receiveShadow=true;wetMesh.renderOrder=1;scene.add(wetMesh);
+
+  // Embedded stones/rubble and fallen roots provide a readable scale transition.
+  if(LVL.id!=='porcelain'){
+    const shoreN=MOBILE_GPU?70:140,shoreStone=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(.24,0),new THREE.MeshStandardMaterial({color:LVL.id==='harbor'?0x68777a:0x6d7166,roughness:.9}),shoreN);
+    const rootN=MOBILE_GPU?24:54,shoreRoot=new THREE.InstancedMesh(new THREE.CylinderGeometry(.055,.09,1,7),new THREE.MeshStandardMaterial({color:LVL.id==='harbor'?0x665c4e:0x57422f,roughness:.94}),rootN);
+    const sm=new THREE.Matrix4(),sq=new THREE.Quaternion(),ss=new THREE.Vector3(),up=new THREE.Vector3(0,1,0),axis=new THREE.Vector3();
+    for(let n=0;n<shoreN;n++){
+      const i=Math.floor((n/shoreN)*NSAMP+randRange(-5,5)),ii=wrapI(i),sgn=n%2?1:-1,ob=randRange(.65,2.35),p=S.pos[ii].clone().addScaledVector(S.side[ii],sgn*(S.w[ii]+ob)),scale=randRange(.55,1.65);
+      p.y=waterHeightAt(ii)+bankH(ii,ob,sgn)+.02; sq.setFromEuler(new THREE.Euler(randRange(-.35,.35),rand()*6,randRange(-.35,.35)));sm.compose(p,sq,ss.set(scale,randRange(.45,.95)*scale,scale));shoreStone.setMatrixAt(n,sm);
+    }
+    for(let n=0;n<rootN;n++){
+      const ii=wrapI(Math.floor((n/rootN)*NSAMP+randRange(-9,9))),sgn=n%2?1:-1,ob=randRange(1.05,2.8),p=S.pos[ii].clone().addScaledVector(S.side[ii],sgn*(S.w[ii]+ob)),len=randRange(.65,1.65);
+      p.y=waterHeightAt(ii)+bankH(ii,ob,sgn)+.05;axis.copy(S.tan[ii]).multiplyScalar(rand()<.5?-1:1).addScaledVector(S.side[ii],randRange(-.6,.6)).setY(randRange(-.12,.18)).normalize();sq.setFromUnitVectors(up,axis);sm.compose(p,sq,ss.set(1,len,1));shoreRoot.setMatrixAt(n,sm);
+    }
+    shoreStone.castShadow=shoreStone.receiveShadow=shoreRoot.castShadow=true;shoreStone.frustumCulled=shoreRoot.frustumCulled=false;scene.add(shoreStone,shoreRoot);
+  }
 }
 
 // ---------- riverbed (dark, under the water, so falls don't show sky)
@@ -4460,28 +4493,37 @@ let rainMesh, rainVel = [];
 }
 
 // ---------- ducks (instanced body, sculpted wing/tail highlights, beak, eyes)
-let bodyIM, detailIM, beakIM, eyeIM, contactIM;
-var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
+let bodyIM, detailIM, beakIM, billDetailIM, eyeIM, contactIM;
+var duckBodyG, duckDetailG, duckBeakG, duckBillDetailG, duckEyeG;   // shared with the customizer preview
 {
-  const bodyG = new THREE.SphereGeometry(DUCK_R, 12, 10);
-  bodyG.scale(1, 0.78, 1.15);
-  const headG = new THREE.SphereGeometry(DUCK_R * 0.62, 10, 8);
-  headG.translate(0, DUCK_R * 0.7, DUCK_R * 0.72);
-  const merged = duckBodyG = mergeGeoms([bodyG, headG]);
+  const bodyG = new THREE.SphereGeometry(DUCK_R, 16, 12);
+  bodyG.scale(1.02, 0.76, 1.2);
+  const chestG = new THREE.SphereGeometry(DUCK_R * .72, 14, 10);
+  chestG.scale(.9,1.08,.82); chestG.translate(0,DUCK_R*.34,DUCK_R*.48);
+  const neckG = new THREE.SphereGeometry(DUCK_R * .48, 12, 9);
+  neckG.scale(.82,1.05,.78); neckG.translate(0,DUCK_R*.58,DUCK_R*.56);
+  const headG = new THREE.SphereGeometry(DUCK_R * 0.64, 14, 11);
+  headG.scale(1,.96,1.03); headG.translate(0, DUCK_R * 0.78, DUCK_R * 0.72);
+  const merged = duckBodyG = mergeGeoms([bodyG, chestG, neckG, headG]);
   bodyIM = new THREE.InstancedMesh(merged,
-    new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 55, specular: 0x666666 }), N_DUCKS);   // rubber sheen
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness:.3, metalness:0, envMapIntensity:.7 }), N_DUCKS);
 
   // Slightly raised wings and a tail nub catch their own highlights. From the chase
   // camera this small second shell is what turns a field of coloured blobs into ducks.
-  const wingL=new THREE.SphereGeometry(DUCK_R*.38,8,6);wingL.scale(.34,.2,1.15);wingL.rotateZ(-.22);wingL.translate(-DUCK_R*.43,DUCK_R*.02,-DUCK_R*.02);
-  const wingR=new THREE.SphereGeometry(DUCK_R*.38,8,6);wingR.scale(.34,.2,1.15);wingR.rotateZ(.22);wingR.translate(DUCK_R*.43,DUCK_R*.02,-DUCK_R*.02);
-  const tail=new THREE.SphereGeometry(DUCK_R*.23,7,5);tail.scale(1,.7,.8);tail.translate(0,DUCK_R*.18,-DUCK_R*1.04);
-  detailIM=new THREE.InstancedMesh(mergeGeoms([wingL,wingR,tail]),new THREE.MeshPhongMaterial({color:0xffffff,shininess:72,specular:0x777777}),N_DUCKS);
+  const wingL=new THREE.SphereGeometry(DUCK_R*.43,12,8);wingL.scale(.38,.18,1.28);wingL.rotateZ(-.28);wingL.rotateX(.08);wingL.translate(-DUCK_R*.47,DUCK_R*.06,-DUCK_R*.03);
+  const wingR=new THREE.SphereGeometry(DUCK_R*.43,12,8);wingR.scale(.38,.18,1.28);wingR.rotateZ(.28);wingR.rotateX(.08);wingR.translate(DUCK_R*.47,DUCK_R*.06,-DUCK_R*.03);
+  const tail=new THREE.ConeGeometry(DUCK_R*.29,DUCK_R*.55,8);tail.rotateX(-Math.PI/2);tail.translate(0,DUCK_R*.2,-DUCK_R*1.18);
+  duckDetailG=mergeGeoms([wingL,wingR,tail]);
+  detailIM=new THREE.InstancedMesh(duckDetailG,new THREE.MeshStandardMaterial({color:0xffffff,roughness:.38,metalness:0}),N_DUCKS);
 
-  const beakG = duckBeakG = new THREE.ConeGeometry(DUCK_R * 0.22, DUCK_R * 0.55, 6);
-  beakG.rotateX(Math.PI / 2);
-  beakG.translate(0, DUCK_R * 0.68, DUCK_R * 1.28);
-  beakIM = new THREE.InstancedMesh(beakG, new THREE.MeshLambertMaterial({ color: 0xffffff }), N_DUCKS);
+  const beakG = duckBeakG = new THREE.SphereGeometry(DUCK_R*.34,12,7);
+  beakG.scale(1,.27,.72);beakG.translate(0,DUCK_R*.69,DUCK_R*1.27);
+  beakIM = new THREE.InstancedMesh(beakG, new THREE.MeshStandardMaterial({ color:0xffffff,roughness:.48,metalness:0 }), N_DUCKS);
+  const mouth=new THREE.BoxGeometry(DUCK_R*.5,DUCK_R*.018,DUCK_R*.24);mouth.translate(0,DUCK_R*.675,DUCK_R*1.43);
+  const nostL=new THREE.SphereGeometry(DUCK_R*.025,5,4);nostL.scale(1,.35,1);nostL.translate(-DUCK_R*.105,DUCK_R*.735,DUCK_R*1.43);
+  const nostR=nostL.clone();nostR.translate(DUCK_R*.21,0,0);
+  duckBillDetailG=mergeGeoms([mouth,nostL,nostR]);
+  billDetailIM=new THREE.InstancedMesh(duckBillDetailG,new THREE.MeshBasicMaterial({color:0x5a321f}),N_DUCKS);
 
   const eL = new THREE.SphereGeometry(DUCK_R * 0.09, 6, 5); eL.translate(-DUCK_R * 0.26, DUCK_R * 0.88, DUCK_R * 1.0);
   const eR = new THREE.SphereGeometry(DUCK_R * 0.09, 6, 5); eR.translate( DUCK_R * 0.26, DUCK_R * 0.88, DUCK_R * 1.0);
@@ -4501,11 +4543,11 @@ var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
     else c.set(palette[1 + Math.floor(rand() * (palette.length - 1))]).offsetHSL(randRange(-0.02, 0.02), 0, randRange(-0.06, 0.06));
     bodyIM.setColorAt(i, c);detailIM.setColorAt(i,c);
   }
-  bodyIM.frustumCulled = detailIM.frustumCulled = beakIM.frustumCulled = eyeIM.frustumCulled = eyeShineIM.frustumCulled = false;
+  bodyIM.frustumCulled = detailIM.frustumCulled = beakIM.frustumCulled = billDetailIM.frustumCulled = eyeIM.frustumCulled = eyeShineIM.frustumCulled = false;
   const contactG=new THREE.CircleGeometry(DUCK_R*.72,12);
   contactIM=new THREE.InstancedMesh(contactG,new THREE.MeshBasicMaterial({color:0x123f48,transparent:true,opacity:.14,depthWrite:false}),N_DUCKS);
   contactIM.frustumCulled=false;contactIM.renderOrder=3;
-  scene.add(contactIM,bodyIM,detailIM, beakIM, eyeIM, eyeShineIM);
+  scene.add(contactIM,bodyIM,detailIM,beakIM,billDetailIM,eyeIM,eyeShineIM);
 }
 // naive geometry merge (positions/normals/uv discarded ok for lambert flat colors)
 function mergeGeoms(geoms) {
@@ -5107,7 +5149,7 @@ function syncDucks(t) {
     if (G.tt && d.idx !== 0) {   // time trial: the field stays in the shed
       _s.setScalar(0.0001);
       _m4.compose(_tmpA.set(0, -500, 0), _q.identity(), _s);
-      bodyIM.setMatrixAt(d.idx, _m4);detailIM.setMatrixAt(d.idx,_m4);beakIM.setMatrixAt(d.idx, _m4);
+      bodyIM.setMatrixAt(d.idx, _m4);detailIM.setMatrixAt(d.idx,_m4);beakIM.setMatrixAt(d.idx, _m4);billDetailIM.setMatrixAt(d.idx,_m4);
       eyeIM.setMatrixAt(d.idx, _m4); eyeShineIM.setMatrixAt(d.idx, _m4);
       contactIM.setMatrixAt(d.idx,_m4);
       _s.set(1, 1, 1);
@@ -5149,7 +5191,7 @@ function syncDucks(t) {
       rr.quaternion.copy(_q);
       rr.scale.setScalar(wsc);
     }
-    bodyIM.setMatrixAt(d.idx, _m4);detailIM.setMatrixAt(d.idx,_m4);beakIM.setMatrixAt(d.idx, _m4);
+    bodyIM.setMatrixAt(d.idx, _m4);detailIM.setMatrixAt(d.idx,_m4);beakIM.setMatrixAt(d.idx, _m4);billDetailIM.setMatrixAt(d.idx,_m4);
     const customEyes = (d.idx === 0 && SETTINGS.duck.eyes && SETTINGS.duck.eyes !== 'classic')
                     || (d.rogue && d.rogue.gear.eyes);
     if (customEyes) {
@@ -5169,6 +5211,7 @@ function syncDucks(t) {
   bodyIM.instanceMatrix.needsUpdate = true;
   detailIM.instanceMatrix.needsUpdate = true;
   beakIM.instanceMatrix.needsUpdate = true;
+  billDetailIM.instanceMatrix.needsUpdate = true;
   eyeIM.instanceMatrix.needsUpdate = true;
   eyeShineIM.instanceMatrix.needsUpdate = true;
   contactIM.instanceMatrix.needsUpdate = true;
@@ -6085,10 +6128,12 @@ const prevSun = new THREE.DirectionalLight(0xfff2d0, 1.2); prevSun.position.set(
 prevScene.add(prevSun);
 const prevDuck = new THREE.Group();
 const prevBody = new THREE.Mesh(duckBodyG, new THREE.MeshLambertMaterial({ color: 0xffd23f }));
+const prevDetail = new THREE.Mesh(duckDetailG, new THREE.MeshStandardMaterial({ color:0xffd23f,roughness:.38 }));
 const prevBeak = new THREE.Mesh(duckBeakG, new THREE.MeshLambertMaterial({ color: 0xff8c1a }));
+const prevBillDetail = new THREE.Mesh(duckBillDetailG,new THREE.MeshBasicMaterial({color:0x5a321f}));
 const prevEyes = new THREE.Mesh(duckEyeG, new THREE.MeshBasicMaterial({ color: 0x14222a }));
 const prevHat = new THREE.Group();
-prevDuck.add(prevBody, prevBeak, prevEyes, prevHat);
+prevDuck.add(prevBody,prevDetail,prevBeak,prevBillDetail,prevEyes,prevHat);
 prevScene.add(prevDuck);
 const prevPool = new THREE.Mesh(new THREE.CircleGeometry(1.05, 24),
   new THREE.MeshLambertMaterial({ color: 0x2e7f8c, transparent: true, opacity: 0.85 }));
@@ -6096,6 +6141,7 @@ prevPool.rotation.x = -Math.PI / 2; prevPool.position.y = -0.28;
 prevScene.add(prevPool);
 function syncPreviewDuck() {
   prevBody.material.color.set(SETTINGS.duck.color);
+  prevDetail.material.color.set(SETTINGS.duck.color);
   prevBeak.material.color.set(SETTINGS.duck.beak);
   prevEyes.visible = !SETTINGS.duck.eyes || SETTINGS.duck.eyes === 'classic';
   while (prevHat.children.length) prevHat.remove(prevHat.children[0]);
