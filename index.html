@@ -150,6 +150,10 @@
   .statGrid .big { font-size:26px; font-weight:bold; }
   .statGrid .lockDone { color:#2a8a5f; }
   .statGrid .lockTodo { opacity:.6; }
+  .challengeBoard { width:100%; margin-top:14px; display:grid; grid-template-columns:repeat(3,minmax(180px,1fr)); gap:7px; text-align:left; }
+  .challengeCard { padding:8px 10px; border:2px solid var(--raceNavy); border-left:7px solid var(--signal); border-radius:7px; background:#fff; font:700 13px/1.25 'Nunito Sans',sans-serif; }
+  .challengeCard.done { border-left-color:var(--current); background:#e7fff7; }
+  .challengeCard b { display:block; font:900 16px 'Barlow Condensed',sans-serif; text-transform:uppercase; }
   /* ================= KART THEME: chunky, glossy, angled, gold ================= */
   :root { --gold:#ffcd2e; --goldHi:#ffe886; --goldLo:#e8960f; }
   .kart, .panel h1, .panel h2, #hubHead h1, #hubTabs button, .go, .diffRow button, .segRow button,
@@ -321,6 +325,9 @@
     .hubPane { transform:none; }
     .pill { min-height:52px; font-size:22px; padding:3px 9px; }
     #place { min-width:98px; font-size:27px; }
+    .challengeBoard { grid-template-columns:1fr; }
+    #speedo { display:none; } #hudTop { top:7px; max-width:74vw; } #minimap { transform:scale(.78); transform-origin:top right; }
+    #raceCue { top:68px; font-size:14px; } #raceIntro { left:2%; top:15%; width:88vw; }
   }
   @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; } }
 </style>
@@ -384,6 +391,7 @@
       <button data-n="20">20</button><button data-n="40">40</button><button data-n="80">80</button><button data-n="120">120</button><button data-n="160">160</button><button data-n="200">200</button></div></div>
     <div class="setRow"><span>Course</span><div class="segRow wrapRow" id="lvlRow" style="max-width:300px">
       <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button><button data-lvl="undergrove">UNDERGROVE</button><button data-lvl="canopy">CANOPY RUN</button><button data-lvl="porcelain">PORCELAIN RUN</button></div></div>
+    <div class="setRow"><span>Championship</span><div class="segRow wrapRow" id="cupRow" style="max-width:330px"></div></div>
     <div class="btnRow" style="margin-top:14px">
       <div class="go" id="raceBtn">RACE <small>(SPACE)</small></div>
       <div class="go" id="gpBtn" style="background:linear-gradient(180deg,#ffe886,#ff9a3c 60%,#e05a2a)">🏆 GRAND PRIX</div>
@@ -426,6 +434,10 @@
       <button data-v="off">OFF</button><button data-v="on">ON</button></div></div>
     <div class="setRow"><span>Duck noises</span><div class="segRow" id="setDuckNoise">
       <button data-v="on">ON</button><button data-v="off">OFF</button></div></div>
+    <div class="setRow"><span>Race announcer</span><div class="segRow" id="setAnnouncer"><button data-v="on">ON</button><button data-v="off">OFF</button></div></div>
+    <div class="setRow"><span>Camera shake</span><div class="segRow" id="setShake"><button data-v="on">ON</button><button data-v="off">OFF</button></div></div>
+    <div class="setRow"><span>Impact flashes</span><div class="segRow" id="setFlashes"><button data-v="on">ON</button><button data-v="off">OFF</button></div></div>
+    <div class="setRow"><span>Large-field clarity</span><div class="segRow" id="setClarity"><button data-v="full">FULL</button><button data-v="clear">CLEAR</button></div></div>
     <div class="setRow"><span>Sound test</span><div class="segRow wrapRow" id="soundTest" style="max-width:290px">
       <button data-s="splash">SPLASH</button><button data-s="squeak">SQUEAK</button><button data-s="thud">THWACK</button><button data-s="cheer">CHEER</button><button data-s="fanfare">FANFARE</button><button data-s="whistle">WHISTLE</button></div></div>
   </div>
@@ -1155,6 +1167,23 @@ const PERSONAS = [
   ['chaos','IMPROVISER','Let it flow.'],
 ];
 ROGUES.forEach((r,i) => { [r.trait,r.role,r.quote] = PERSONAS[i]; });
+const RIVAL_CHALLENGES = [
+ ['Duck Vader','Clean Escape','Beat Vader without taking a major duck collision',g=>g.playerHitCount===0],
+ ['Sir Quacksalot','Royal Standard','Beat Quacksalot on Hard or Insane',g=>['hard','insane'].includes(G.difficulty)],
+ ['Puddles','Rain Dance','Beat Puddles during storm water',g=>G.weather==='storm'],
+ ['Duck Norris','Feather vs Fist','Beat Norris as a lightweight duck',g=>SETTINGS.duck.weight==='light'],
+ ['Bill Murray','Easy Does It','Beat Bill without using Flow Burst',g=>!g.usedFlow],
+ ['The Yellow Baron','Cutwater','Ride at least two named shortcuts',g=>(g.shortcutHits?.size||0)>=2],
+ ['Quackie Chan','Comeback Kick','Beat Quackie after making five overtakes',g=>(g.overtakes||0)>=5],
+ ['Floaty McFloatface','Heavy Float','Beat Floaty as a heavyweight duck',g=>SETTINGS.duck.weight==='heavy'],
+ ['Pond James Pond','Double Agent','Take two shortcuts and finish on the podium',g=>(g.shortcutHits?.size||0)>=2&&ducks[0].place<=3],
+ ['Duckzilla','Barge Match','Beat Duckzilla after using a shove',g=>(g.shoves||0)>0],
+ ['Squirt','Recovery Drive','Beat Squirt after a false start',g=>!!g.falseStarted],
+ ['Mother Clucker','Crowd Control','Beat Mother Clucker in a 100+ duck field',g=>N_DUCKS>=100],
+ ['Eddy Current','Natural Flow','Beat Eddy without using Flow Burst',g=>!g.usedFlow],
+ ['Riverdance','Perfect Rhythm','Beat Riverdance with two shortcuts and two hits or fewer',g=>(g.shortcutHits?.size||0)>=2&&(g.playerHitCount||0)<=2],
+ ['Rubber Soul','After the Change','Beat Rubber Soul after the course transforms',g=>!!g.transformed],
+];
 const COURSE_EVENTS = {
   spillway: { name:'FLOOD STAGE', detail:'Banks vanish and the whole river accelerates', duration:8, state:'THE SPILLWAY FLOODS' },
   millrace: { name:'MILL SHIFT', detail:'Machinery redirects the outside race line', duration:8, state:'THE MILL CHANGES GEAR' },
@@ -1164,6 +1193,7 @@ const COURSE_EVENTS = {
 };
 
 const ducks = [];
+function safeStored(key,fallback){try{const v=localStorage.getItem(key);return v==null?fallback:JSON.parse(v)}catch(e){localStorage.removeItem(key);return fallback}}
 function makeDuckState(idx) {
   return {
     idx, name: idx === 0 ? 'YOU' : DUCK_NAMES[(idx - 1) % DUCK_NAMES.length],
@@ -1180,7 +1210,7 @@ function makeDuckState(idx) {
 }
 function resetDucks() {
   ducks.length = 0;
-  const nem = JSON.parse(localStorage.getItem('spillway-nemesis') || 'null');
+  const nem = safeStored('spillway-nemesis',null);
   for (let i = 0; i < N_DUCKS; i++) {
     const d = makeDuckState(i);
     if (i >= 1 && i <= ROGUES.length) {
@@ -1229,10 +1259,10 @@ const DUSK = { top: [.28,.30,.55], hor: [.95,.55,.40], low: [1,.75,.5], sun: 0xf
 // ---- persisted settings
 const SETTINGS = Object.assign(
   { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', camView: 'behind', fov: 58, assist: false, duckNoises: true,
-    difficulty: 'medium', laps: 1,
+    difficulty: 'medium', laps: 1, shake:true, flashes:true, clarity:'full', announcer:true,
     keys: { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' },
     duck: { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium', eyes: 'classic', pattern: 'none', patternColor: '#fff8e7', face: 'none', body: 'none' } },
-  JSON.parse(localStorage.getItem('spillway-settings') || '{}'));
+  safeStored('spillway-settings',{}));
 if (!SETTINGS.duck) SETTINGS.duck = { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium' };
 SETTINGS.duck = Object.assign({ eyes: 'classic', pattern: 'none', patternColor: '#fff8e7', face: 'none', body: 'none' }, SETTINGS.duck);
 if (!SETTINGS.keys) SETTINGS.keys = { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' };
@@ -1241,8 +1271,8 @@ const PAD = { up: false, down: false, left: false, right: false, on: false, name
 const TOUCH = { up: false, down: false, left: false, right: false, active: 'ontouchstart' in window };
 if (TOUCH.active && !localStorage.getItem('spillway-settings')) SETTINGS.quality = 'medium';
 // progression: race stats feed gear unlocks
-const STATS = Object.assign({ races: 0, wins: {}, winsByLevel: {}, nemesisBeaten: 0, shortcuts:0, cups:0, mastery:{}, rivalWins:{} },
-  JSON.parse(localStorage.getItem('spillway-stats') || '{}'));
+const STATS = Object.assign({ races: 0, wins: {}, winsByLevel: {}, nemesisBeaten: 0, shortcuts:0, cups:0, mastery:{}, masteryGoals:{}, rivalWins:{}, challengeWins:{}, cupTrophies:{} },
+  safeStored('spillway-stats',{}));
 function saveStats() { localStorage.setItem('spillway-stats', JSON.stringify(STATS)); }
 const LOCKS = {
   hat: {
@@ -1270,7 +1300,7 @@ const WEIGHTS = {
 };
 function playerW() { return WEIGHTS[SETTINGS.duck.weight] || WEIGHTS.medium; }
 function massOf(d) { return d.idx === 0 ? playerW().mass : (d.rogue ? d.rogue.scale * d.rogue.scale : 1); }
-const BEST = JSON.parse(localStorage.getItem('spillway-best') || '{}');
+const BEST = safeStored('spillway-best',{});
 G.difficulty = SETTINGS.difficulty;
 function saveSettings() { localStorage.setItem('spillway-settings', JSON.stringify(SETTINGS)); }
 
@@ -1405,12 +1435,14 @@ const SFX = {
 };
 
 const hash = new Map();
+function announce(msg){if(SETTINGS.announcer===false||!('speechSynthesis'in window))return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(msg);u.rate=1.18;u.pitch=.82;u.volume=Math.min(.8,SETTINGS.sfx);speechSynthesis.speak(u);}catch(e){}}
 function hashKey(x, z) { return ((x + 512) << 11) | (z + 512); }
 
 // ---- splash shove: rear up, slam down, radial knockback
 function doShove(d) {
   d.shoveT = d.idx === 0 ? 4 : randRange(5, 7.5);
   d._slamT=.48;
+  if(d.idx===0)G.shoves=(G.shoves||0)+1;
   d._sq = 0.55;
   splash({ x: d.p.x, y: d.y, z: d.p.z }, 16);
   spawnWave(d.p.x, d.y, d.p.z);
@@ -1439,6 +1471,7 @@ function doFlowBurst() {
   const d = ducks[0];
   if (G.mode !== 'race' || d.finished || d.air || d.inFlume || d.flow < 0.995 || d.burstT > 0) return;
   d.flow = 0; d.burstT = 1.35; d._sq = 0.4;
+  G.usedFlow=true;
   const fwd = S.tan[d.si];
   d.v.x += fwd.x * 7.5; d.v.z += fwd.z * 7.5;
   G.camShake = 0.18;
@@ -1448,7 +1481,7 @@ function doFlowBurst() {
 
 function impactBeat(word, mag) {
   const p = el('impactWord');
-  p.textContent = word || 'THWACK!'; p.classList.remove('on'); void p.offsetWidth; p.classList.add('on');
+  if(SETTINGS.flashes!==false){p.textContent = word || 'THWACK!'; p.classList.remove('on'); void p.offsetWidth; p.classList.add('on');}
   G.hitStop = Math.max(G.hitStop || 0, Math.min(.11, .035 + mag * .012));
 }
 function rivalSay(d, line) {
@@ -1460,6 +1493,7 @@ function resolveStart() {
   const d = ducks[0], charge = G.startCharge || 0;
   el('startMeter').style.display = 'none';
   if (G.startEarly || charge > 1.06) {
+    G.falseStarted=true;
     d.launchT = -.9; d.spinV += 5; d.v.multiplyScalar(.35);
     toast('FALSE START!', 1200); eventToast('BOGGED DOWN · TIME YOUR PADDLE ON 2'); SFX.thud(3);
   } else if (charge >= .72) {
@@ -1510,6 +1544,7 @@ function step(dt) {
       const ev = COURSE_EVENTS[LVL.id]; G.courseEventLap = G.raceLap; G.courseEventT = ev.duration;
       G.transformed=true;
       eventToast(`${ev.name} · ${ev.detail}`); SFX.whistle(); setTimeout(() => SFX.thud(3.5), 380);
+      announce(ev.state);
       el('transformName').textContent=ev.state;el('transformBanner').classList.add('on');setTimeout(()=>el('transformBanner').classList.remove('on'),2800);
     }
     G.courseEventT = Math.max(0, (G.courseEventT || 0) - dt);
@@ -1765,6 +1800,7 @@ function step(dt) {
             d.hitT=o.hitT=.38;
             if (J > 1.6) splash({ x: (d.p.x + o.p.x) / 2, y: d.y, z: (d.p.z + o.p.z) / 2 }, Math.min(10, Math.round(J * 2)));
             if (J > 2.2 && (d.idx === 0 || o.idx === 0)) { G.camShake = Math.min(0.65, J * 0.12); SFX.thud(J); impactBeat(J>4?'KABOOM!':'THWACK!',J); ducks[0].flow=Math.max(0,(ducks[0].flow||0)-.16); }
+            if(J>2.2&&(d.idx===0||o.idx===0)){G.playerHitCount=(G.playerHitCount||0)+1;if(!G.biggestHit||J>G.biggestHit.mag)G.biggestHit={mag:J,rival:(d.idx===0?o:d).name};}
             if (J > 2.2) {
               impactBurst((d.p.x+o.p.x)/2,Math.max(d.y,o.y)+.3,(d.p.z+o.p.z)/2,J);
               const rival=d.idx===0?o:o.idx===0?d:null;
@@ -1928,7 +1964,7 @@ function step(dt) {
           if (d.idx === 0) onPlayerFinish();
           else if (G.finishedCount <= 3 && !ducks[0].finished) eventToast(`${d.name} takes P${d.place}!`);
         } else if (d.idx === 0) {
-          if (d.lap === G.laps - 1) { lapBanner('⚑ FINAL LAP ⚑'); SFX.fanfare(); }
+          if (d.lap === G.laps - 1) { lapBanner('⚑ FINAL LAP ⚑'); SFX.fanfare(); announce('Final lap'); }
           else { lapBanner(`LAP ${d.lap + 1} / ${G.laps}`); SFX.beep(true); }
           SFX.splash();
         }
@@ -4550,11 +4586,12 @@ function updateCamera(dt) {
     camera.position.x += (rand() - 0.5) * 0.3;
     camera.position.y += (rand() - 0.5) * 0.3;
   }
-  if (G.camShake > 0) {
+  if (G.camShake > 0 && SETTINGS.shake!==false) {
     G.camShake -= dt;
     camera.position.x += (rand() - 0.5) * G.camShake * 1.6;
     camera.position.y += (rand() - 0.5) * G.camShake * 1.6;
   }
+  else if(G.camShake>0)G.camShake=0;
   // lively camera: bank into lateral motion, FOV opens with speed
   const latV = d.v.x * Math.cos(d.heading) - d.v.z * Math.sin(d.heading);
   const bankT = Math.max(-0.09, Math.min(0.09, latV * 0.012));
@@ -4717,6 +4754,7 @@ function updateTags() {
     const cands = new Set(byProg.slice(0, 3));
     for (const d2 of ducks) {
       if (d2.idx === 0 || d2.finished) continue;
+      if(SETTINGS.clarity==='clear'&&!d2.rogue)continue;
       const dx = d2.p.x - ducks[0].p.x, dz = d2.p.z - ducks[0].p.z;
       if (dx * dx + dz * dz < 64) cands.add(d2);
     }
@@ -4774,6 +4812,7 @@ function drawMap() {
   if (!G.tt) for (const d of ducks) {
     const mp = mapPts[Math.min(mapPts.length - 1, Math.floor(d.si / 10))];
     if (d.idx === 0) continue;
+    if(SETTINGS.clarity==='clear'&&d.idx%3)continue;
     mapCtx.fillStyle = 'rgba(14,42,51,.45)';
     mapCtx.fillRect(mp[0] - 1.5, mp[1] - 1.5, 3, 3);
   }
@@ -4784,6 +4823,7 @@ function drawMap() {
 
 function onPlayerFinish() {
   const d = ducks[0];
+  announce(d.place===1?'Victory!':`Finished position ${d.place}`);
   toast(`P${d.place}!`, 1600);
   el('finishPlace').textContent = d.place === 1 ? 'VICTORY!' : `P${d.place}`;
   el('finishLine').textContent = d.place <= 3 ? 'PODIUM SECURED · OFFICIAL TIME PENDING' : 'CLASSIFIED FINISHER';
@@ -4826,8 +4866,12 @@ function showResults() {
     const cuts=G.shortcutHits?G.shortcutHits.size:0; STATS.shortcuts=(STATS.shortcuts||0)+cuts;
     const medal=me.place===1&&cuts>=2?3:me.place<=3?2:1;
     STATS.mastery=STATS.mastery||{}; STATS.mastery[LVL.id]=Math.max(STATS.mastery[LVL.id]||0,medal);
+    let masteryBits=1;if(me.place<=3)masteryBits|=2;if(me.place===1)masteryBits|=4;if(cuts>=2)masteryBits|=8;if(me.place===1&&G.transformed)masteryBits|=16;if(me.finishTime<95*G.laps)masteryBits|=32;
+    STATS.masteryGoals=STATS.masteryGoals||{};STATS.masteryGoals[LVL.id]=(STATS.masteryGoals[LVL.id]||0)|masteryBits;
     STATS.rivalWins=STATS.rivalWins||{};
     for(const r of ducks)if(r.rogue&&(!r.finished||r.finishTime>me.finishTime))STATS.rivalWins[r.name]=1;
+    STATS.challengeWins=STATS.challengeWins||{};G.newChallenges=[];
+    for(const ch of RIVAL_CHALLENGES){const rival=ducks.find(r=>r.name===ch[0]),beaten=rival&&(!rival.finished||rival.finishTime>me.finishTime);if(beaten&&ch[3](G)&&!STATS.challengeWins[ch[0]]){STATS.challengeWins[ch[0]]=1;G.newChallenges.push(ch[0]);}}
     saveStats();
   }
   if (me.finished && !G.guided) {
@@ -4852,18 +4896,19 @@ function showResults() {
   let gpHTML = '';
   if (GP && GP.active) {
     gpAward();
-    const final = GP.stage >= 4;
+    const final = GP.stage >= cupDef().courses.length;
     gpHTML = gpStandingsHTML(final);
     el('againBtn').innerHTML = final ? '🏁 FINISH GP' : 'NEXT RACE ▶';
     el('courseBtn').style.display = 'none';
     if (final) {
-      const champ = gpRows()[0];
+      const finalRows=gpRows(),champ = finalRows[0],cupPlace=finalRows.findIndex(r=>r.k==='d0')+1,grade=cupPlace===1?3:cupPlace<=3?2:1;
+      if(!GP.trophySaved){GP.trophySaved=true;STATS.cupTrophies=STATS.cupTrophies||{};STATS.cupTrophies[cupDef().id]=Math.max(STATS.cupTrophies[cupDef().id]||0,grade);if(grade===3)STATS.cups=(STATS.cups||0)+1;saveStats();saveGP();}
       el('resultsTitle').textContent = champ && champ.k === 'd0'
         ? '🏆 GRAND PRIX CHAMPION — YOU!'
         : `GRAND PRIX OVER — CHAMPION: ${champ ? champ.name : '—'}`;
-      if (champ && champ.k === 'd0') { if(!GP.cupSaved){GP.cupSaved=true;STATS.cups=(STATS.cups||0)+1;saveStats();} confettiBurst(ducks[0].p, 260); SFX.fanfare(); setTimeout(() => SFX.fanfare(), 600); playOnce('audio/fireworks.mp3', SETTINGS.sfx); }
+      if (champ && champ.k === 'd0') { confettiBurst(ducks[0].p, 260); SFX.fanfare(); setTimeout(() => SFX.fanfare(), 600); playOnce('audio/fireworks.mp3', SETTINGS.sfx); }
     } else {
-      el('resultsTitle').textContent = `STAGE ${GP.stage}/4 — P${me.place || '—'}` + bestNote;
+      el('resultsTitle').textContent = `STAGE ${GP.stage}/${cupDef().courses.length} — P${me.place || '—'}` + bestNote;
     }
   } else {
     el('againBtn').innerHTML = 'RACE AGAIN <small>(R)</small>';
@@ -4872,7 +4917,9 @@ function showResults() {
   const goalWon = G.tt ? !!bestNote : me.place > 0 && me.place <= 3;
   const cutNote=G.shortcutHits&&G.shortcutHits.size?` · ${G.shortcutHits.size} SHORTCUT${G.shortcutHits.size>1?'S':''}`:'';
   const goalHTML = G.guided ? '' : `<div class="goalResult ${goalWon ? 'win' : 'try'}">${goalWon ? '✓ RACE GOAL COMPLETE' : 'RACE GOAL · PODIUM NEXT RUN'}${cutNote}</div>`;
-  list.innerHTML = goalHTML + rows.join('') + gpHTML;
+  const highlights=G.guided?[]:[`${G.overtakes||0} OVERTAKES`,`${G.shortcutHits?.size||0} SHORTCUTS`,G.biggestHit?`BIGGEST HIT · ${G.biggestHit.mag.toFixed(1)} vs ${G.biggestHit.rival}`:'CLEAN BODYWORK',G.transformed?'ADAPTED AFTER TRANSFORMATION':'FINISHED BEFORE TRANSFORMATION',...(G.newChallenges||[]).map(n=>`RIVAL CHALLENGE COMPLETE · ${n}`)];
+  const highlightHTML=highlights.length?`<div style="margin:9px 0;padding:8px;border:2px solid var(--raceNavy);border-left:7px solid var(--current);border-radius:7px;background:#f4fffb"><b class="kart">RACE CONTROL REPLAY</b>${highlights.map(h=>`<div style="font-size:13px">· ${h}</div>`).join('')}</div>`:'';
+  list.innerHTML = goalHTML + highlightHTML + rows.join('') + gpHTML;
   el('results').style.display = 'block';
   for (const p of ['title', 'duckPanel', 'levelPanel', 'statsPanel', 'settingsPanel', 'guidePanel']) el(p).classList.add('hidden');
   document.querySelectorAll('#hubTabs button').forEach(b => b.classList.remove('sel'));
@@ -4894,11 +4941,12 @@ function prepRace(skipFly) {
   G.laps = SETTINGS.laps;
   G.raceLap = 0; G.surge = -1; G.surgeLap = -1; G.surgeLapT = 0; G.slowmo = 0; G.statsCounted = false; G.podT = 0;
   G.startCharge=0; G.startEarly=false; G.courseEventT=0; G.courseEventLap=-1; G.courseEventBase=0; G.transformed=false;
+  G.overtakes=0;G.playerHitCount=0;G.biggestHit=null;G.usedFlow=false;G.falseStarted=false;G.shoves=0;
   G.shortcutHits=new Set();
   G.tt = ttMode; G._recT = 0; G.ghostRec = [];
   G.guided = !!G.guidedNext; G.guidedNext = false;
   if (G.guided) { G.laps = 1; G.weather = 'clear'; G.gStep = 0; }
-  G.ghost = (G.tt && !G.guided) ? JSON.parse(localStorage.getItem(ttGhostKey()) || 'null') : null;
+  G.ghost = (G.tt && !G.guided) ? safeStored(ttGhostKey(),null) : null;
   if (G.tt) for (const rr of Object.values(rogueRigs)) rr.position.set(0, -500, 0);
   const wPool = LVL.weathers || ['clear', 'golden', 'mist', 'storm'];
   G.weather = wPool[Math.floor(rand() * wPool.length)];
@@ -4978,12 +5026,14 @@ function showTab(id) {
 }
 function refreshStatsUI() {
   const host = el('statGrid');
+  const rivalDone=Object.keys(STATS.challengeWins||{}).length;
   const wins = Object.entries(STATS.wins || {}).map(([k, v]) => `${k.toUpperCase()}: <b>${v}</b>`).join(' &middot; ') || 'none yet';
   const courseRows = Object.keys(LEVELS).map(id => {
     const w = (STATS.winsByLevel || {})[id] || 0;
     const best = BEST[`${id}-${SETTINGS.difficulty}-${SETTINGS.laps}`];
     const medals=['—','🥉','🥈','🥇'];
-    return `<li>${medals[(STATS.mastery||{})[id]||0]} ${LEVELS[id].name} · wins <b>${w}</b><span style="float:right;opacity:.7">${best ? fmtTime(best) : '—'}</span></li>`;
+    const bits=(STATS.masteryGoals||{})[id]||0,goals=[1,2,4,8,16,32].filter(b=>bits&b).length;
+    return `<li>${medals[(STATS.mastery||{})[id]||0]} ${LEVELS[id].name} · mastery <b>${goals}/6</b> · wins <b>${w}</b><span style="float:right;opacity:.7">${best ? fmtTime(best) : '—'}</span></li>`;
   }).join('');
   const lockRows = [];
   for (const [slot, defs] of Object.entries(LOCKS)) {
@@ -5000,7 +5050,8 @@ function refreshStatsUI() {
       <p>rival challenges: <b>${rivalDone}/${ROGUES.length}</b></p><p>nemeses bested: <b>${STATS.nemesisBeaten || 0}</b></p></div>
     <div><h3>COURSES <small style="opacity:.6">(best @ ${SETTINGS.difficulty.toUpperCase()} · ${SETTINGS.laps} lap${SETTINGS.laps > 1 ? 's' : ''})</small></h3>
       <ul>${courseRows}</ul></div>
-    <div><h3>UNLOCKS</h3><ul>${lockRows.join('')}</ul></div>`;
+    <div><h3>UNLOCKS</h3><ul>${lockRows.join('')}</ul></div>
+    <div class="challengeBoard">${RIVAL_CHALLENGES.map(c=>{const done=(STATS.challengeWins||{})[c[0]];return `<div class="challengeCard ${done?'done':''}"><b>${done?'✓':'○'} ${c[0]} · ${c[1]}</b>${c[2]}</div>`}).join('')}</div>`;
 }
 function showHub(tab) { el('screen').classList.remove('hidden'); showTab(tab || 'title'); }
 function toTitle() {
@@ -5185,17 +5236,29 @@ el('courseBtn').addEventListener('click', () => { toTitle(); showTab('levelPanel
 el('menuBtn').addEventListener('click', () => { if (GP && GP.active) clearGP(); toTitle(); });
 // ---- GRAND PRIX: four courses, kart points, one champion. Survives the per-course
 // page reloads by living in localStorage.
-const GP_COURSES = ['spillway', 'millrace', 'undergrove', 'canopy'];
+const CUP_DEFS=[
+ {id:'creek',name:'CREEK CUP',courses:['spillway','millrace','canopy'],diff:'easy'},
+ {id:'wild',name:'WILDWATER CUP',courses:['undergrove','spillway','porcelain'],diff:'medium'},
+ {id:'works',name:'BATHWORKS CUP',courses:['millrace','porcelain','canopy','undergrove'],diff:'medium'},
+ {id:'moon',name:'MOONLIGHT CUP',courses:['undergrove','canopy','spillway','porcelain'],diff:'hard'},
+ {id:'crown',name:'SPILLWAY CROWN',courses:['spillway','millrace','undergrove','canopy','porcelain'],diff:'insane'},
+];
+let selectedCup=localStorage.getItem('spillway-cup-select')||'creek';
+let GP = safeStored('spillway-gp',null);
+function cupDef(){return CUP_DEFS.find(c=>c.id===(GP&&GP.cup||selectedCup))||CUP_DEFS[0]}
+function cupUnlocked(ix){return ix===0||((STATS.cupTrophies||{})[CUP_DEFS[ix-1].id]||0)>0}
+const GP_COURSES = cupDef().courses;
 const GP_PTS = [15, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
-let GP = JSON.parse(localStorage.getItem('spillway-gp') || 'null');
-if (GP && (!GP.active || GP.stage >= 4 || GP_COURSES[GP.stage] !== LVL.id)) { GP = null; localStorage.removeItem('spillway-gp'); }
+if (GP && (!GP.active || GP.stage >= cupDef().courses.length || cupDef().courses[GP.stage] !== LVL.id)) { GP = null; localStorage.removeItem('spillway-gp'); }
 function saveGP() { localStorage.setItem('spillway-gp', JSON.stringify(GP)); }
 function clearGP() { GP = null; localStorage.removeItem('spillway-gp'); refreshGPUI(); }
 function startGP() {
   ttMode = false;
-  GP = { active: true, stage: 0, pts: {}, names: {}, counted: -1 };
+  const def=CUP_DEFS.find(c=>c.id===selectedCup)||CUP_DEFS[0],ix=CUP_DEFS.indexOf(def);if(!cupUnlocked(ix)){eventToast('WIN THE PREVIOUS CUP TO UNLOCK');return;}
+  SETTINGS.difficulty=def.diff;saveSettings();G.difficulty=def.diff;
+  GP = { active: true, cup:def.id, stage: 0, pts: {}, names: {}, counted: -1 };
   saveGP();
-  if (LVL.id !== GP_COURSES[0]) { localStorage.setItem('spillway-level', GP_COURSES[0]); location.reload(); return; }
+  if (LVL.id !== def.courses[0]) { localStorage.setItem('spillway-level', def.courses[0]); location.reload(); return; }
   refreshGPUI();
   prepRace();
 }
@@ -5217,22 +5280,22 @@ function gpStandingsHTML(final) {
   const rows = gpRows();
   const top = rows.slice(0, 8);
   const meIx = rows.findIndex(r => r.k === 'd0');
-  let html = `<div style="margin-top:12px;border-top:2.5px solid var(--ink);padding-top:8px"><b class="kart" style="font-size:17px">${final ? '🏆 FINAL STANDINGS' : `STANDINGS — STAGE ${GP.stage}/4`}</b>`;
+  let html = `<div style="margin-top:12px;border-top:2.5px solid var(--ink);padding-top:8px"><b class="kart" style="font-size:17px">${final ? '🏆 FINAL STANDINGS' : `STANDINGS — STAGE ${GP.stage}/${cupDef().courses.length}`}</b>`;
   top.forEach((r, ri2) => html += `<div class="${r.k === 'd0' ? 'you' : ri2 < 3 ? 'p' + (ri2 + 1) : ''}">${ri2 + 1}. ${r.name}<span class="t">${r.v} pts</span></div>`);
   if (meIx >= 8) html += `<div style="opacity:.5">…</div><div class="you">${meIx + 1}. YOU<span class="t">${rows[meIx].v} pts</span></div>`;
   return html + '</div>';
 }
 function refreshGPUI() {
   const b = el('gpBanner');
-  if (GP && GP.active && GP.stage < 4) {
+  if (GP && GP.active && GP.stage < cupDef().courses.length) {
     b.style.display = '';
-    b.innerHTML = `🏆 GRAND PRIX — STAGE ${GP.stage + 1}/4: ${LVL.name} &nbsp;<span id="gpQuit" style="text-decoration:underline;cursor:pointer;font-size:12px">quit</span>`;
+    b.innerHTML = `🏆 ${cupDef().name} — STAGE ${GP.stage + 1}/${cupDef().courses.length}: ${LVL.name} &nbsp;<span id="gpQuit" style="text-decoration:underline;cursor:pointer;font-size:12px">quit</span>`;
     el('gpQuit').addEventListener('click', () => clearGP());
   } else b.style.display = 'none';
 }
 function raceAgain() {
   if (GP && GP.active) {
-    if (GP.stage >= 4) { clearGP(); toTitle(); return; }
+    if (GP.stage >= cupDef().courses.length) { clearGP(); toTitle(); return; }
     const next = GP_COURSES[GP.stage];
     if (next !== LVL.id) { localStorage.setItem('spillway-level', next); location.reload(); return; }
     refreshGPUI(); prepRace(); return;
@@ -5240,6 +5303,8 @@ function raceAgain() {
   prepRace();
 }
 el('gpBtn').addEventListener('click', startGP);
+function refreshCupRow(){const host=el('cupRow');host.innerHTML='';CUP_DEFS.forEach((c,i)=>{const b=document.createElement('button'),grade=(STATS.cupTrophies||{})[c.id]||0;b.dataset.cup=c.id;b.textContent=`${grade?['','🥉','🥈','🥇'][grade]:cupUnlocked(i)?'○':'🔒'} ${c.name.replace(' CUP','')}`;b.classList.toggle('sel',c.id===selectedCup);b.classList.toggle('lockedOpt',!cupUnlocked(i));b.onclick=()=>{if(!cupUnlocked(i)){eventToast('WIN THE PREVIOUS CUP TO UNLOCK');return;}selectedCup=c.id;localStorage.setItem('spillway-cup-select',c.id);refreshCupRow();};host.appendChild(b);});}
+refreshCupRow();
 refreshGPUI();
 // field size: swap the flock and reload (the field is baked at load like the course)
 document.querySelectorAll('#duckRow button').forEach(b => {
@@ -5346,6 +5411,8 @@ function segWire(id, key, after) {
 segWire('setQuality', 'quality', () => applyQuality());
 segWire('setCam', 'camDist');
 segWire('setView', 'camView');
+segWire('setClarity','clarity');
+for(const [id,key] of [['setShake','shake'],['setFlashes','flashes'],['setAnnouncer','announcer']])document.querySelectorAll('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{SETTINGS[key]=b.dataset.v==='on';saveSettings();refreshSettingsUI();}));
 function refreshKeyBtns() {
   document.querySelectorAll('#keyBtns button').forEach(b => {
     const kv = SETTINGS.keys[b.dataset.a];
@@ -5386,6 +5453,10 @@ function refreshSettingsUI() {
   document.querySelectorAll('#setView button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.camView));
   document.querySelectorAll('#setAssist button').forEach(b => b.classList.toggle('sel', (b.dataset.v === 'on') === SETTINGS.assist));
   document.querySelectorAll('#setDuckNoise button').forEach(b => b.classList.toggle('sel', (b.dataset.v === 'on') === (SETTINGS.duckNoises !== false)));
+  document.querySelectorAll('#setShake button').forEach(b=>b.classList.toggle('sel',(b.dataset.v==='on')===(SETTINGS.shake!==false)));
+  document.querySelectorAll('#setFlashes button').forEach(b=>b.classList.toggle('sel',(b.dataset.v==='on')===(SETTINGS.flashes!==false)));
+  document.querySelectorAll('#setAnnouncer button').forEach(b=>b.classList.toggle('sel',(b.dataset.v==='on')===(SETTINGS.announcer!==false)));
+  document.querySelectorAll('#setClarity button').forEach(b=>b.classList.toggle('sel',b.dataset.v===(SETTINGS.clarity||'full')));
   refreshKeyBtns();
   el('padStatus').textContent = PAD.on || PAD.name ? `controller: ${(PAD.name || 'connected').slice(0, 40)}` : 'controller: none detected — plug in & press a button';
 }
@@ -5543,7 +5614,7 @@ function frame(now) {
   } else updateCamera(dt);
   syncDucks(now / 1000);
   if (G.mode === 'race') {
-    let wakeBudget=5;
+    let wakeBudget=SETTINGS.clarity==='clear'?2:5;
     for (const d of ducks) {
       if (!wakeBudget || d.air || d.inFlume) continue;
       const dx=d.p.x-ducks[0].p.x, dz=d.p.z-ducks[0].p.z;
@@ -5552,7 +5623,6 @@ function frame(now) {
       if (d._wakeRibbonT<=0) { d._wakeRibbonT=d.idx===0?.16:.32; spawnWake(d); wakeBudget--; }
     }
   }
-  const rivalDone=Object.keys(STATS.rivalWins||{}).length;
   updateGhost();
   skyMesh.position.copy(camera.position);
   // shadow frustum follows the player
@@ -5573,6 +5643,7 @@ function frame(now) {
       clearTimeout(G._placeT);
       G._placeT = setTimeout(() => placeEl.classList.remove('gain', 'lose'), 900);
       if (pNow < G._lastP && AU.ctx && SETTINGS.sfx > 0) pluck(1180, 0.07, AU.sfx, 0.18);
+      if(pNow<G._lastP)G.overtakes=(G.overtakes||0)+(G._lastP-pNow);
       if(pNow>G._lastP&&rand()<.34){const talker=ducks.filter(d=>d.rogue&&d.progress>ducks[0].progress).sort((a,b)=>a.progress-b.progress)[0];if(talker)rivalSay(talker,'COMING THROUGH!');}
     }
     G._lastP = pNow;
