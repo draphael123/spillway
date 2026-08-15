@@ -373,6 +373,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ============================================================ RNG (seeded)
 let seed = 1337;
@@ -2036,12 +2037,16 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   const t = Math.min(1, ob / 16);
   const base = 0.3 + 5.2 * t * t;
   const n = vnoise(i * 0.02 + sgn * 13, ob * 0.12) * 2.4 + vnoise(i * 0.09 + sgn * 51, ob * 0.3) * 0.9;
-  return base + n * Math.min(1, t * 2.5) - 0.35;
+  // ridged octave: hills get bones — sharp crests instead of blobby mounds
+  const r0 = vnoise(i * 0.013 + sgn * 71, ob * 0.05);
+  const ridge = Math.pow(1 - Math.abs(2 * r0 - 1), 2) * 2.4 * Math.min(1, t * 1.8);
+  return base + n * Math.min(1, t * 2.5) + ridge - 0.35;
 }
 {
   const OFFS = LVL.id === 'spillway' ? [0.15, 1.1, 3.5, 8, 16, 26] : [0.15, 1.1, 3.5, 7, 12, 17];
   const pos = [], col = [], uvArr = [], idx = [];
   const cTmp = new THREE.Color();
+  const _slopeRockC = new THREE.Color(LVL.id === 'undergrove' ? 0x4d5558 : 0x8b8478);
   let vi = 0;
   for (const sgn of [-1, 1]) {
     const start = vi;
@@ -2069,6 +2074,12 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
             0.34 + (patch - .5) * 0.07 + (strat > 0.3 ? 0.055 : strat < -0.5 ? -0.035 : 0));
         }
         else cTmp.setHSL(gh + patch * 0.045, gs, gl - 0.02 + patch * 0.14 - Math.min(1, ob / 26) * 0.06);
+        // slope shading: steep faces shed their grass and show rock/dirt
+        if (LVL.id !== 'porcelain' && ob >= 2) {
+          const hOut = bankH(i, Math.min(28, ob + 1), sgn);
+          const steep = sstep(0.55, 1.15, Math.abs(hOut - h));
+          cTmp.lerp(_slopeRockC, steep * 0.7);
+        }
         // fake AO: wet-sand darkening at the waterline, soft crease just above it
         const ao = ob < 0.6 ? 0.74 : ob < 2 ? 0.90 : 1.0;
         cTmp.multiplyScalar(ao);
@@ -5224,6 +5235,128 @@ function frame(now) {
   renderFrame();
 }
 requestAnimationFrame(frame);
+
+// ============================================================ MODEL UPGRADE
+// Kenney Nature Kit (CC0): real low-poly models replace the primitive scatter.
+// Loaded async after boot; the primitives render until the swap lands, and
+// remain the fallback if loading ever fails.
+const UP_TINTS = {
+  millrace: new THREE.Color(0.88, 0.9, 0.83),
+  undergrove: new THREE.Color(0.48, 0.64, 0.7),
+};
+async function upgradeVisuals() {
+  if (LVL.id === 'porcelain') return;   // the bathworks has no nature to upgrade
+  const loader = new GLTFLoader();
+  const loadGLB = (url) => new Promise((res, rej) => loader.load(url, g => res(g.scene), undefined, rej));
+  let lib;
+  try {
+    const defs = {
+      pines: ['models/tree_pineTallA_detailed.glb', 'models/tree_pineTallB_detailed.glb', 'models/tree_pineDefaultA.glb'],
+      meadow: ['models/tree_default.glb', 'models/tree_detailed.glb', 'models/tree_oak.glb'],
+      rocks: ['models/rock_largeA.glb', 'models/rock_largeC.glb', 'models/rock_largeE.glb'],
+      bush: ['models/plant_bushDetailed.glb', 'models/plant_bushLarge.glb'],
+      stump: ['models/stump_roundDetailed.glb'],
+    };
+    const entries = Object.entries(defs);
+    const loaded = await Promise.all(entries.map(([, urls]) => Promise.all(urls.map(loadGLB))));
+    lib = {};
+    entries.forEach(([k], ix) => lib[k] = loaded[ix]);
+  } catch (e) { console.warn('model upgrade skipped:', e); return; }
+  const tint = UP_TINTS[LVL.id] || null;
+  // Kenney foliage leans teal — re-hue leafy materials into our forest green,
+  // leave trunks/rocks alone, then apply the per-course tint
+  const convMat = (srcMat) => {
+    const c = srcMat.color.clone();
+    const hsl = { h: 0, s: 0, l: 0 };
+    c.getHSL(hsl);
+    if (hsl.h > 0.36 && hsl.h < 0.58 && hsl.s > 0.18) c.setHSL(0.29, Math.min(0.6, hsl.s + 0.06), hsl.l * 0.96);
+    if (tint) c.multiply(tint);
+    return new THREE.MeshLambertMaterial({ color: c, map: srcMat.map || null });
+  };
+  const prepVariant = (root, targetH) => {
+    root.updateMatrixWorld(true);
+    const parts = [];
+    root.traverse(o => { if (o.isMesh) parts.push(o); });
+    const bb = new THREE.Box3().setFromObject(root);
+    return { parts, k: targetH / Math.max(0.001, bb.max.y - bb.min.y), minY: bb.min.y };
+  };
+  const _M = new THREE.Matrix4(), _P = new THREE.Vector3(), _Q = new THREE.Quaternion(), _S = new THREE.Vector3();
+  // srcIMs[0] provides the instance transforms; every listed IM gets hidden
+  const swap = (srcIMs, models, targetH, baseOff) => {
+    const prim = srcIMs[0];
+    if (!prim || !prim._full) return;
+    const variants = models.map(m => prepVariant(m, targetH));
+    const lists = variants.map(() => []);
+    for (let k = 0; k < prim._full; k++) {
+      prim.getMatrixAt(k, _M);
+      _M.decompose(_P, _Q, _S);
+      if (_P.y < -100 || _S.x < 0.01) continue;   // buried/suppressed instances stay gone
+      lists[k % variants.length].push({ x: _P.x, y: _P.y, z: _P.z, q: _Q.clone(), s: _S.x });
+    }
+    variants.forEach((V, vi) => {
+      const list = lists[vi];
+      if (!list.length) return;
+      for (const part of V.parts) {
+        const srcMat = Array.isArray(part.material) ? part.material[0] : part.material;
+        const mat = convMat(srcMat);
+        const im = new THREE.InstancedMesh(part.geometry, mat, list.length);
+        list.forEach((inst, j) => {
+          const sc3 = inst.s * V.k;
+          const m2 = new THREE.Matrix4().compose(
+            _P.set(inst.x, inst.y - baseOff(inst.s) - V.minY * sc3, inst.z),
+            inst.q, _S.set(sc3, sc3, sc3));
+          m2.multiply(part.matrixWorld);
+          im.setMatrixAt(j, m2);
+        });
+        im.castShadow = true;
+        im.frustumCulled = false;
+        im._full = list.length;
+        scene.add(im);
+        SCATTER.push(im);
+      }
+    });
+    srcIMs.forEach(im => { if (im) im.visible = false; });
+  };
+  // SCATTER index map: 0 trunks · 1-3 pine tiers · 4 mTrunks · 5 mCrowns · 9 bushes · 11 boulders · 14 stumps
+  swap([SCATTER[0], SCATTER[1], SCATTER[2], SCATTER[3]], lib.pines, 7.4, s => 0.86 * s);
+  swap([SCATTER[4], SCATTER[5]], lib.meadow, 5.6, s => 0.86 * s);
+  swap([SCATTER[11]], [lib.rocks[1], lib.rocks[2]], 1.5, () => 0.35);   // chunky boulders only — the shelf rock is outcrop duty
+  swap([SCATTER[9]], lib.bush, 1.5, () => 0.35);
+  swap([SCATTER[14]], lib.stump, 0.95, s => 0.26 * s);
+  // rock OUTCROPS: chunky boulders half-buried in the steepest faces the ridge noise carved
+  {
+    const V = prepVariant(lib.rocks[1], 1.9);
+    const spots = [];
+    let guard = 0;
+    while (spots.length < 26 && guard++ < 700) {
+      const i = Math.floor(rand() * NSAMP), sgn = rand() < 0.5 ? -1 : 1, ob = randRange(5, 17);
+      const h1 = bankH(i, ob, sgn), h2 = bankH(i, ob + 1, sgn);
+      if (Math.abs(h2 - h1) < 0.85) continue;
+      const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+      spots.push({ x: p.x, y: waterHeightAt(i) + Math.min(h1, h2) - 1.0, z: p.z, s: randRange(0.8, 1.6), ry: rand() * 6 });
+    }
+    for (const part of V.parts) {
+      const srcMat = Array.isArray(part.material) ? part.material[0] : part.material;
+      const mat = convMat(srcMat);
+      const im = new THREE.InstancedMesh(part.geometry, mat, Math.max(1, spots.length));
+      spots.forEach((sp, j) => {
+        _Q.setFromAxisAngle(_P.set(0, 1, 0), sp.ry);
+        const sc3 = sp.s * V.k;
+        const m2 = new THREE.Matrix4().compose(_P.clone().set(sp.x, sp.y - V.minY * sc3, sp.z), _Q, _S.set(sc3, sc3, sc3));
+        m2.multiply(part.matrixWorld);
+        im.setMatrixAt(j, m2);
+      });
+      if (!spots.length) im.count = 0;
+      im.castShadow = true;
+      im.frustumCulled = false;
+      im._full = spots.length;
+      scene.add(im);
+      SCATTER.push(im);
+    }
+  }
+  applyQuality();   // re-apply the density fraction to the new meshes
+}
+upgradeVisuals();
 
 // RAF watchdog (memory: hidden panels stall RAF — keep rendering)
 setInterval(() => {

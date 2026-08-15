@@ -36,8 +36,10 @@ All music and ambience via [OpenGameArt](https://opengameart.org) — thank you 
   (https://opengameart.org/content/squeak-toy-sounds)
 - Winner jingle: "And the winner is" by congusbongus — CC0
   (https://opengameart.org/content/and-the-winner-is)
-- Everything else (code, art, remaining sound effects) is generated in-file —
-  the sfx are synthesized WebAudio, the art is procedural Three.js.
+- 3D nature models (trees, rocks, bushes, stumps): "Nature Kit" by Kenney — CC0
+  (https://kenney.nl/assets/nature-kit) — license copy in models/LICENSE-kenney.txt
+- Everything else (code, remaining art and sound effects) is generated in-file —
+  fallback sfx are synthesized WebAudio, the rest of the art is procedural Three.js.
 
 ## Dev
 
