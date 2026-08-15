@@ -1759,13 +1759,17 @@ function step(dt) {
     }
     if (!G.transformed && G.raceT - (G.courseEventBase || 0) > 18) {
       const ev = COURSE_EVENTS[LVL.id]; G.courseEventLap = G.raceLap; G.courseEventT = ev.duration;
-      G.transformed=true;
+      G.transformed=true;G.heroRevealT=2.8;
       eventToast(`${ev.name} · ${ev.detail}`); SFX.whistle(); setTimeout(() => SFX.thud(3.5), 380);
       if(LVL.id==='harbor')setTimeout(()=>SFX.foghorn(),650);
+      if(LVL.id==='millrace')setTimeout(()=>SFX.lock(),620);
+      if(LVL.id==='undergrove'||LVL.id==='canopy')setTimeout(()=>SFX.thunder(),520);
+      if(LVL.id==='porcelain')setTimeout(()=>{SFX.splash();SFX.splash();},520);
       announce(ev.state);
       el('transformName').textContent=ev.state;el('transformBanner').classList.add('on');setTimeout(()=>el('transformBanner').classList.remove('on'),2800);
     }
     G.courseEventT = Math.max(0, (G.courseEventT || 0) - dt);
+    G.heroRevealT=Math.max(0,(G.heroRevealT||0)-dt);
     // guided tutorial: the river explains itself, station by station
     // (lives in the sim step so it works even when the tab throttles RAF)
     if (G.guided && G.gStep < GUIDE_STEPS.length && ducks[0].tot / NSAMP >= GUIDE_STEPS[G.gStep][0]) {
@@ -1868,9 +1872,11 @@ function step(dt) {
         d._strokeT = (d._strokeT || 0) - dt;
         if (d._strokeT <= 0) {                                // rhythmic stroke surge
           d._strokeT = 0.32;
+          d._strokeSide=-(d._strokeSide||-1);
           d.v.x += ux * 1.6 * pw; d.v.z += uz * 1.6 * pw;
           d._sq = Math.max(d._sq || 0, 0.16);
-          splash({ x: d.p.x - ux * 0.5, y: d.y, z: d.p.z - uz * 0.5 }, 1);
+          const wetX=d.p.x+side.x*d._strokeSide*.82-ux*.18,wetZ=d.p.z+side.z*d._strokeSide*.82-uz*.18;
+          splash({x:wetX,y:d.y,z:wetZ},3);spawnWave(wetX,d.y,wetZ);
         }
       } else d._strokeT = 0;
       // Flow is earned fastest in chutes, then in the deep middle; banks and collisions drain it.
@@ -4917,6 +4923,7 @@ function updateSplashes(dt) {
 // ============================================================ CAMERA
 const camState = { pos: new THREE.Vector3(0, 70, 20), look: new THREE.Vector3() };
 const CAMS = { near: [7, 4.2], std: [9, 5.2], far: [12, 6.6] };
+const CAM_BLOCKERS=[],camRay=new THREE.Raycaster(),camRayOrigin=new THREE.Vector3(),camRayDir=new THREE.Vector3();
 function updateCamera(dt) {
   const d = ducks[0];
   // podium ceremony: once you cross the line, the camera circles your duck
@@ -4947,9 +4954,15 @@ function updateCamera(dt) {
   const back = S.tan[si].clone().multiplyScalar(front ? camBack * 0.95 : -camBack);
   const target = _tmpA.set(anchor.x, 0, anchor.z).add(back);
   target.y = d.y + camH * (front ? 0.85 : 1);
+  const reveal=Math.min(1,(G.heroRevealT||0)/1.35);
+  if(reveal>0&&!front){target.addScaledVector(S.tan[si],-3.5*reveal);target.y+=3.2*reveal;}
   // over the falls, pull the camera up and back so you see the drop (not under a cave roof)
   const t01 = si / NSAMP;
   if (t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4 * (1 - caveF); target.add(S.tan[si].clone().multiplyScalar(-4 * (1 - caveF * 0.6))); }
+  // Pull in front of substantial scenery instead of letting an authored landmark fill the screen.
+  G._camOccT=(G._camOccT||0)-dt;
+  if(G._camOccT<=0&&CAM_BLOCKERS.length){G._camOccT=.09;camRayOrigin.set(anchor.x,d.y+1.1,anchor.z);camRayDir.copy(target).sub(camRayOrigin);const rayLen=camRayDir.length();camRayDir.normalize();camRay.set(camRayOrigin,camRayDir);camRay.near=2.2;camRay.far=rayLen;const hit=camRay.intersectObjects(CAM_BLOCKERS,false)[0];if(hit&&hit.distance<rayLen-.35){const safe=Math.max(2.6,hit.distance-.7);G._camOccPos=camRayOrigin.clone().addScaledVector(camRayDir,safe);}else G._camOccPos=null;}
+  if(G._camOccPos)target.lerp(G._camOccPos,.88);
   const k = 1 - Math.pow(0.0004, dt);
   camState.pos.lerp(target, k);
   // terrain guard: the chase camera must never swing through the channel walls
@@ -4968,7 +4981,7 @@ function updateCamera(dt) {
   }
   const lookT = front
     ? _tmpB.set(d.p.x, d.y + 0.8, d.p.z).addScaledVector(S.tan[si], -2.5)   // broadcast view: watch your duck & the chasing pack
-    : _tmpB.set(anchor.x, d.y + 1.2, anchor.z).addScaledVector(S.tan[si], 6);
+    : _tmpB.set(anchor.x, d.y + 1.2+reveal*.8, anchor.z).addScaledVector(S.tan[si], 6+reveal*4);
   camState.look.lerp(lookT, 1 - Math.pow(0.0002, dt));
   camera.position.copy(camState.pos);
   camera.lookAt(camState.look);
@@ -4991,7 +5004,7 @@ function updateCamera(dt) {
   G._bank = prevBank + (bankT - prevBank) * Math.min(1, 5 * dt);
   camera.rotateZ(G._bank);
   const spd = Math.hypot(d.v.x, d.v.z);
-  const fovT = SETTINGS.fov + Math.min(12, Math.max(0, spd - 6) * 0.55);
+  const fovT = SETTINGS.fov + Math.min(12, Math.max(0, spd - 6) * 0.55)+reveal*5;
   camera.fov += (fovT - camera.fov) * Math.min(1, 3 * dt);
   camera.updateProjectionMatrix();
 }
@@ -5042,8 +5055,9 @@ function syncDucks(t) {
       playerPaddle.visible=G.mode==='race'||G.mode==='countdown';
       playerPaddle.position.set(d.p.x,d.y+bob+.28,d.p.z);
       playerPaddle.quaternion.copy(_q);
-      playerPaddle.translateX(.72*wsc);playerPaddle.translateZ(.08*wsc);
-      playerPaddle.rotateZ(-.42+(d._stroking?stroke*.48:0)+(d.shoveT>0?.65:0));
+      const strokeSide=d._strokeSide||1;
+      playerPaddle.translateX(.72*wsc*strokeSide);playerPaddle.translateZ(.08*wsc);
+      playerPaddle.rotateZ(strokeSide*(-.42+(d._stroking?stroke*.48:0))+(d.shoveT>0?.65:0));
       playerPaddle.scale.setScalar(wsc);
     } else if (d.rogue && rogueRigs[d.idx]) {
       const rr = rogueRigs[d.idx];
@@ -5348,7 +5362,7 @@ function prepRace(skipFly) {
   G.raceT = 0; G.finishedCount = 0; G.results = []; G.tutStep = 0;
   G.laps = SETTINGS.laps;
   G.raceLap = 0; G.surge = -1; G.surgeLap = -1; G.surgeLapT = 0; G.slowmo = 0; G.statsCounted = false; G.podT = 0;
-  G.startCharge=0; G.startEarly=false; G.courseEventT=0; G.courseEventLap=-1; G.courseEventBase=0; G.transformed=false;G._inClimb=false;
+  G.startCharge=0; G.startEarly=false; G.courseEventT=0; G.courseEventLap=-1; G.courseEventBase=0; G.transformed=false;G.heroRevealT=0;G._inClimb=false;
   G.overtakes=0;G.playerHitCount=0;G.playerImpactCd=0;G.biggestHit=null;G.usedFlow=false;G.falseStarted=false;G.shoves=0;
   G.shortcutHits=new Set();
   G.tt = ttMode; G._recT = 0; G.ghostRec = [];
@@ -6015,7 +6029,10 @@ addEventListener('resize', resize); resize();
 
 // everything opaque casts a shadow; the ground catches them (grounds every prop)
 scene.traverse(o => {
-  if (o.isMesh && o !== skyMesh && !o.material.transparent) o.castShadow = true;
+  if (o.isMesh && o !== skyMesh && !o.material.transparent) {
+    o.castShadow = true;
+    if(!o.isInstancedMesh&&o!==waterMesh&&o.parent!==playerPaddle){o.geometry.computeBoundingSphere();if((o.geometry.boundingSphere?.radius||0)>1.15)CAM_BLOCKERS.push(o);}
+  }
 });
 
 resetDucks();
@@ -6230,6 +6247,7 @@ function frame(now) {
       const inRace = G.mode === 'race' || G.mode === 'countdown' || G.mode === 'flyover';
       const lerpV = (a, tv) => { if (a) a.volume += (Math.min(1, Math.max(0, tv)) - a.volume) * 0.05; };
       lerpV(AU.track, SETTINGS.music * (inRace ? 0.8 : 0));
+      if(AU.track){const finalPush=G.mode==='race'&&G.raceLap>=Math.max(0,G.laps-1)&&G.laps>1;AU.track.playbackRate+=( (finalPush?1.075:1)-AU.track.playbackRate)*.025;}
       lerpV(AU.menu, SETTINGS.music * (inRace ? 0 : 0.5));
       let crowdT = 0;
       if (inRace) {
