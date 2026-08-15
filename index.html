@@ -342,7 +342,7 @@
         <b>HAZARDS</b>
         <p>Rocks stop you. Logs and booms block lanes — aim for the gap. Eddies and the whirlpool trap drifters. Watch for the lunging pike, the snapping turtle, and each course's machinery. Islands split the river: one lane is fast and mean, one is safe and slow.</p>
         <b>RACES</b>
-        <p>Every course is a <b>closed circuit</b> — a lap is crossing the start/finish line. The glowing rune-water is a <b>magic surge channel</b>: it runs uphill at full race speed. Lap 2 runs <b>high water</b>; lap 3 opens a <b>flood-gate shortcut</b>. Once a lap the dam releases a <b>surge wave</b> — ride it. Rivals remember: beat your <b style="color:#d94f30">NEMESIS</b>.</p>
+        <p>Every course is a <b>closed circuit</b>. Each has its own powered climb — rune current, penstock pump, glowroots, sap-rise, or bubble jet — with a different pulse and steering rhythm. Lap 2 runs <b>high water</b>; lap 3 opens a <b>flood-gate shortcut</b>. Once a lap the dam releases a <b>surge wave</b>. Rivals remember: beat your <b style="color:#d94f30">NEMESIS</b>.</p>
       </div>
     </div>
   </div>
@@ -650,6 +650,13 @@ const LEVELS = {
   },
 };
 const LVL = LEVELS[localStorage.getItem('spillway-level')] || LEVELS.spillway;
+const SURGE_STYLE = ({
+  spillway:   { name:'RUNE CURRENT',       speed:1.08, sway:0.0,  pulse:1.8, prop:'rune' },
+  millrace:   { name:'PENSTOCK PUMP',      speed:1.18, sway:0.22, pulse:4.6, prop:'gear' },
+  undergrove: { name:'GLOWROOT CURRENT',   speed:1.02, sway:0.48, pulse:2.2, prop:'root' },
+  canopy:     { name:'GREAT SAP-RISE',     speed:1.15, sway:0.34, pulse:3.2, prop:'leaf' },
+  porcelain:  { name:'BUBBLE-LIFT JET',    speed:1.12, sway:0.56, pulse:5.4, prop:'bubble' },
+})[LVL.id];
 const CTRL = LVL.ctrl;
 // CLOSED CatmullRom: the course is a ring — the last control point flows back into the first
 const curve = new THREE.CatmullRomCurve3(CTRL.map(p => new THREE.Vector3(p.x, p.y, p.z)), true, 'centripetal', 0.35);
@@ -1008,8 +1015,12 @@ function waterVelAt(p, si, out) {
   // mid-channel is fastest (parabolic profile); surge channels run bank-to-bank at full magic
   let prof = 1 - 0.45 * Math.min(1, (lat / w) ** 2);
   if (S.surge[si]) prof = Math.max(prof, 0.92);
-  const spd = BASE_FLOW * S.sMul[si] * prof;
+  const spd = BASE_FLOW * S.sMul[si] * prof * (S.surge[si] ? SURGE_STYLE.speed : 1);
   out.set(tan.x * spd, 0, tan.z * spd);
+  if (S.surge[si] && SURGE_STYLE.sway) {
+    const cross = Math.sin(G.time * SURGE_STYLE.pulse + si * 0.055) * SURGE_STYLE.sway * BASE_FLOW;
+    out.x += side.x * cross; out.z += side.z * cross;
+  }
   const HZ = (DIFF[G.difficulty] || DIFF.medium).haz;
   _zone.chute = false; _zone.mud = false;
   // lap 2+: high water — everything runs faster
@@ -1917,8 +1928,13 @@ const SUN_DIR = new THREE.Vector3(-70, 90, -30).normalize();
 const ambLight = new THREE.AmbientLight(0x9fb4c8, 0.32);   // lighting floor: nothing ever goes black
 scene.add(ambLight);
 
-// ---------- water ribbon
-let waterMat;
+// ---------- water ribbon + moving local environment capture
+let waterMat, waterMesh;
+const waterReflectRT = new THREE.WebGLCubeRenderTarget(128, {
+  generateMipmaps:true, minFilter:THREE.LinearMipmapLinearFilter, type:THREE.HalfFloatType,
+});
+const waterReflectCam = new THREE.CubeCamera(0.5, 190, waterReflectRT);
+scene.add(waterReflectCam);
 {
   const pos = [], uv = [], spd = [], foamA = [], slopeA = [], deepA = [], shalA = [], chuteA = [], shoalA = [], kindA = [], surgeA = [], rockA = [], idx = [];
   const DEEPS = [[0.06,0.29,0.40],[0.04,0.23,0.34],[0.10,0.30,0.33],[0.10,0.32,0.35]];   // per biome
@@ -1988,6 +2004,7 @@ let waterMat;
       uT: { value: 0 }, uFog: { value: new THREE.Color(0xa8d8e0) },
       uCamPos: { value: new THREE.Vector3() }, uSunDir: { value: new THREE.Vector3(-0.6, 0.7, -0.26) },
       uSunCol: { value: new THREE.Color(0xfff2d0) }, uGlint: { value: 0.9 }, uDark: { value: 1.0 },
+      uEnvMap: { value: waterReflectRT.texture }, uReflectMix: { value: SETTINGS.quality === 'low' ? 0.0 : 0.34 },
       uSurgeCol: { value: new THREE.Color((LVL.surgeCol || [0.2, 0.9, 0.85])[0], (LVL.surgeCol || [0.2, 0.9, 0.85])[1], (LVL.surgeCol || [0.2, 0.9, 0.85])[2]) },
     },
     vertexShader: `
@@ -2013,6 +2030,7 @@ let waterMat;
     fragmentShader: `
       uniform float uT; uniform vec3 uFog;
       uniform vec3 uCamPos; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uGlint;
+      uniform samplerCube uEnvMap; uniform float uReflectMix;
       uniform vec3 uSurgeCol; uniform float uDark;
       varying vec2 vUv; varying float vSpd; varying float vFoam; varying float vFog; varying float vSlope;
       varying vec3 vDeep; varying vec3 vShal; varying vec3 vWorld; varying vec3 vRockB;
@@ -2065,7 +2083,10 @@ let waterMat;
           c += uSunCol * sg * (0.4 + 0.6 * detail);
           // grazing angles reflect the bright sky; overhead views keep the course colour.
           float fresnel = pow(1. - max(dot(-vdir, n), 0.), 3.2);
-          c = mix(c, uFog + vec3(.10,.14,.13), fresnel * .34 * uDark);
+          vec3 envDir = reflect(vdir, n);
+          vec3 env = textureCube(uEnvMap, envDir).rgb;
+          c = mix(c, env, fresnel * uReflectMix * uDark);
+          c = mix(c, uFog + vec3(.10,.14,.13), fresnel * .13 * uDark);
         }
         // ---- STRUCTURED whitewater ----
         float foamAmt = clamp(smoothstep(1.35, 2.5, vSpd) * 0.7 + vFoam + smoothstep(0.07, 0.24, vSlope), 0., 1.25);
@@ -2111,7 +2132,9 @@ let waterMat;
         float alpha = mix(0.45, 0.95, smoothstep(0.0, 0.09, shore));
         gl_FragColor = vec4(c, alpha); }`,
   });
-  scene.add(new THREE.Mesh(g, waterMat));
+  waterMesh = new THREE.Mesh(g, waterMat);
+  waterMesh.receiveShadow = true;
+  scene.add(waterMesh);
 }
 
 // ---------- baked detail textures: wood grain + rock speckle (canvas, tiling, zero assets)
@@ -2260,7 +2283,12 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   }
   const mottleTex = new THREE.CanvasTexture(mc2);
   mottleTex.wrapS = mottleTex.wrapT = THREE.RepeatWrapping;
-  var banksMesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, map: LVL.id === 'porcelain' ? TILETEX : mottleTex, side: THREE.DoubleSide, flatShading: true }));
+  const bankTex = LVL.id === 'porcelain' ? TILETEX : mottleTex;
+  bankTex.colorSpace = THREE.SRGBColorSpace;
+  var banksMesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+    vertexColors:true, map:bankTex, bumpMap:bankTex, bumpScale:LVL.id === 'porcelain' ? 0.12 : 0.38,
+    roughness:LVL.id === 'porcelain' ? 0.62 : 0.94, metalness:0, side:THREE.DoubleSide, flatShading:true,
+  }));
   banksMesh.receiveShadow = true;
   scene.add(banksMesh);
 }
@@ -3291,7 +3319,7 @@ const RUNES = [];
 {
   const runeCol = new THREE.Color((LVL.surgeCol || [0.2, 0.9, 0.85])[0], (LVL.surgeCol || [0.2, 0.9, 0.85])[1], (LVL.surgeCol || [0.2, 0.9, 0.85])[2]);
   const stoneM = new THREE.MeshLambertMaterial({ color: 0x4c5258 });
-  for (const [a, b] of (LVL.surge || [])) {
+  for (const [a, b] of (SURGE_STYLE.prop === 'rune' ? (LVL.surge || []) : [])) {
     const i0 = Math.round(a * NSAMP), i1 = Math.round(b * NSAMP);
     for (let i = i0 + 8; i <= i1 - 4; i += 26) {
       for (const sgn of [-1, 1]) {
@@ -3391,6 +3419,30 @@ const BFLIES = [];
     mesh.position.set(anchor.x, gy + 1, anchor.z);
     scene.add(mesh);
     BFLIES.push({ mesh, anchor, gy, ph: rand() * 9 });
+  }
+}
+
+// ---------- trackside duck fans + underwater schools
+const TRACK_FANS=[], FISH_SHADOWS=[];
+{
+  const fanCols=[0xffd23f,0xff6f61,0x53a6ff,0x7bd66f,0xc084fc,0xfff8e7];
+  const bodyG=new THREE.SphereGeometry(.32,9,6), headG=new THREE.SphereGeometry(.2,8,6);
+  for(let n=0;n<22;n++){
+    const anchors=[.015,.235,.49,.765,.91], i=Math.round((anchors[n%anchors.length]+(n%4)*.006)*NSAMP), sgn=n%2?1:-1;
+    const ob=1.8+(n%3)*.8, p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob));
+    const grp=new THREE.Group(), mat=new THREE.MeshLambertMaterial({color:fanCols[n%fanCols.length]});
+    const body=new THREE.Mesh(bodyG,mat);body.scale.set(1,.78,1.18);
+    const head=new THREE.Mesh(headG,mat);head.position.set(0,.34,.22);
+    const beak=new THREE.Mesh(new THREE.ConeGeometry(.08,.26,6),new THREE.MeshLambertMaterial({color:0xff9b2f}));beak.rotation.x=Math.PI/2;beak.position.set(0,.32,.48);
+    grp.add(body,head,beak);grp.position.set(p.x,waterHeightAt(i)+Math.max(.15,bankH(i,ob,sgn))+.36,p.z);
+    grp.rotation.y=Math.atan2(-S.side[i].x*sgn,-S.side[i].z*sgn);scene.add(grp);
+    TRACK_FANS.push({grp,baseY:grp.position.y,ph:rand()*6});
+  }
+  const fishG=new THREE.CapsuleGeometry(.08,.38,3,6);fishG.rotateX(Math.PI/2);
+  for(let n=0;n<18;n++){
+    const i=Math.round(((.08+n*.051)%1)*NSAMP), mat=new THREE.MeshBasicMaterial({color:n%3===0?0xe4a844:0x244e5d,transparent:true,opacity:.34,depthWrite:false});
+    const mesh=new THREE.Mesh(fishG,mat);scene.add(mesh);
+    FISH_SHADOWS.push({mesh,i,lat:randRange(-S.w[i]*.62,S.w[i]*.62),ph:rand()*6,speed:randRange(.45,.9)});
   }
 }
 
@@ -4125,6 +4177,66 @@ function updateWaves(dt) {
     w.mesh.material.opacity = 0.55 * (1 - w.life / 0.5);
   }
 }
+
+// Every uphill run now has its own machine/organism and motion language.
+const SURGE_PROPS = [];
+{
+  const glow = new THREE.Color(...(LVL.surgeCol || [0.2,0.9,0.85]));
+  const glowM = new THREE.MeshBasicMaterial({color:glow,transparent:true,opacity:.78,depthWrite:false});
+  const darkM = new THREE.MeshStandardMaterial({color:LVL.id==='millrace'?0x52616a:0x34414a,roughness:.58,metalness:LVL.id==='millrace'?0.62:.08});
+  for (const [a,b] of (LVL.surge||[])) for(let i=Math.round(a*NSAMP)+30;i<Math.round(b*NSAMP)-18;i+=62){
+    const sgn=((i/62|0)%2)*2-1, p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+1.8));
+    const gy=waterHeightAt(i)+Math.max(0,bankH(i,1.8,sgn));
+    const grp=new THREE.Group();
+    if(SURGE_STYLE.prop==='gear'){
+      const wheel=new THREE.Mesh(new THREE.TorusGeometry(1.05,.16,8,18),darkM); wheel.rotation.y=Math.PI/2; grp.add(wheel);
+      for(let k=0;k<6;k++){const spoke=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,1.8),darkM);spoke.rotation.x=k*Math.PI/3;grp.add(spoke);}
+      const hub=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.4,10),glowM);hub.rotation.z=Math.PI/2;grp.add(hub);
+    } else if(SURGE_STYLE.prop==='root'){
+      const arch=new THREE.Mesh(new THREE.TorusGeometry(1.05,.18,7,18,Math.PI),new THREE.MeshStandardMaterial({color:0x3b241a,roughness:1}));arch.rotation.z=Math.PI;grp.add(arch);
+      for(const x of [-.72,0,.72]){const cap=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),glowM);cap.position.set(x,.35+Math.abs(x)*.45,0);grp.add(cap);}
+    } else if(SURGE_STYLE.prop==='leaf'){
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.08,6,20),glowM);ring.rotation.x=Math.PI/2;grp.add(ring);
+      for(let k=0;k<5;k++){const leaf=new THREE.Mesh(new THREE.ConeGeometry(.18,.65,5),new THREE.MeshStandardMaterial({color:0x75b84b,roughness:.8}));leaf.position.set(Math.cos(k*1.257),Math.sin(k*1.257),0);leaf.rotation.z=-k*1.257;grp.add(leaf);}
+    } else if(SURGE_STYLE.prop==='bubble'){
+      const nozzle=new THREE.Mesh(new THREE.CylinderGeometry(.4,.55,.9,12),darkM);nozzle.position.y=-.35;grp.add(nozzle);
+      for(let k=0;k<4;k++){const bub=new THREE.Mesh(new THREE.SphereGeometry(.18+k*.04,10,7),glowM);bub.position.set(Math.sin(k*2.1)*.4,.35+k*.5,Math.cos(k*1.7)*.2);grp.add(bub);}
+    } else {
+      const mon=new THREE.Mesh(new THREE.OctahedronGeometry(.72,0),darkM);mon.scale.y=1.8;grp.add(mon);
+      const core=new THREE.Mesh(new THREE.OctahedronGeometry(.28,0),glowM);core.position.y=.3;grp.add(core);
+    }
+    grp.position.set(p.x,gy+1.2,p.z); grp.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);
+    scene.add(grp); SURGE_PROPS.push({grp,ph:rand()*6,baseY:grp.position.y,kind:SURGE_STYLE.prop});
+  }
+}
+// Persistent V wakes: nearby racers carve readable trails that widen and dissolve.
+const WAKE_TRAILS = [];
+{
+  const g = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0,0,0), new THREE.Vector3(-1.35,0,-3.8),
+    new THREE.Vector3(0,0,0), new THREE.Vector3( 1.35,0,-3.8),
+  ]);
+  for (let i=0;i<72;i++) {
+    const mesh = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color:0xeaffff, transparent:true, opacity:0, depthWrite:false }));
+    mesh.visible=false; mesh.renderOrder=4; scene.add(mesh); WAKE_TRAILS.push({mesh,life:-1});
+  }
+}
+let wakeCursor=0;
+function spawnWake(d) {
+  const w=WAKE_TRAILS[wakeCursor++ % WAKE_TRAILS.length];
+  w.life=0; w.mesh.visible=true; w.mesh.position.set(d.p.x,d.y+0.1,d.p.z);
+  w.mesh.rotation.y=d.heading; w.mesh.scale.setScalar(0.55 + Math.min(0.6,Math.hypot(d.v.x,d.v.z)/24));
+}
+function updateWakeTrails(dt) {
+  for (const w of WAKE_TRAILS) {
+    if (w.life<0) continue; w.life+=dt;
+    if (w.life>2.15) { w.life=-1; w.mesh.visible=false; continue; }
+    const k=w.life/2.15;
+    w.mesh.scale.x*=1+dt*.32; w.mesh.scale.z*=1+dt*.15;
+    w.mesh.position.y+=dt*.006;
+    w.mesh.material.opacity=.42*(1-k)*(1-k);
+  }
+}
 // ---------- confetti: the podium ceremony's colour burst
 const CONF = { n: 320, i: 0 };
 {
@@ -4367,7 +4479,8 @@ function updateRaceRead() {
   for (const e of EDDIES) offer(e.i, `${e.lat < 0 ? 'KEEP RIGHT' : 'KEEP LEFT'} · ${e.whirl ? 'WHIRLPOOL' : 'EDDY'}`, 'hazard');
   for (const r of ROCKS) offer(r.i, `ROCKS AHEAD · READ THE GAP`, 'hazard');
   const inFast = CHUTES.some(c => (!c.lapMin || d.lap >= c.lapMin) && d.si >= c.i0 && d.si <= c.i1);
-  if (inFast) best = { ahead:0, msg:'FAST WATER · HOLD THIS LINE', cls:'fast' };
+  if (S.surge[d.si]) best = { ahead:0, msg:`${SURGE_STYLE.name} · RIDE THE PULSE`, cls:'fast' };
+  else if (inFast) best = { ahead:0, msg:'FAST WATER · HOLD THIS LINE', cls:'fast' };
   if (best) { cueText.textContent = best.msg; cue.style.display = 'block'; cue.dataset.kind = best.cls; }
   else cue.style.display = 'none';
 }
@@ -5160,7 +5273,7 @@ resetDucks();
 camState.pos.set(S.pos[0].x + 14, S.pos[0].y + 10, S.pos[0].z + 18);
 camState.look.copy(S.pos[30]);
 
-let last = performance.now(), lastRAF = performance.now();
+let last = performance.now(), lastRAF = performance.now(), reflectFrame = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (now - last) / 1000);
@@ -5172,6 +5285,7 @@ function frame(now) {
   }
   updateSplashes(dt);
   updateWaves(dt);
+  updateWakeTrails(dt);
   updateConfetti(dt);
   if (!el('screen').classList.contains('hidden') && !el('duckPanel').classList.contains('hidden')) {
     prevDuck.rotation.y += dt * 0.9;
@@ -5206,6 +5320,16 @@ function frame(now) {
     if (G.flyT >= 1) { G.mode = 'countdown'; G.countdown = 3.2; snapCam(); }
   } else updateCamera(dt);
   syncDucks(now / 1000);
+  if (G.mode === 'race') {
+    let wakeBudget=5;
+    for (const d of ducks) {
+      if (!wakeBudget || d.air || d.inFlume) continue;
+      const dx=d.p.x-ducks[0].p.x, dz=d.p.z-ducks[0].p.z;
+      if (dx*dx+dz*dz>1500 || Math.hypot(d.v.x,d.v.z)<5.5) continue;
+      d._wakeRibbonT=(d._wakeRibbonT||0)-dt;
+      if (d._wakeRibbonT<=0) { d._wakeRibbonT=d.idx===0?.16:.32; spawnWake(d); wakeBudget--; }
+    }
+  }
   updateGhost();
   skyMesh.position.copy(camera.position);
   // shadow frustum follows the player
@@ -5396,6 +5520,13 @@ function frame(now) {
       const onSurge = S.surge[ducks[0].si] ? 0.35 : 0;
       for (let rn = 0; rn < RUNES.length; rn++)
         RUNES[rn].opacity = 0.55 + 0.3 * Math.sin(t * 2.6 + rn * 1.7) + onSurge;
+      for (const sp of SURGE_PROPS) {
+        sp.grp.position.y=sp.baseY+Math.sin(t*SURGE_STYLE.pulse+sp.ph)*.12;
+        if(sp.kind==='gear') sp.grp.rotation.z=t*1.8+sp.ph;
+        else if(sp.kind==='leaf') sp.grp.rotation.y+=dt*1.4;
+        else if(sp.kind==='bubble') sp.grp.children.forEach((c,k)=>{if(k)c.position.y=.35+((t*.72+k*.5+sp.ph)%2.2);});
+        else sp.grp.rotation.y+=Math.sin(t+sp.ph)*dt*.08;
+      }
     }
     // surge wall sweeps
     if (G.surge >= 0 && G.surge <= 1) {
@@ -5513,6 +5644,16 @@ function frame(now) {
         b.anchor.z + Math.cos(b.ph * 0.9) * 1.4);
       b.mesh.rotation.y = Math.sin(b.ph * 14) * 0.9;
     }
+    for(const f of TRACK_FANS){
+      f.grp.position.y=f.baseY+Math.abs(Math.sin(t*3.4+f.ph))*.13;
+      f.grp.rotation.z=Math.sin(t*4.2+f.ph)*.08;
+    }
+    for(const fs of FISH_SHADOWS){
+      const ii=wrapI(fs.i+Math.floor(t*fs.speed*12)), p=S.pos[ii], side=S.side[ii];
+      const lat=fs.lat+Math.sin(t*.7+fs.ph)*1.1;
+      fs.mesh.position.set(p.x+side.x*lat,waterHeightAt(ii)-.36,p.z+side.z*lat);
+      fs.mesh.rotation.y=Math.atan2(S.tan[ii].x,S.tan[ii].z);
+    }
     // storm rain follows the camera
     const raining = (WEATHERS[G.weather] || {}).rain && G.mode !== 'title';
     rainMesh.visible = !!raining;
@@ -5531,6 +5672,15 @@ function frame(now) {
       }
       rp.needsUpdate = true;
     }
+  }
+  // A local cubemap follows the race and catches banks, bridges, trees, ducks and sky.
+  // Updating intermittently keeps the reflection alive without doubling every frame's cost.
+  const reflectEvery = SETTINGS.quality === 'high' ? 18 : SETTINGS.quality === 'medium' ? 34 : 0;
+  if (reflectEvery && waterMesh && (++reflectFrame % reflectEvery === 0)) {
+    waterReflectCam.position.set(ducks[0].p.x, waterHeightAt(ducks[0].si) + 1.4, ducks[0].p.z);
+    waterMesh.visible = false;
+    waterReflectCam.update(renderer, scene);
+    waterMesh.visible = true;
   }
   renderFrame();
 }
