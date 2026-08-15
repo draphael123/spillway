@@ -2527,9 +2527,13 @@ scene.add(waterReflectCam);
         }
         // Weather and biome signatures: rain rings, cave glow, mill oil-sheen,
         // canopy leaf-shadow and porcelain's bright tiled sparkle.
-        vec2 rainCell=fract(vec2(vUv.x*34.,vUv.y*18.)+vec2(n21(floor(vec2(vUv.x*34.,vUv.y*18.))),0.));
-        float rr=abs(length(rainCell-.5)-fract(uT*1.8+n21(floor(vUv*vec2(34.,18.))))*.46);
-        c+=vec3(.34,.48,.5)*smoothstep(.045,.0,rr)*uRain*detail;
+        // Sparse, fine rain rings. The previous low-resolution UV grid stretched into
+        // oversized repeating ovals on bends; smaller cells and a per-cell birth mask
+        // produce individual impacts that fade naturally with distance.
+        vec2 rainGrid=vec2(72.,44.),rainId=floor(vUv*rainGrid),rainCell=fract(vUv*rainGrid);
+        float rainSeed=n21(rainId),rainLife=fract(uT*.72+rainSeed),rainRad=rainLife*.34;
+        float rr=abs(length(rainCell-.5)-rainRad),rainRing=smoothstep(.018,.004,rr)*(1.-rainLife)*step(.78,n21(rainId+19.7));
+        c+=vec3(.38,.52,.54)*rainRing*uRain*detail*.58;
         if(uBiome>1.5&&uBiome<2.5)c+=uSurgeCol*pow(noise(vec2(vUv.x*18.,flow*7.)),8.)*.28;
         if(uBiome>.5&&uBiome<1.5)c+=vec3(.10,.07,.025)*sin(flow*2.+vUv.x*8.)*.035;
         if(uBiome>2.5&&uBiome<3.5)c*=.94+.06*sin(vUv.x*24.+flow*.8);
@@ -3838,6 +3842,18 @@ if (LVL.id === 'millrace') {
   }
 }
 
+// Layered world-shaped horizons keep the outdoor courses from ending in isolated
+// placeholder peaks. Their lower skirts sink into the bank mesh, so the silhouette
+// remains continuous even across steep climbs and wide bends.
+if(!IS_BATHWORLD&&LVL.id!=='spillway'){
+  const hc={millrace:[0x4d6665,0x718586],undergrove:[0x1d2b29,0x384844],canopy:[0x527d58,0x82a071]}[LVL.id]||[0x557476,0x789395];
+  for(let layer=0;layer<2;layer++)for(const sgn of [-1,1]){
+    const obR=42+layer*18,ps=[],ix=[];let row=0;
+    for(let j=0;j<=NSAMP;j+=18){const ii=wrapI(j),p=S.pos[ii].clone().addScaledVector(S.side[ii],sgn*(S.w[ii]+obR)),base=waterHeightAt(ii)+bankH(ii,24,sgn)-8,noise=vnoise(ii*.021+layer*12,sgn*31),crest=base+13+layer*7+noise*(LVL.id==='undergrove'?8:12);ps.push(p.x,base,p.z,p.x,crest,p.z);if(row){const k=(row-1)*2;ix.push(k,k+2,k+1,k+1,k+2,k+3);}row++;}
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(ps,3));geo.setIndex(ix);geo.computeVertexNormals();const ridge=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:hc[layer],side:THREE.DoubleSide,flatShading:true,fog:true}));ridge.receiveShadow=true;scene.add(ridge);
+  }
+}
+
 // ---------- course hero events: one unmistakable transformation landmark per world
 window._heroEvent=null;
 if(LVL.id!=='spillway'){
@@ -4843,10 +4859,10 @@ const CLIMB_FX=[];
 const WAKE_TRAILS = [];
 {
   const g = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0,0,0), new THREE.Vector3(-1.35,0,-3.8),
-    new THREE.Vector3(0,0,0), new THREE.Vector3( 1.35,0,-3.8),
+    new THREE.Vector3(0,0,0), new THREE.Vector3(-.95,0,-2.8),
+    new THREE.Vector3(0,0,0), new THREE.Vector3( .95,0,-2.8),
   ]);
-  for (let i=0;i<72;i++) {
+  for (let i=0;i<42;i++) {
     const mesh = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color:0xeaffff, transparent:true, opacity:0, depthWrite:false }));
     mesh.visible=false; mesh.renderOrder=4; scene.add(mesh); WAKE_TRAILS.push({mesh,life:-1});
   }
@@ -4860,11 +4876,11 @@ function spawnWake(d) {
 function updateWakeTrails(dt) {
   for (const w of WAKE_TRAILS) {
     if (w.life<0) continue; w.life+=dt;
-    if (w.life>2.15) { w.life=-1; w.mesh.visible=false; continue; }
-    const k=w.life/2.15;
+    if (w.life>1.3) { w.life=-1; w.mesh.visible=false; continue; }
+    const k=w.life/1.3;
     w.mesh.scale.x*=1+dt*.32; w.mesh.scale.z*=1+dt*.15;
     w.mesh.position.y+=dt*.006;
-    w.mesh.material.opacity=.42*(1-k)*(1-k);
+    w.mesh.material.opacity=.22*(1-k)*(1-k);
   }
 }
 // Comic impact shards: droplets and gold stars burst from hard bumper-boat hits.
@@ -6109,13 +6125,13 @@ function frame(now) {
   } else updateCamera(dt);
   syncDucks(now / 1000);
   if (G.mode === 'race') {
-    let wakeBudget=SETTINGS.clarity==='clear'?2:5;
+    let wakeBudget=SETTINGS.clarity==='clear'?1:3;
     for (const d of ducks) {
       if (!wakeBudget || d.air || d.inFlume) continue;
       const dx=d.p.x-ducks[0].p.x, dz=d.p.z-ducks[0].p.z;
-      if (dx*dx+dz*dz>1500 || Math.hypot(d.v.x,d.v.z)<5.5) continue;
+      if (dx*dx+dz*dz>760 || Math.hypot(d.v.x,d.v.z)<5.5) continue;
       d._wakeRibbonT=(d._wakeRibbonT||0)-dt;
-      if (d._wakeRibbonT<=0) { d._wakeRibbonT=d.idx===0?.16:.32; spawnWake(d); wakeBudget--; }
+      if (d._wakeRibbonT<=0) { d._wakeRibbonT=d.idx===0?.18:.44; spawnWake(d); wakeBudget--; }
     }
   }
   updateGhost();
