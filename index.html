@@ -150,6 +150,21 @@
   .musicDeck button, #soundPlay, #soundStop { font:900 12px 'Barlow Condensed',sans-serif; letter-spacing:1px; padding:9px; border:2px solid var(--ink); border-radius:8px; background:#fff; color:var(--ink); cursor:pointer; }
   .musicDeck button.playing { background:var(--sun); }
   .soundPicker { width:100%; padding:9px; border:2px solid var(--ink); border-radius:8px; background:#fff; color:var(--ink); font:800 13px 'Nunito Sans',sans-serif; }
+  #editorPanel { width:min(1120px,96vw); }
+  .editorShell { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:14px; }
+  .draftBoard { overflow:hidden; border:4px solid var(--raceNavy); border-radius:14px; background:#0b3445; box-shadow:0 7px 0 #071b2b; }
+  .draftHead { display:flex; justify-content:space-between; padding:8px 12px; color:#fff8e7; background:#071b2b; font:900 13px 'Barlow Condensed',sans-serif; letter-spacing:2px; }
+  #editorCanvas { display:block; width:100%; height:auto; aspect-ratio:16/9; touch-action:none; cursor:crosshair; background:#0c4255; }
+  .editorRail { display:flex; flex-direction:column; gap:10px; }
+  .editorCard { padding:12px; border:3px solid var(--raceNavy); border-radius:11px; background:#fff8e7; }
+  .editorCard h3 { margin:0 0 8px; color:#d94f30; font:900 15px 'Barlow Condensed',sans-serif; letter-spacing:1.6px; }
+  .editorCard label { display:grid; grid-template-columns:80px 1fr 34px; gap:6px; align-items:center; margin:8px 0; font:800 12px 'Nunito Sans',sans-serif; }
+  .editorCard select,.editorCard textarea { width:100%; padding:8px; border:2px solid var(--raceNavy); border-radius:7px; background:#fff; color:#071b2b; font:800 12px 'Nunito Sans',sans-serif; }
+  .editorCard textarea { height:66px; resize:vertical; }
+  .editorBtns { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .editorBtns button { padding:8px 5px; border:2px solid var(--raceNavy); border-radius:7px; background:#fff; color:#071b2b; font:900 12px 'Barlow Condensed',sans-serif; cursor:pointer; }
+  .editorBtns button.primary { color:#071b2b; background:#ffd23f; }
+  .editorHint { margin-top:8px; opacity:.7; font-size:12px; line-height:1.35; }
   @media (max-width:760px){
     #hub { width:100%; padding:8px 4px; align-items:stretch; }
     #hubHead { padding:0 8px; }
@@ -392,6 +407,8 @@
     .pill { min-height:52px; font-size:22px; padding:3px 9px; }
     #place { min-width:98px; font-size:27px; }
     .challengeBoard { grid-template-columns:1fr; }
+    .editorShell { grid-template-columns:1fr; }
+    .editorRail { display:grid; grid-template-columns:1fr; }
     #speedo { display:none; }
     #raceCue { font-size:14px; }
     #raceIntro { left:calc(8px + env(safe-area-inset-left)); top:18%; width:calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)); padding:13px 32px 13px 14px; transform:translateY(-10px); }
@@ -470,7 +487,7 @@
     <button id="fullscreenBtn" type="button">⛶ FULLSCREEN</button>
   </div>
   <div id="hubTabs">
-    <button data-tab="title" class="sel">🏁 RACE</button><button data-tab="duckPanel">🦆 YOUR DUCK</button><button data-tab="levelPanel">🗺️ COURSES</button><button data-tab="statsPanel">🏆 STATS</button><button data-tab="guidePanel">📖 GUIDE</button><button data-tab="settingsPanel">⚙️ SETTINGS</button>
+    <button data-tab="title" class="sel">🏁 RACE</button><button data-tab="duckPanel">🦆 YOUR DUCK</button><button data-tab="levelPanel">🗺️ COURSES</button><button data-tab="editorPanel">✏️ EDITOR</button><button data-tab="statsPanel">🏆 STATS</button><button data-tab="guidePanel">📖 GUIDE</button><button data-tab="settingsPanel">⚙️ SETTINGS</button>
   </div>
   <div class="panel hubPane hidden" id="guidePanel">
     <h2>HOW TO RACE</h2>
@@ -486,6 +503,24 @@
         <p>Rocks stop you. Logs and booms block lanes — aim for the gap. Eddies and the whirlpool trap drifters. Watch for the lunging pike, the snapping turtle, and each course's machinery. Islands split the river: one lane is fast and mean, one is safe and slow.</p>
         <b>RACES</b>
         <p>Every course is a <b>closed circuit</b>. Each has its own powered climb — Rune Slalom, Pressure Pump, Glowroot Hunt, Sap-Rise Launch, Faucet Jet, or Lock Elevator — with a different pulse and steering rhythm. Lap 2 runs <b>high water</b>; lap 3 opens a <b>flood-gate shortcut</b>. Once a lap the dam releases a <b>surge wave</b>. Rivals remember: beat your <b style="color:#d94f30">NEMESIS</b>.</p>
+      </div>
+    </div>
+  </div>
+  <div class="panel hubPane hidden" id="editorPanel">
+    <div class="paneEyebrow">Spillway works department</div><h2>COURSE DRAFTING TABLE</h2>
+    <div class="paneIntro">Drag the buoy points to shape a closed circuit. Select a point to tune its elevation, width, and current.</div>
+    <div class="editorShell">
+      <div class="draftBoard"><div class="draftHead"><span>PLAN VIEW · CLOSED CIRCUIT</span><span id="editorReadout">8 CONTROL POINTS</span></div><canvas id="editorCanvas" width="800" height="450"></canvas></div>
+      <div class="editorRail">
+        <div class="editorCard"><h3>WORLD THEME</h3><select id="editorTheme"></select><div class="editorHint" id="editorThemeNote"></div></div>
+        <div class="editorCard"><h3>SELECTED BUOY</h3>
+          <label><span>ELEVATION</span><input id="editorY" type="range" min="24" max="80" step="1"><b id="editorYVal">52</b></label>
+          <label><span>WIDTH</span><input id="editorW" type="range" min="4" max="14" step=".5"><b id="editorWVal">8</b></label>
+          <label><span>CURRENT</span><input id="editorS" type="range" min=".4" max="2.5" step=".1"><b id="editorSVal">1</b></label>
+        </div>
+        <div class="editorCard"><h3>DRAFT ACTIONS</h3><div class="editorBtns">
+          <button id="editorStarter">NEW STARTER</button><button id="editorUndo">UNDO</button><button id="editorDelete">DELETE POINT</button><button id="editorSave">SAVE</button><button id="editorExport">EXPORT</button><button id="editorImport">IMPORT</button><button class="primary" id="editorTest">TEST DRIVE</button><button id="editorClear">CLEAR</button>
+        </div><textarea id="editorData" placeholder="Exported track data appears here"></textarea><div class="editorHint">Tap empty water to add a buoy. A valid race needs at least six points.</div></div>
       </div>
     </div>
   </div>
@@ -655,6 +690,20 @@ function vnoise(x, z) {
 // CHANNELS (glowing rune-water that runs uphill at full race speed).
 // Each course: ctrl loop (x/z plan, y bed elevation, w half-width, s flow
 // speed), surge t-ranges, a weather pool, and a surge glow colour.
+const THEME_LIBRARY={
+  kitchen:{name:'KITCHEN CATASTROPHE',base:'porcelain',accent:'#ff8c3a',note:'Dishes, cereal islands, faucet floods, and the disposal vortex.',pal:{deep:[.12,.38,.49],shal:[.50,.76,.79],fog:[.90,.90,.82],ground:[.10,.12,.72],tree:[.08,.20,.56],skyMul:[1.04,1.02,.92]}},
+  backyard:{name:'BACKYARD MONSOON',base:'spillway',accent:'#6fd15c',note:'Garden beds, gutters, sprinklers, pool toys, and muddy shortcuts.',pal:{deep:[.50,.50,.28],shal:[.47,.58,.52],fog:[.75,.86,.78],ground:[.29,.52,.34],tree:[.27,.58,.29],skyMul:[.95,1.02,.96]}},
+  arctic:{name:'ARCTIC THAW',base:'canopy',accent:'#a8edff',note:'Glaciers, research lights, cracking ice, and sliding channels.',pal:{deep:[.54,.55,.31],shal:[.52,.70,.73],fog:[.58,.20,.94],ground:[.55,.18,.82],tree:[.55,.12,.72],skyMul:[.88,.98,1.10]}},
+  volcanic:{name:'VOLCANIC SPRINGS',base:'spillway',accent:'#ff5b2e',note:'Basalt shelves, steam pools, geysers, and magma-lit caverns.',pal:{deep:[.02,.42,.22],shal:[.05,.55,.42],fog:[.03,.24,.42],ground:[.02,.16,.24],tree:[.03,.28,.20],skyMul:[1.08,.78,.66]}},
+  waterpark:{name:'NEON WATERPARK',base:'porcelain',accent:'#ff45d7',note:'Branching slides, wave machines, launch bowls, and night lighting.',pal:{deep:[.51,.68,.35],shal:[.48,.78,.60],fog:[.69,.28,.48],ground:[.79,.52,.45],tree:[.34,.64,.42],skyMul:[.66,.58,.92]}},
+  sewer:{name:'CLOCKWORK SEWER',base:'millrace',accent:'#e2aa47',note:'Brass valves, brick tunnels, pressure doors, and rotating junctions.',pal:{deep:[.18,.38,.18],shal:[.18,.42,.34],fog:[.13,.16,.38],ground:[.08,.36,.28],tree:[.11,.28,.24],skyMul:[.72,.68,.58]}},
+  aquarium:{name:'AQUARIUM AFTER HOURS',base:'undergrove',accent:'#4fffe1',note:'Coral galleries, glass tunnels, filtration currents, and giant fish.',pal:{deep:[.51,.72,.18],shal:[.48,.62,.42],fog:[.53,.30,.42],ground:[.62,.32,.34],tree:[.44,.62,.38],skyMul:[.54,.70,.88]}},
+  city:{name:'MINIATURE CITY FLOOD',base:'harbor',accent:'#ffcc4d',note:'Street canals, subway cuts, traffic hazards, and opening bridges.',pal:{deep:[.52,.36,.25],shal:[.51,.38,.48],fog:[.58,.10,.64],ground:[.58,.08,.38],tree:[.32,.24,.30],skyMul:[.84,.88,.94]}},
+  boardwalk:{name:'HAUNTED BOARDWALK',base:'harbor',accent:'#a56cff',note:'Ghost lights, flooded rides, spectral currents, and vanishing routes.',pal:{deep:[.69,.50,.18],shal:[.67,.42,.35],fog:[.73,.18,.30],ground:[.74,.24,.22],tree:[.26,.35,.18],skyMul:[.52,.44,.70]}},
+  space:{name:'SPACE STATION HYDROPONICS',base:'canopy',accent:'#7dff9a',note:'Gravity shifts, rotating labs, floating water, and orbital gardens.',pal:{deep:[.52,.60,.20],shal:[.48,.62,.44],fog:[.62,.12,.24],ground:[.58,.08,.26],tree:[.32,.64,.38],skyMul:[.36,.44,.62]}},
+  candy:{name:'CANDY FACTORY',base:'millrace',accent:'#ff6fae',note:'Soda rapids, syrup machinery, carbonation jumps, and candy conveyors.',pal:{deep:[.94,.52,.30],shal:[.92,.68,.58],fog:[.92,.28,.82],ground:[.86,.48,.62],tree:[.12,.64,.56],skyMul:[1.08,.90,1.02]}},
+  pirate:{name:'PIRATE TOYBOX',base:'spillway',accent:'#f2b84b',note:'Toy ships, block islands, cannon boosts, treasure, and sea monsters.',pal:{deep:[.53,.56,.26],shal:[.50,.64,.48],fog:[.55,.18,.78],ground:[.10,.46,.40],tree:[.28,.52,.30],skyMul:[.96,.94,.80]}},
+};
 const LEVELS = {
   spillway: {
     id: 'spillway', name: 'SPILLWAY RUN', sub: 'rapids · the falls · canyon · the magic climb',
@@ -848,7 +897,15 @@ const LEVELS = {
     ],
   },
 };
+try{
+  const saved=JSON.parse(localStorage.getItem('spillway-custom-track')||'null'),theme=THEME_LIBRARY[saved?.theme];
+  if(theme&&Array.isArray(saved.ctrl)&&saved.ctrl.length>=6&&saved.ctrl.length<=64&&saved.ctrl.every(p=>['x','z','y','w','s'].every(k=>Number.isFinite(+p[k])))){
+    const ctrl=saved.ctrl.map(p=>({x:Math.max(-220,Math.min(220,+p.x)),z:Math.max(-320,Math.min(120,+p.z)),y:Math.max(20,Math.min(90,+p.y)),w:Math.max(4,Math.min(16,+p.w)),s:Math.max(.35,Math.min(2.7,+p.s))}));
+    LEVELS.custom={id:theme.base,name:`CUSTOM · ${theme.name}`,sub:theme.note,weathers:['clear','golden','mist','storm'],surge:[[.82,.985]],surgeCol:new THREE.Color(theme.accent).toArray(),pal:theme.pal,ctrl};
+  }
+}catch(e){console.warn('custom track ignored:',e);}
 const LVL = LEVELS[localStorage.getItem('spillway-level')] || LEVELS.spillway;
+const ACTIVE_LEVEL_KEY=localStorage.getItem('spillway-level')==='custom'&&LEVELS.custom?'custom':LVL.id;
 const IS_BATHWORLD = LVL.id === 'porcelain' || LVL.id === 'harbor';
 const SURGE_STYLE = ({
   spillway:   { name:'RUNE SLALOM',        speed:1.08, sway:0.0,  pulse:1.8, prop:'rune',   cue:'READ THE GLOWING LANE' },
@@ -5598,12 +5655,13 @@ function refreshFlavour() {
   }
 }
 function showTab(id) {
-  for (const p of ['title', 'duckPanel', 'levelPanel', 'audioPanel', 'statsPanel', 'settingsPanel', 'guidePanel']) el(p).classList.toggle('hidden', p !== id);
+  for (const p of ['title','duckPanel','levelPanel','editorPanel','audioPanel','statsPanel','settingsPanel','guidePanel']) el(p).classList.toggle('hidden', p !== id);
   document.querySelectorAll('#hubTabs button').forEach(b => b.classList.toggle('sel', b.dataset.tab === id));
   G.hubTab = id;
   el('results').style.display = 'none';
   if (id === 'duckPanel') refreshDuckUI();
   if (id === 'levelPanel') refreshLevelCards();
+  if(id==='editorPanel'){editorSync();editorDraw();}
   if (id === 'statsPanel') refreshStatsUI();
   if (id === 'title') refreshFlavour();
   el('hub').scrollTop=0;
@@ -5812,15 +5870,58 @@ if (TOUCH.active) {
 }
 addEventListener('pointerdown', auInit, { once: false });
 
+// ---- course drafting table: a compact, persistent closed-circuit editor
+const EDITOR={points:[],selected:0,drag:false,history:[],theme:'waterpark'};
+const editorCanvas=el('editorCanvas'),editorCtx=editorCanvas.getContext('2d');
+const themeKeys=Object.keys(THEME_LIBRARY);
+function editorSnapshot(){EDITOR.history.push(JSON.stringify({points:EDITOR.points,theme:EDITOR.theme}));if(EDITOR.history.length>30)EDITOR.history.shift();}
+function editorStarter(themeKey=EDITOR.theme,remember=true){
+  if(remember&&EDITOR.points.length)editorSnapshot();EDITOR.theme=THEME_LIBRARY[themeKey]?themeKey:'waterpark';
+  const ti=themeKeys.indexOf(EDITOR.theme),n=10+(ti%3),lobes=2+(ti%4),phase=ti*.47;
+  EDITOR.points=[];
+  for(let k=0;k<n;k++){const t=k/n,a=-Math.PI/2+t*Math.PI*2,r=1+.12*Math.sin(a*lobes+phase)+.06*Math.sin(a*(lobes+2)-phase),x=65+Math.cos(a)*72*r,z=-112+Math.sin(a)*108*(1+.08*Math.cos(a*3+phase)),y=60-23*Math.sin(Math.PI*t);EDITOR.points.push({x:+x.toFixed(2),z:+z.toFixed(2),y:+y.toFixed(1),w:+(7+1.4*Math.sin(a*2+phase)).toFixed(1),s:+(.9+.65*Math.max(0,Math.sin(a*2-phase))).toFixed(1)});}
+  EDITOR.selected=0;editorSync();editorDraw();
+}
+function editorWorldToCanvas(p){return [(p.x+25)/185*editorCanvas.width,(25-p.z)/285*editorCanvas.height];}
+function editorCanvasToWorld(x,y){return {x:x/editorCanvas.width*185-25,z:25-y/editorCanvas.height*285};}
+function editorDraw(){
+  const x=editorCtx,w=editorCanvas.width,h=editorCanvas.height,th=THEME_LIBRARY[EDITOR.theme],accent=th?.accent||'#ffd23f';x.clearRect(0,0,w,h);x.fillStyle='#0c4255';x.fillRect(0,0,w,h);
+  x.strokeStyle='rgba(174,232,239,.13)';x.lineWidth=1;for(let gx=0;gx<w;gx+=40){x.beginPath();x.moveTo(gx,0);x.lineTo(gx,h);x.stroke();}for(let gy=0;gy<h;gy+=40){x.beginPath();x.moveTo(0,gy);x.lineTo(w,gy);x.stroke();}
+  if(EDITOR.points.length>1){const path=()=>{x.beginPath();EDITOR.points.forEach((p,i)=>{const [px,py]=editorWorldToCanvas(p);i?x.lineTo(px,py):x.moveTo(px,py);});x.closePath();};path();x.strokeStyle='rgba(2,19,28,.72)';x.lineWidth=30;x.lineJoin='round';x.stroke();path();x.strokeStyle='#4fc8dc';x.lineWidth=22;x.stroke();path();x.strokeStyle='rgba(255,255,255,.56)';x.lineWidth=2;x.setLineDash([10,10]);x.stroke();x.setLineDash([]);}
+  EDITOR.points.forEach((p,i)=>{const [px,py]=editorWorldToCanvas(p),sel=i===EDITOR.selected;x.beginPath();x.arc(px,py,sel?10:7,0,7);x.fillStyle=sel?accent:'#fff8e7';x.fill();x.lineWidth=3;x.strokeStyle='#071b2b';x.stroke();x.fillStyle='#071b2b';x.font='900 10px sans-serif';x.textAlign='center';x.fillText(i+1,px,py+3.5);});
+  el('editorReadout').textContent=`${EDITOR.points.length} CONTROL POINTS · ${th?.name||''}`;
+}
+function editorSync(){const p=EDITOR.points[EDITOR.selected];for(const [id,key] of [['editorY','y'],['editorW','w'],['editorS','s']]){const input=el(id);input.disabled=!p;if(p)input.value=p[key];el(id+'Val').textContent=p?Number(p[key]).toFixed(key==='y'?0:1):'—';}const th=THEME_LIBRARY[EDITOR.theme];el('editorTheme').value=EDITOR.theme;el('editorThemeNote').textContent=th?.note||'';}
+function editorPayload(){return {version:1,name:`CUSTOM · ${THEME_LIBRARY[EDITOR.theme].name}`,theme:EDITOR.theme,ctrl:EDITOR.points.map(p=>({x:+p.x,z:+p.z,y:+p.y,w:+p.w,s:+p.s}))};}
+function editorValid(data){return data&&THEME_LIBRARY[data.theme]&&Array.isArray(data.ctrl)&&data.ctrl.length>=6&&data.ctrl.length<=64&&data.ctrl.every(p=>['x','z','y','w','s'].every(k=>Number.isFinite(+p[k])));}
+for(const key of themeKeys){const o=document.createElement('option');o.value=key;o.textContent=THEME_LIBRARY[key].name;el('editorTheme').appendChild(o);}
+el('editorTheme').addEventListener('change',e=>{editorSnapshot();EDITOR.theme=e.target.value;editorSync();editorDraw();});
+for(const [id,key] of [['editorY','y'],['editorW','w'],['editorS','s']])el(id).addEventListener('input',e=>{const p=EDITOR.points[EDITOR.selected];if(!p)return;p[key]=+e.target.value;el(id+'Val').textContent=Number(p[key]).toFixed(key==='y'?0:1);editorDraw();});
+editorCanvas.addEventListener('pointerdown',e=>{const r=editorCanvas.getBoundingClientRect(),cx=(e.clientX-r.left)*editorCanvas.width/r.width,cy=(e.clientY-r.top)*editorCanvas.height/r.height;let best=-1,bd=18;EDITOR.points.forEach((p,i)=>{const [x,y]=editorWorldToCanvas(p),d=Math.hypot(x-cx,y-cy);if(d<bd){bd=d;best=i;}});editorSnapshot();if(best<0){const p=editorCanvasToWorld(cx,cy),base=EDITOR.points[EDITOR.selected]||{y:55,w:8,s:1};EDITOR.points.splice(Math.min(EDITOR.points.length,EDITOR.selected+1),0,{x:p.x,z:p.z,y:base.y,w:base.w,s:base.s});EDITOR.selected=Math.min(EDITOR.points.length-1,EDITOR.selected+1);}else EDITOR.selected=best;EDITOR.drag=true;editorCanvas.setPointerCapture(e.pointerId);editorSync();editorDraw();});
+editorCanvas.addEventListener('pointermove',e=>{if(!EDITOR.drag)return;const r=editorCanvas.getBoundingClientRect(),p=editorCanvasToWorld((e.clientX-r.left)*editorCanvas.width/r.width,(e.clientY-r.top)*editorCanvas.height/r.height),pt=EDITOR.points[EDITOR.selected];pt.x=Math.max(-25,Math.min(160,p.x));pt.z=Math.max(-260,Math.min(25,p.z));editorDraw();});
+editorCanvas.addEventListener('pointerup',()=>EDITOR.drag=false);editorCanvas.addEventListener('pointercancel',()=>EDITOR.drag=false);
+el('editorStarter').onclick=()=>editorStarter(EDITOR.theme);el('editorClear').onclick=()=>{editorSnapshot();EDITOR.points=[];EDITOR.selected=0;editorSync();editorDraw();};
+el('editorDelete').onclick=()=>{if(!EDITOR.points.length)return;editorSnapshot();EDITOR.points.splice(EDITOR.selected,1);EDITOR.selected=Math.max(0,Math.min(EDITOR.selected,EDITOR.points.length-1));editorSync();editorDraw();};
+el('editorUndo').onclick=()=>{const raw=EDITOR.history.pop();if(!raw)return;const d=JSON.parse(raw);EDITOR.points=d.points;EDITOR.theme=d.theme;EDITOR.selected=Math.min(EDITOR.selected,EDITOR.points.length-1);editorSync();editorDraw();};
+el('editorSave').onclick=()=>{const d=editorPayload();if(!editorValid(d)){eventToast('TRACK NEEDS AT LEAST 6 VALID BUOYS');return;}localStorage.setItem('spillway-custom-track',JSON.stringify(d));eventToast('CUSTOM TRACK SAVED');};
+el('editorExport').onclick=async()=>{const raw=JSON.stringify(editorPayload());el('editorData').value=raw;try{await navigator.clipboard.writeText(raw);eventToast('TRACK COPIED');}catch(e){eventToast('TRACK READY TO COPY');}};
+el('editorImport').onclick=()=>{try{const d=JSON.parse(el('editorData').value);if(!editorValid(d))throw Error('invalid');editorSnapshot();EDITOR.theme=d.theme;EDITOR.points=d.ctrl.map(p=>({x:+p.x,z:+p.z,y:+p.y,w:+p.w,s:+p.s}));EDITOR.selected=0;editorSync();editorDraw();eventToast('TRACK IMPORTED');}catch(e){eventToast('IMPORT NEEDS VALID TRACK DATA');}};
+el('editorTest').onclick=()=>{const d=editorPayload();if(!editorValid(d)){eventToast('ADD AT LEAST 6 BUOYS TO TEST');return;}localStorage.setItem('spillway-custom-track',JSON.stringify(d));localStorage.setItem('spillway-level','custom');location.reload();};
+try{const d=JSON.parse(localStorage.getItem('spillway-custom-track')||'null');if(editorValid(d)){EDITOR.theme=d.theme;EDITOR.points=d.ctrl.map(p=>({...p}));EDITOR.selected=0;editorSync();editorDraw();}else editorStarter('waterpark',false);}catch(e){editorStarter('waterpark',false);}
+if(LEVELS.custom){
+  const b=document.createElement('button');b.dataset.lvl='custom';b.textContent='MY TRACK';el('lvlRow').appendChild(b);
+  el('levelPanel').insertAdjacentHTML('beforeend',`<div class="lvlCard" data-lvl="custom"><canvas class="thumb" width="84" height="64"></canvas><div><b>MY TRACK</b><br><span>${LEVELS.custom.name.replace('CUSTOM · ','')} · made in the course editor</span></div><span class="bestLabel">best —</span></div>`);
+}
+
 // ---- menu & settings wiring
 // Rebuild the hub as race control + paddock garage without duplicating the settings state.
 {
-  const labels = [['title','RACE'],['duckPanel','GARAGE'],['levelPanel','COURSES'],['statsPanel','RECORDS'],['guidePanel','GUIDE'],['settingsPanel','OPTIONS']];
+  const labels = [['title','RACE'],['duckPanel','GARAGE'],['levelPanel','COURSES'],['editorPanel','EDITOR'],['statsPanel','RECORDS'],['guidePanel','GUIDE'],['settingsPanel','OPTIONS']];
   for (const [tab,label] of labels) { const b=document.querySelector(`#hubTabs button[data-tab="${tab}"]`); if(b)b.textContent=label; }
   const optBtn=document.querySelector('#hubTabs button[data-tab="settingsPanel"]');
   const audioBtn=document.createElement('button');audioBtn.dataset.tab='audioPanel';audioBtn.textContent='AUDIO';
   optBtn.parentNode.insertBefore(audioBtn,document.querySelector('#hubTabs button[data-tab="statsPanel"]'));
-  const tabs=el('hubTabs');for(const id of ['title','duckPanel','levelPanel','audioPanel','settingsPanel','statsPanel','guidePanel'])tabs.appendChild(tabs.querySelector(`[data-tab="${id}"]`));
+  const tabs=el('hubTabs');for(const id of ['title','duckPanel','levelPanel','editorPanel','audioPanel','settingsPanel','statsPanel','guidePanel'])tabs.appendChild(tabs.querySelector(`[data-tab="${id}"]`));
   const mix=el('audioMix');
   for(const id of ['setMusic','setSfx']){const row=el(id)?.closest('.setRow');if(row)mix.appendChild(row);}
   const oldSound=el('soundTest')?.closest('.setRow');if(oldSound)oldSound.remove();
@@ -5959,9 +6060,9 @@ document.addEventListener('click', e => {
 });
 document.querySelectorAll('#lapRow button').forEach(b => b.addEventListener('click', () => setLaps(+b.dataset.l)));
 document.querySelectorAll('#lvlRow button').forEach(b => {
-  b.classList.toggle('sel', b.dataset.lvl === LVL.id);
+  b.classList.toggle('sel', b.dataset.lvl === ACTIVE_LEVEL_KEY);
   b.addEventListener('click', () => {
-    if (b.dataset.lvl === LVL.id) return;
+    if (b.dataset.lvl === ACTIVE_LEVEL_KEY) return;
     localStorage.setItem('spillway-level', b.dataset.lvl);
     location.reload();
   });
@@ -6015,14 +6116,14 @@ function drawCourseThumbs() {
 drawCourseThumbs();
 function refreshLevelCards() {
   document.querySelectorAll('.lvlCard[data-lvl]').forEach(card => {
-    card.classList.toggle('sel', card.dataset.lvl === LVL.id);
+    card.classList.toggle('sel', card.dataset.lvl === ACTIVE_LEVEL_KEY);
     const best = BEST[`${card.dataset.lvl}-${SETTINGS.difficulty}-${SETTINGS.laps}`];
     card.querySelector('.bestLabel').textContent = best ? `best ${fmtTime(best)}` : 'best —';
   });
 }
 document.querySelectorAll('#hubTabs button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 document.querySelectorAll('.lvlCard[data-lvl]').forEach(card => card.addEventListener('click', () => {
-  if (card.dataset.lvl === LVL.id) { showTab('title'); return; }
+  if (card.dataset.lvl === ACTIVE_LEVEL_KEY) { showTab('title'); return; }
   localStorage.setItem('spillway-level', card.dataset.lvl);
   location.reload();
 }));
