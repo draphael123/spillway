@@ -735,8 +735,8 @@ const LEVELS = {
     id: 'harbor', name: 'HARBOR RUSH', sub: 'storm drains · tide locks · container quay · king tide',
     weathers: ['storm', 'mist', 'golden', 'storm'],
     surge: [[0.855, 0.985]], surgeCol: [1.0, 0.38, 0.10],
-    pal: { deep: [0.025, 0.20, 0.28], shal: [0.12, 0.48, 0.53], fog: [0.60, 0.70, 0.72],
-           ground: [0.28, 0.30, 0.30], tree: [0.18, 0.24, 0.24], skyMul: [0.78, 0.84, 0.88] },
+    pal: { deep: [0.025, 0.20, 0.28], shal: [0.12, 0.48, 0.53], fog: [0.82, 0.88, 0.89],
+           ground: [0.53, 0.08, 0.68], tree: [0.50, 0.05, 0.68], skyMul: [1.0, 1.02, 1.04] },
     ctrl: [
       { x:   0, z:    0, y: 46.0, w: 10, s: 0.8 },  // flood-control start
       { x: -12, z:  -34, y: 45.4, w: 8,  s: 1.3 },  // concrete channel
@@ -758,6 +758,7 @@ const LEVELS = {
   },
 };
 const LVL = LEVELS[localStorage.getItem('spillway-level')] || LEVELS.spillway;
+const IS_BATHWORLD = LVL.id === 'porcelain' || LVL.id === 'harbor';
 const SURGE_STYLE = ({
   spillway:   { name:'RUNE CURRENT',       speed:1.08, sway:0.0,  pulse:1.8, prop:'rune' },
   millrace:   { name:'PENSTOCK PUMP',      speed:1.18, sway:0.22, pulse:4.6, prop:'gear' },
@@ -2601,11 +2602,11 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   }
   const mottleTex = new THREE.CanvasTexture(mc2);
   mottleTex.wrapS = mottleTex.wrapT = THREE.RepeatWrapping;
-  const bankTex = LVL.id === 'porcelain' ? TILETEX : mottleTex;
+  const bankTex = IS_BATHWORLD ? TILETEX : mottleTex;
   bankTex.colorSpace = THREE.SRGBColorSpace;
   var banksMesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
-    vertexColors:true, map:bankTex, bumpMap:bankTex, bumpScale:LVL.id === 'porcelain' ? 0.12 : 0.38,
-    roughness:LVL.id === 'porcelain' ? 0.62 : 0.94, metalness:0, side:THREE.DoubleSide, flatShading:true,
+    vertexColors:true, map:bankTex, bumpMap:bankTex, bumpScale:IS_BATHWORLD ? 0.12 : 0.38,
+    roughness:IS_BATHWORLD ? 0.62 : 0.94, metalness:0, side:THREE.DoubleSide, flatShading:true,
   }));
   banksMesh.receiveShadow = true;
   scene.add(banksMesh);
@@ -2665,7 +2666,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const ob = randRange(3.5, 15);
     // course identity: Millrace has logged a third of its pines; Canopy has NO ground
     // pines at all (you're AT treetop height — its own crown billows fill the banks)
-    if ((LVL.id === 'millrace' && k % 3 === 0) || LVL.id === 'canopy' || LVL.id === 'porcelain') {
+    if ((LVL.id === 'millrace' && k % 3 === 0) || LVL.id === 'canopy' || IS_BATHWORLD) {
       q.identity(); m.compose(_tmpA.set(0, -300, 0), q, sc.set(0.001, 0.001, 0.001));
       trunks.setMatrixAt(k, m);
       for (let tr = 0; tr < 3; tr++) tiers[tr].setMatrixAt(k, m);
@@ -2743,7 +2744,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   const nB = 150;
   const bushes = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.9, 0),
     new THREE.MeshLambertMaterial({ color: 0xffffff }), nB);
-  for (let k = 0; k < nB && LVL.id !== 'porcelain'; k++) {
+  for (let k = 0; k < nB && !IS_BATHWORLD; k++) {
     const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.4, 13);
     const bs2 = randRange(0.5, 1.3);
     place(bushes, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.3, bs2, rand() * 6);
@@ -2755,7 +2756,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   const flowers = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 5, 4),
     new THREE.MeshLambertMaterial({ color: 0xffffff }), nF);
   const petals = [0xfff8e7, 0xffd23f, 0xff6b6b, 0xc084fc, 0xff9ff3];
-  for (let k = 0; k < nF && LVL.id !== 'porcelain'; k++) {
+  for (let k = 0; k < nF && !IS_BATHWORLD; k++) {
     const i = k < 170 ? Math.floor((0.73 + rand() * 0.26) * NSAMP)
                       : Math.floor(rand() * 0.25 * NSAMP);
     const sgn = (k % 2) * 2 - 1, ob = randRange(1.2, 9);
@@ -2766,7 +2767,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   const nBo = 60;
   const boulders = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.8, 0),
     new THREE.MeshLambertMaterial({ color: 0x8f949a, map: ROCKTEX }), nBo);
-  for (let k = 0; k < nBo && LVL.id !== 'porcelain'; k++) {
+  for (let k = 0; k < nBo && !IS_BATHWORLD; k++) {
     const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.6, 14);
     const bo2 = randRange(0.4, 1.5);
     place(boulders, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.2, bo2, rand() * 6);
@@ -2775,7 +2776,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   }
   // reeds — dense in the reed patches (in the water), sparse along waterlines.
   // The bathworks grows SUDS instead: flattened white foam blobs in the same slots.
-  const isSuds = LVL.id === 'porcelain';
+  const isSuds = IS_BATHWORLD;
   const nR = 260;
   const reedsIM = new THREE.InstancedMesh(
     isSuds ? new THREE.SphereGeometry(0.3, 6, 5) : new THREE.ConeGeometry(0.07, 1.5, 4),
@@ -2942,10 +2943,10 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
       0.18*zw[0] + 0.10*zw[1] + 0.40*zw[2] + 0.25*zw[3],
       0.44 + rand() * 0.08));
   }
-  if (LVL.id === 'porcelain') { mountains.count = 0; caps.count = 0; }
+  if (IS_BATHWORLD) { mountains.count = 0; caps.count = 0; }
   scene.add(caps);
   if (LVL.id !== 'spillway') { cacti.count = 0; slabs.count = 0; spires.count = 0; mTrunks.count = 0; mCrowns.count = 0; }
-  if (LVL.id === 'porcelain') { bushes.count = 0; flowers.count = 0; boulders.count = 0; tufts.count = 0; }
+  if (IS_BATHWORLD) { trunks.count = 0; tiers.forEach(t => t.count = 0); bushes.count = 0; flowers.count = 0; boulders.count = 0; tufts.count = 0; }
   // contact shadows: one soft dark disc under every prop — grounds the whole world
   {
     const bg = new THREE.CircleGeometry(1, 10); bg.rotateX(-Math.PI / 2);
@@ -3115,6 +3116,39 @@ const ARROWS = [];
       mesh.userData.lapMin = c.lapMin || 0;
       ARROWS.push(mesh); scene.add(mesh);
     }
+  }
+}
+
+// ---------- shared Bathworld skyline: both bathroom courses live inside the same giant tub.
+if (IS_BATHWORLD) {
+  const tileMat = new THREE.MeshStandardMaterial({ color: 0xe7eeee, map: TILETEX, bumpMap: TILETEX, bumpScale: 0.08, roughness: 0.56 });
+  const chromeMat = new THREE.MeshStandardMaterial({ color: 0xcbd6da, roughness: 0.18, metalness: 0.82 });
+  // A tiled bathroom wall follows the outer course silhouette instead of leaving an empty skybox horizon.
+  for (let n = 0; n < 20; n++) {
+    const i = Math.round((n / 20) * NSAMP), sgn = n % 2 ? 1 : -1, ob = 17;
+    const gy = waterHeightAt(i) + bankH(i, ob, sgn);
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(24, 10, 0.75), tileMat);
+    panel.position.set(p.x, gy + 4.35, p.z); panel.rotation.y = Math.atan2(S.tan[i].x, S.tan[i].z) - Math.PI / 2;
+    panel.receiveShadow = true; scene.add(panel);
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(24.2, 0.3, 0.95), chromeMat);
+    trim.position.set(p.x, gy + 9.25, p.z); trim.rotation.y = panel.rotation.y; scene.add(trim);
+  }
+  // Giant toiletries turn the room into a readable scale joke and a real background skyline.
+  const bottleSpecs = [[.18,-1,0x66c6d0,7.5],[.53,1,0xf49ab4,10],[.82,-1,0xf2cf64,8.5]];
+  for (const [t2, sgn, col, h] of bottleSpecs) {
+    const i = Math.round(t2 * NSAMP), ob = 11.5;
+    const gy = waterHeightAt(i) + bankH(i, ob, sgn);
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(2.25, 2.5, h, 12), new THREE.MeshPhongMaterial({ color: col, shininess: 65 }));
+    body.position.y = h / 2 - 0.15;
+    const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 2.25, 1.1, 12), new THREE.MeshPhongMaterial({ color: col, shininess: 65 }));
+    shoulder.position.y = h + 0.35;
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.8, 12), chromeMat); cap.position.y = h + 1.25;
+    const label = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 2.0), new THREE.MeshBasicMaterial({ color: 0xfffbeb }));
+    label.position.set(0, h * .55, 2.26); g.add(body, shoulder, cap, label);
+    g.position.set(p.x, gy, p.z); g.rotation.y = Math.atan2(S.tan[i].x, S.tan[i].z); scene.add(g);
   }
 }
 
@@ -3491,31 +3525,35 @@ if (LVL.id === 'millrace') {
   const metal = c => new THREE.MeshStandardMaterial({color:c,roughness:.48,metalness:.55});
   // Flood-control walls and sodium lamps frame the municipal channel.
   for(let n=0;n<18;n++){
-    const i=Math.round((.02+n*.046)*NSAMP),sgn=n%2?1:-1,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+3.8));
-    const wall=new THREE.Mesh(new THREE.BoxGeometry(8,2.6,.7),lam(n%3?0x686d6d:0xd5632a));wall.position.set(p.x,waterHeightAt(i)+1.1,p.z);wall.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(wall);
-    if(n%3===0){const post=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,4.2,6),metal(0x27343a));post.position.set(p.x,waterHeightAt(i)+3,p.z);const lamp=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),new THREE.MeshBasicMaterial({color:0xffb23e}));lamp.position.set(p.x,waterHeightAt(i)+5,p.z);scene.add(post,lamp);}
+    const i=Math.round((.02+n*.046)*NSAMP),sgn=n%2?1:-1,ob=3.8,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,ob,sgn);
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(8,2.6,.7),lam(n%3?0x66aeb3:0xe98261));wall.position.set(p.x,gy+1.2,p.z);wall.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z)-Math.PI/2;scene.add(wall);
+    if(n%3===0){const post=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,4.2,6),metal(0x27343a));post.position.set(p.x,gy+2.1,p.z);const lamp=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),new THREE.MeshBasicMaterial({color:0xffb23e}));lamp.position.set(p.x,gy+4.25,p.z);scene.add(post,lamp);}
   }
   // Working container quay: stacked color blocks, crane silhouettes, and lock towers.
   for(let n=0;n<12;n++){
-    const i=Math.round((.50+n*.018)*NSAMP),sgn=1,p=S.pos[i].clone().addScaledVector(S.side[i],S.w[i]+8+(n%3)*3);
-    const box=new THREE.Mesh(new THREE.BoxGeometry(7,2.3,2.7),lam([0xd95d39,0x167d87,0xe2a93b,0x314c66][n%4]));box.position.set(p.x,waterHeightAt(i)+1.2+(n%2)*2.35,p.z);box.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(box);
+    const i=Math.round((.50+n*.018)*NSAMP),sgn=1,ob=8+(n%3)*3,p=S.pos[i].clone().addScaledVector(S.side[i],S.w[i]+ob),gy=waterHeightAt(i)+bankH(i,ob,sgn);
+    const box=new THREE.Mesh(new THREE.BoxGeometry(7,2.3,2.7),lam([0xd95d39,0x167d87,0xe2a93b,0x314c66][n%4]));box.position.set(p.x,gy+1.1,p.z);box.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z)-Math.PI/2;scene.add(box);
   }
   for(const t of [.37,.43]){
-    const i=Math.round(t*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],-(S.w[i]+5));
-    const tower=new THREE.Mesh(new THREE.BoxGeometry(3,10,3),lam(0x50595b));tower.position.set(p.x,waterHeightAt(i)+5,p.z);const light=new THREE.Mesh(new THREE.BoxGeometry(2.2,.35,2.2),new THREE.MeshBasicMaterial({color:0xff7a2f}));light.position.set(p.x,waterHeightAt(i)+9,p.z);scene.add(tower,light);
+    const i=Math.round(t*NSAMP),sgn=-1,ob=5,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,ob,sgn);
+    const tower=new THREE.Mesh(new THREE.BoxGeometry(3,10,3),lam(0x50595b));tower.position.set(p.x,gy+4.8,p.z);const light=new THREE.Mesh(new THREE.BoxGeometry(2.2,.35,2.2),new THREE.MeshBasicMaterial({color:0xff7a2f}));light.position.set(p.x,gy+9,p.z);scene.add(tower,light);
   }
   window._harborScene={cranes:[],doors:[],gauges:[],containers:[],boat:null};
   for(const [t2,sgn] of [[.51,1],[.60,1]]){
-    const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+8)),g=new THREE.Group(),mast=new THREE.Mesh(new THREE.BoxGeometry(.7,11,.7),metal(0x31565a)),boom=new THREE.Group();mast.position.y=5.5;const arm=new THREE.Mesh(new THREE.BoxGeometry(10,.45,.55),metal(0xff6b21));arm.position.x=-4.5;const cable=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,5,4),lam(0x202a2d));cable.position.set(-8.5,-2.6,0);const hook=new THREE.Mesh(new THREE.TorusGeometry(.22,.07,5,8,Math.PI*1.5),metal(0x252b2c));hook.position.set(-8.5,-5.1,0);boom.position.y=10.4;boom.add(arm,cable,hook);g.add(mast,boom);g.position.set(p.x,waterHeightAt(i),p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(g);_harborScene.cranes.push({g,boom,cable,hook,ph:t2*20});
+    const i=Math.round(t2*NSAMP),ob=8,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,ob,sgn),g=new THREE.Group(),mast=new THREE.Mesh(new THREE.BoxGeometry(.7,11,.7),metal(0x31565a)),boom=new THREE.Group();mast.position.y=5.5;const arm=new THREE.Mesh(new THREE.BoxGeometry(10,.45,.55),metal(0xff6b21));arm.position.x=-4.5;const cable=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,5,4),lam(0x202a2d));cable.position.set(-8.5,-2.6,0);const hook=new THREE.Mesh(new THREE.TorusGeometry(.22,.07,5,8,Math.PI*1.5),metal(0x252b2c));hook.position.set(-8.5,-5.1,0);boom.position.y=10.4;boom.add(arm,cable,hook);g.add(mast,boom);g.position.set(p.x,gy,p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(g);_harborScene.cranes.push({g,boom,cable,hook,ph:t2*20});
   }
   {
     const i=Math.round(.39*NSAMP),w=S.w[i],p=S.pos[i],g=new THREE.Group();
-    for(const sgn of [-1,1]){const door=new THREE.Mesh(new THREE.BoxGeometry(w*.94,4.8,.65),metal(0x35565b));door.position.set(sgn*w*.48,2.35,0);g.add(door);_harborScene.doors.push({door,baseY:2.35,sgn});}
+    for(const sgn of [-1,1]){
+      const pier=new THREE.Mesh(new THREE.BoxGeometry(1.5,9,2.2),lam(0xe7eeee));pier.position.set(sgn*(w+1),4.1,0);g.add(pier);
+      const door=new THREE.Mesh(new THREE.BoxGeometry(w*.94,4.8,.65),metal(0x4d8e95));door.position.set(sgn*w*.48,2.35,0);g.add(door);_harborScene.doors.push({door,baseY:2.35,sgn});
+    }
+    const gantry=new THREE.Mesh(new THREE.BoxGeometry(w*2+3.5,.65,2.0),metal(0xe98261));gantry.position.y=8.35;g.add(gantry);
     g.position.set(p.x,waterHeightAt(i),p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(g);
   }
   for(const t2 of [.34,.48,.68]){
-    const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],-(S.w[i]+1.6)),g=new THREE.Group(),post=new THREE.Mesh(new THREE.BoxGeometry(.35,5,.35),lam(0xf1e3c5));post.position.y=2.5;g.add(post);
-    for(let k=0;k<5;k++){const tick=new THREE.Mesh(new THREE.BoxGeometry(.8,.08,.12),new THREE.MeshBasicMaterial({color:k<2?0xff6b21:0x18333c}));tick.position.set(.3,.7+k*.85,.2);g.add(tick);}g.position.set(p.x,waterHeightAt(i),p.z);scene.add(g);_harborScene.gauges.push({g,post,baseY:g.position.y,ph:t2*12});
+    const i=Math.round(t2*NSAMP),sgn=-1,ob=1.6,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,ob,sgn),g=new THREE.Group(),post=new THREE.Mesh(new THREE.BoxGeometry(.35,5,.35),lam(0xf1e3c5));post.position.y=2.5;g.add(post);
+    for(let k=0;k<5;k++){const tick=new THREE.Mesh(new THREE.BoxGeometry(.8,.08,.12),new THREE.MeshBasicMaterial({color:k<2?0xff6b21:0x18333c}));tick.position.set(.3,.7+k*.85,.2);g.add(tick);}g.position.set(p.x,gy,p.z);scene.add(g);_harborScene.gauges.push({g,post,baseY:g.position.y,ph:t2*12});
   }
   for(const c of HARBOR_DYN.containers){const mesh=new THREE.Mesh(new THREE.BoxGeometry(4.5,1.45,2.1),new THREE.MeshStandardMaterial({color:c.col,roughness:.72,metalness:.18}));scene.add(mesh);c.mesh=mesh;_harborScene.containers.push(c);}
   if(HARBOR_DYN.boat){const g=new THREE.Group(),hull=new THREE.Mesh(new THREE.BoxGeometry(6.5,1.05,2.5),lam(0x203f4a)),cab=new THREE.Mesh(new THREE.BoxGeometry(2.1,1.6,1.8),lam(0xf0e1bd)),lamp=new THREE.Mesh(new THREE.SphereGeometry(.16,6,5),new THREE.MeshBasicMaterial({color:0xffb23e}));cab.position.set(1.1,1.15,0);lamp.position.set(1.1,2.15,0);g.add(hull,cab,lamp);scene.add(g);HARBOR_DYN.boat.mesh=g;_harborScene.boat=g;}
