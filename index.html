@@ -4425,7 +4425,7 @@ let rainMesh, rainVel = [];
 }
 
 // ---------- ducks (instanced body, sculpted wing/tail highlights, beak, eyes)
-let bodyIM, detailIM, beakIM, eyeIM;
+let bodyIM, detailIM, beakIM, eyeIM, contactIM;
 var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
 {
   const bodyG = new THREE.SphereGeometry(DUCK_R, 12, 10);
@@ -4467,7 +4467,10 @@ var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
     bodyIM.setColorAt(i, c);detailIM.setColorAt(i,c);
   }
   bodyIM.frustumCulled = detailIM.frustumCulled = beakIM.frustumCulled = eyeIM.frustumCulled = eyeShineIM.frustumCulled = false;
-  scene.add(bodyIM,detailIM, beakIM, eyeIM, eyeShineIM);
+  const contactG=new THREE.CircleGeometry(DUCK_R*.72,12);
+  contactIM=new THREE.InstancedMesh(contactG,new THREE.MeshBasicMaterial({color:0x123f48,transparent:true,opacity:.14,depthWrite:false}),N_DUCKS);
+  contactIM.frustumCulled=false;contactIM.renderOrder=3;
+  scene.add(contactIM,bodyIM,detailIM, beakIM, eyeIM, eyeShineIM);
 }
 // naive geometry merge (positions/normals/uv discarded ok for lambert flat colors)
 function mergeGeoms(geoms) {
@@ -5062,6 +5065,7 @@ function snapCam() {
 
 // ============================================================ RENDER SYNC
 const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new THREE.Vector3(1, 1, 1);
+const _contactQ=new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0));
 const _duskSun = new THREE.Color(), _c3 = new THREE.Color();
 function syncDucks(t) {
   for (const d of ducks) {
@@ -5070,6 +5074,7 @@ function syncDucks(t) {
       _m4.compose(_tmpA.set(0, -500, 0), _q.identity(), _s);
       bodyIM.setMatrixAt(d.idx, _m4);detailIM.setMatrixAt(d.idx,_m4);beakIM.setMatrixAt(d.idx, _m4);
       eyeIM.setMatrixAt(d.idx, _m4); eyeShineIM.setMatrixAt(d.idx, _m4);
+      contactIM.setMatrixAt(d.idx,_m4);
       _s.set(1, 1, 1);
       continue;
     }
@@ -5119,6 +5124,11 @@ function syncDucks(t) {
       _s.set(1, 1, 1);
     } else { eyeIM.setMatrixAt(d.idx, _m4); eyeShineIM.setMatrixAt(d.idx, _m4); }
     if (d.idx === 0) { outlineMesh.matrix.copy(_m4); outlineMesh.matrixAutoUpdate = false; }
+    // A quiet oval under each hull gives the flotilla water contact without adding
+    // another bright foam ring to an already busy 200-duck race.
+    const contactScale=d.air?.0001:wsc*(.9+Math.min(.35,Math.hypot(d.v.x,d.v.z)*.012));
+    _s.set(contactScale,contactScale,contactScale);
+    _m4.compose(_tmpA.set(d.p.x,waterHeightAt(d.si)+.055,d.p.z),_contactQ,_s);contactIM.setMatrixAt(d.idx,_m4);
   }
   _s.set(1, 1, 1);
   bodyIM.instanceMatrix.needsUpdate = true;
@@ -5126,6 +5136,7 @@ function syncDucks(t) {
   beakIM.instanceMatrix.needsUpdate = true;
   eyeIM.instanceMatrix.needsUpdate = true;
   eyeShineIM.instanceMatrix.needsUpdate = true;
+  contactIM.instanceMatrix.needsUpdate = true;
   ring.position.set(ducks[0].p.x, ducks[0].y + 0.1, ducks[0].p.z);
   ring.material.opacity = 0.55 + Math.sin(t * 5) * 0.25;
 }
