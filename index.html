@@ -71,6 +71,9 @@
   #elimHud b { display:flex; justify-content:space-between; font:900 15px 'Barlow Condensed',sans-serif; letter-spacing:1.4px; }
   #elimTrack { height:8px; margin-top:6px; overflow:hidden; border:1px solid #fff; border-radius:99px; background:#173847; }
   #elimFill { height:100%; width:100%; background:linear-gradient(90deg,#35e5e0,#ff55d7); }
+  #hudTop,#raceGoal,#flowPill,#cameraControls,#startMeter { transition:opacity .18s ease,transform .18s ease; }
+  body.gatePulse #elimHud { animation:gateAlarm .72s cubic-bezier(.2,.9,.2,1); }
+  @keyframes gateAlarm { 0%{transform:translateX(-50%) scale(1);filter:brightness(1)} 28%{transform:translateX(-50%) scale(1.08);filter:brightness(1.7)} 100%{transform:translateX(-50%) scale(1);filter:brightness(1)} }
   #joy { position:fixed; left:22px; bottom:70px; width:130px; height:130px; border-radius:50%;
     border:3px solid rgba(255,248,231,.7); background:rgba(14,42,51,.25); touch-action:none; z-index:30; }
   #joyNub { position:absolute; left:45px; top:45px; width:40px; height:40px; border-radius:50%;
@@ -409,6 +412,7 @@
     #shoveTouch { right:calc(20px + env(safe-area-inset-right)); bottom:calc(34px + env(safe-area-inset-bottom)); }
     #cameraControls { top:calc(90px + env(safe-area-inset-top)); right:calc(8px + env(safe-area-inset-right)); bottom:auto; display:none; flex-direction:column; padding:4px; gap:3px; }
     #cameraControls button { min-width:58px; padding:5px 6px; font-size:10px; }
+    body.hudQuiet #raceGoal,body.hudQuiet #cameraControls,body.hudQuiet #flowPill { opacity:0;pointer-events:none;transform:translateY(-8px); }
     #startMeter { top:50%; bottom:auto; transform:translate(-50%,-50%); width:min(330px,82vw); }
     .hubPane { transform:none; }
     .pill { min-height:52px; font-size:22px; padding:3px 9px; }
@@ -919,6 +923,7 @@ try{
 const LVL = LEVELS[localStorage.getItem('spillway-level')] || LEVELS.spillway;
 const ACTIVE_LEVEL_KEY=localStorage.getItem('spillway-level')==='custom'&&LEVELS.custom?'custom':LVL.id;
 const CUSTOM_FEATURES=ACTIVE_LEVEL_KEY==='custom'?(LEVELS.custom.features||[]):[];
+const IS_NEON_WATERPARK=ACTIVE_LEVEL_KEY==='custom'&&LEVELS.custom?.name.includes('NEON WATERPARK');
 const IS_BATHWORLD = LVL.id === 'porcelain' || LVL.id === 'harbor';
 const SURGE_STYLE = ({
   spillway:   { name:'RUNE SLALOM',        speed:1.08, sway:0.0,  pulse:1.8, prop:'rune',   cue:'READ THE GLOWING LANE' },
@@ -1841,7 +1846,7 @@ function finishElimination(){
 function updateElimination(){
   if(G.elimDone)return;const alive=ducks.filter(d=>!d.eliminated);const left=Math.max(0,G.elimNextT-G.raceT);el('elimCount').textContent=`${alive.length} REMAIN`;el('elimNext').textContent=`NEXT GATE IN ${Math.ceil(left)}`;el('elimFill').style.width=`${Math.max(0,Math.min(1,left/18))*100}%`;
   if(alive.length<=1){finishElimination();return;}if(G.raceT<G.elimNextT)return;G.elimNextT+=18;const ranked=[...alive].sort((a,b)=>a.progress-b.progress),drop=Math.min(alive.length-1,Math.max(1,Math.ceil(alive.length*.16))),cut=ranked.slice(0,drop);for(const d of cut){d.eliminated=true;d.finished=true;d.v.set(0,0,0);if(d.idx===0){playerHat.visible=false;playerPaddle.visible=false;}else if(rogueRigs[d.idx])rogueRigs[d.idx].position.y=-500;}
-  G.elimRound++;const remain=alive.length-drop;eventToast(`FLOOD GATE ${G.elimRound} · ${drop} DUCK${drop>1?'S':''} ELIMINATED · ${remain} REMAIN`);SFX.thud(4);G.camShake=.45;if(cut.includes(ducks[0])||remain<=1)finishElimination();
+  G.elimRound++;const remain=alive.length-drop;eventToast(`FLOOD GATE ${G.elimRound} · ${drop} DUCK${drop>1?'S':''} ELIMINATED · ${remain} REMAIN`);impactBeat(`CUT ${drop}!`,5);document.body.classList.remove('gatePulse');void document.body.offsetWidth;document.body.classList.add('gatePulse');setTimeout(()=>document.body.classList.remove('gatePulse'),760);SFX.thud(5);setTimeout(()=>SFX.whistle(),180);G.camShake=.58;if(cut.includes(ducks[0])||remain<=1)finishElimination();
 }
 function step(dt) {
   G.time += dt;
@@ -2313,7 +2318,7 @@ function step(dt) {
           G.results.push(d);
           if (d.idx === 0) onPlayerFinish();
           else if (G.finishedCount <= 3 && !ducks[0].finished) eventToast(`${d.name} takes P${d.place}!`);
-        } else if (d.idx === 0) {
+        } else if (d.idx === 0 && !G.elim) {
           if (d.lap === G.laps - 1) { lapBanner('⚑ FINAL LAP ⚑'); SFX.fanfare(); }
           else { lapBanner(`LAP ${d.lap + 1} / ${G.laps}`); SFX.beep(true); }
           SFX.splash();
@@ -3381,6 +3386,7 @@ const ARROWS = [];
 }
 
 // ---------- shared Bathworld skyline: both bathroom courses live inside the same giant tub.
+const NEON_DYN=[];
 if (IS_BATHWORLD) {
   const tileMat = new THREE.MeshStandardMaterial({ color: 0xe7eeee, map: TILETEX, bumpMap: TILETEX, bumpScale: 0.08, roughness: 0.56 });
   const chromeMat = new THREE.MeshStandardMaterial({ color: 0xcbd6da, roughness: 0.18, metalness: 0.82 });
@@ -3411,6 +3417,21 @@ if (IS_BATHWORLD) {
     label.position.set(0, h * .55, 2.26); g.add(body, shoulder, cap, label);
     g.position.set(p.x, gy, p.z); g.rotation.y = Math.atan2(S.tan[i].x, S.tan[i].z); scene.add(g);
   }
+}
+
+// ---------- Neon Waterpark: bath-toy architecture, visible elimination portals and moving props.
+if(IS_NEON_WATERPARK){
+  const cyan=new THREE.MeshStandardMaterial({color:0x20e8e2,emissive:0x063f4d,emissiveIntensity:1.15,roughness:.28,metalness:.18});
+  const pink=new THREE.MeshStandardMaterial({color:0xff45d7,emissive:0x5b073f,emissiveIntensity:1.2,roughness:.3,metalness:.12});
+  const amber=new THREE.MeshBasicMaterial({color:0xffd84a});
+  const dark=new THREE.MeshStandardMaterial({color:0x17243d,roughness:.42,metalness:.58});
+  const groundAt=(i,lat)=>{const sgn=Math.sign(lat)||1,ob=Math.max(.4,Math.abs(lat)-S.w[i]);return waterHeightAt(i)+Math.max(.05,bankH(i,ob,sgn));};
+  [.07,.31,.57,.82].forEach((t2,k)=>{const i=Math.round(t2*NSAMP),yaw=Math.atan2(S.tan[i].x,S.tan[i].z),g=new THREE.Group(),ring=new THREE.Mesh(new THREE.TorusGeometry(Math.max(4.2,S.w[i]*.62),.28,8,30),k%2?pink:cyan);ring.rotation.y=yaw;ring.position.copy(S.pos[i]);ring.position.y=waterHeightAt(i)+4.5;g.add(ring);for(const sgn of [-1,1]){const lat=sgn*(S.w[i]+1.2),p=S.pos[i].clone().addScaledVector(S.side[i],lat),gy=groundAt(i,lat),h=Math.max(1,ring.position.y-gy);const post=new THREE.Mesh(new THREE.CylinderGeometry(.32,.48,h,8),dark);post.position.set(p.x,gy+h/2,p.z);g.add(post);const lamp=new THREE.Mesh(new THREE.SphereGeometry(.24,7,5),amber);lamp.position.set(p.x,gy+h+.25,p.z);g.add(lamp);}scene.add(g);NEON_DYN.push({kind:'gate',obj:ring,phase:k*1.4});});
+  const si=Math.round(.43*NSAMP),sgn=1,lat=sgn*(S.w[si]+7),base=S.pos[si].clone().addScaledVector(S.side[si],lat),gy=groundAt(si,lat),topY=gy+12;
+  const tower=new THREE.Mesh(rbox(4.4,12,4.4,.3,3),dark);tower.position.set(base.x,gy+6,base.z);scene.add(tower);
+  for(const [off,mat] of [[-1.15,cyan],[1.15,pink]]){const ei=wrapI(si+72),end=S.pos[ei].clone().addScaledVector(S.side[ei],sgn*(S.w[ei]-.8));const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(base.x+S.tan[si].x*off,topY,base.z+S.tan[si].z*off),new THREE.Vector3().copy(base).addScaledVector(S.side[si],-sgn*5).setY(topY-1.2),new THREE.Vector3().lerpVectors(base,end,.55).setY(topY-5.5),end.setY(waterHeightAt(ei)+.55)]);scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve,30,.72,8,false),mat));}
+  const crown=new THREE.Mesh(new THREE.TorusGeometry(2.4,.22,7,24),pink);crown.position.set(base.x,topY+1.2,base.z);crown.rotation.x=Math.PI/2;scene.add(crown);NEON_DYN.push({kind:'spin',obj:crown,phase:0});
+  for(let k=0;k<14;k++){const i=Math.round((.04+k/14*.92)*NSAMP),sgn2=k%2?1:-1,lat2=sgn2*(S.w[i]+randRange(2.2,5.5)),p=S.pos[i].clone().addScaledVector(S.side[i],lat2),gy2=groundAt(i,lat2),ball=new THREE.Mesh(new THREE.SphereGeometry(.48,10,7),new THREE.MeshStandardMaterial({color:k%3===0?0xff45d7:k%3===1?0x20e8e2:0xffd84a,roughness:.3}));ball.position.set(p.x,gy2+.55,p.z);scene.add(ball);NEON_DYN.push({kind:'bob',obj:ball,y:ball.position.y,phase:k*.77});}
 }
 
 // ---------- landmarks: watermill, gorge arch, hoodoos, dock village (Spillway Run)
@@ -5610,7 +5631,7 @@ function prepRace(skipFly) {
   G.shortcutHits=new Set();
   G.creatorEvents=new Set();G.elim=localStorage.getItem('spillway-mode')==='elimination';G.elimNextT=18;G.elimRound=0;G.elimDone=false;
   G.tt = ttMode; G._recT = 0; G.ghostRec = [];
-  if(G.elim){G.laps=999;G.tt=false;}
+  if(G.elim){G.laps=999;G.tt=false;G.tutOn=false;}
   G.guided = !!G.guidedNext; G.guidedNext = false;
   if (G.guided) { G.laps = 1; G.weather = 'clear'; G.gStep = 0; }
   G.ghost = (G.tt && !G.guided) ? safeStored(ttGhostKey(),null) : null;
@@ -6361,6 +6382,8 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now; lastRAF = now;
+  document.body.classList.toggle('hudQuiet',TOUCH.active&&G.mode==='race'&&(+eventEl.style.opacity>.5||document.body.classList.contains('gatePulse')));
+  for(const n of NEON_DYN){if(n.kind==='gate')n.obj.material.emissiveIntensity=1.05+.55*Math.sin(now/260+n.phase);else if(n.kind==='spin')n.obj.rotation.z=now/1300;else if(n.kind==='bob'){n.obj.position.y=n.y+Math.sin(now/520+n.phase)*.16;n.obj.rotation.y+=dt*.8;}}
   pollPad();
   if (G.mode !== 'title') advance(dt);
   else { // gentle idle bob on the title screen
