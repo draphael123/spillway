@@ -16,6 +16,8 @@ All music and ambience via [OpenGameArt](https://opengameart.org) — thank you 
   (https://opengameart.org/content/mysterious-ambience-song21)
 - Canopy Run theme: "Happy Adventure Loop" by tinyworlds — CC0
   (https://opengameart.org/content/happy-adventure-loop)
+- Porcelain Run theme: "8bit Bossa" by Cleyton Kauffman — CC0
+  (https://opengameart.org/content/bossa-nova)
 - Menu theme: "Happy Clappy Loop" by Owlish Media — CC0
   (https://opengameart.org/content/happy-clappy-loop)
 - Grandstand crowd + finish cheer: "Free Crowd Cheering Sounds" by Gregor Quendel — CC-BY 3.0

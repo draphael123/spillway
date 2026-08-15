@@ -209,6 +209,7 @@
   .lvlCard[data-lvl="millrace"]   { --stripe: linear-gradient(180deg, #9fc4ec, #5a6a78); }
   .lvlCard[data-lvl="undergrove"] { --stripe: linear-gradient(180deg, #8df26e, #17342a); }
   .lvlCard[data-lvl="canopy"]     { --stripe: linear-gradient(180deg, #ffc04a, #53d769); }
+  .lvlCard[data-lvl="porcelain"]  { --stripe: linear-gradient(180deg, #ffffff, #7fd4e8); }
   .lvlCard b { font-size: 19px; letter-spacing: 1px; }
   .lvlCard .thumb { flex-shrink: 0; border: 2.5px solid var(--ink); border-radius: 10px;
     box-shadow: 0 2px 0 rgba(14,42,51,.3); }
@@ -276,7 +277,7 @@
     <div class="setRow"><span>Field</span><div class="segRow" id="duckRow">
       <button data-n="20">20</button><button data-n="40">40</button><button data-n="80">80</button></div></div>
     <div class="setRow"><span>Course</span><div class="segRow wrapRow" id="lvlRow" style="max-width:300px">
-      <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button><button data-lvl="undergrove">UNDERGROVE</button><button data-lvl="canopy">CANOPY RUN</button></div></div>
+      <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button><button data-lvl="undergrove">UNDERGROVE</button><button data-lvl="canopy">CANOPY RUN</button><button data-lvl="porcelain">PORCELAIN RUN</button></div></div>
     <div class="btnRow" style="margin-top:14px">
       <div class="go" id="raceBtn">RACE <small>(SPACE)</small></div>
       <div class="go" id="gpBtn" style="background:linear-gradient(180deg,#ffe886,#ff9a3c 60%,#e05a2a)">🏆 GRAND PRIX</div>
@@ -347,6 +348,7 @@
     <div class="lvlCard" data-lvl="millrace"><canvas class="thumb" width="84" height="64"></canvas><div><b>MILLRACE</b><br><span>the working forest &mdash; mind the machines</span></div><span class="bestLabel">best &mdash;</span></div>
     <div class="lvlCard" data-lvl="undergrove"><canvas class="thumb" width="84" height="64"></canvas><div><b>UNDERGROVE</b><br><span>the drowned-dark forest &mdash; follow the lanterns</span></div><span class="bestLabel">best &mdash;</span></div>
     <div class="lvlCard" data-lvl="canopy"><canvas class="thumb" width="84" height="64"></canvas><div><b>CANOPY RUN</b><br><span>the flooded forest &mdash; race the treetops</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="porcelain"><canvas class="thumb" width="84" height="64"></canvas><div><b>PORCELAIN RUN</b><br><span>the bathworks &mdash; tub rapids &middot; faucet falls &middot; the drain</span></div><span class="bestLabel">best &mdash;</span></div>
   </div>
  </div>
 </div>
@@ -524,6 +526,39 @@ const LEVELS = {
       { x:  14, z:    6, y: 73.0, w: 5.5, s: 2.2  },  // crest
     ],
   },
+  porcelain: {
+    id: 'porcelain', name: 'PORCELAIN RUN', sub: 'the bathworks — tub rapids · faucet falls · the drain',
+    weathers: ['mist', 'clear', 'mist'],
+    surge: [[0.795, 0.985]], surgeCol: [0.5, 0.9, 1.0],
+    // gleaming bathworks: pool-blue water, porcelain-white ground, steam-bright air
+    pal: { deep: [0.16, 0.42, 0.55], shal: [0.55, 0.76, 0.82], fog: [0.88, 0.92, 0.94],
+           ground: [0.55, 0.06, 0.74], tree: [0.5, 0.05, 0.6], skyMul: [1.02, 1.04, 1.08] },
+    ctrl: [
+      { x:   0, z:    0, y: 58.0, w: 8,   s: 0.7  },  // START/FINISH — the tub rim
+      { x:   8, z:  -36, y: 56.8, w: 6.5, s: 1.3  },  // Q1 TUB RAPIDS
+      { x:  -6, z:  -70, y: 55.2, w: 5.5, s: 1.8  },
+      { x:   6, z: -104, y: 53.6, w: 5,   s: 2.1  },  // the soap garden
+      { x:  -4, z: -138, y: 52.4, w: 6,   s: 1.5  },
+      { x:   2, z: -172, y: 51.6, w: 6.5, s: 1.3  },
+      { x:  18, z: -202, y: 50.4, w: 5,   s: 1.8  },  // Q2 TILE GORGE
+      { x:  44, z: -220, y: 49.6, w: 4.5, s: 2.0  },  // shampoo shelf narrows
+      { x:  66, z: -228, y: 49.0, w: 5,   s: 1.9  },
+      { x:  80, z: -226, y: 48.5, w: 5,   s: 2.0  },  // faucet lip
+      { x:  88, z: -219, y: 41.0, w: 5.5, s: 1.8  },  // FAUCET FALLS (7.5u)
+      { x: 100, z: -202, y: 39.8, w: 8,   s: 0.7  },  // the basin
+      { x: 110, z: -178, y: 39.0, w: 7,   s: 1.0  },
+      { x: 122, z: -148, y: 38.0, w: 6,   s: 1.5  },  // Q3 TILE CANYON
+      { x: 134, z: -116, y: 36.8, w: 5,   s: 2.0  },
+      { x: 127, z:  -84, y: 35.8, w: 6.5, s: 1.3  },
+      { x: 138, z:  -54, y: 34.8, w: 5,   s: 1.9  },  // the shampoo slick
+      { x: 128, z:  -26, y: 34.2, w: 9,   s: 0.6  },  // THE DRAIN
+      { x: 108, z:   -6, y: 34.6, w: 6,   s: 1.6  },  // Q4 approach
+      { x:  84, z:    4, y: 37.0, w: 5.5, s: 2.2  },  // OVERFLOW PIPE — pumped surge
+      { x:  58, z:   10, y: 44.5, w: 5,   s: 2.4  },
+      { x:  34, z:   10, y: 52.5, w: 5,   s: 2.4  },
+      { x:  16, z:    6, y: 56.5, w: 5.5, s: 2.2  },  // crest — back to the rim
+    ],
+  },
 };
 const LVL = LEVELS[localStorage.getItem('spillway-level')] || LEVELS.spillway;
 const CTRL = LVL.ctrl;
@@ -625,6 +660,11 @@ const EDDIES = ({
     { i: Math.round(0.195 * NSAMP), lat: -3.0, r: 4.0, spin: -1.4, pull: 0.8 },
     { i: Math.round(0.565 * NSAMP), lat:  0.0, r: 4.5, spin:  2.2, pull: 1.8, whirl: true }, // the mist pool
   ],
+  porcelain: [
+    { i: Math.round(0.440 * NSAMP), lat: -4.2, r: 4.8, spin:  1.5, pull: 0.8 },  // basin swirl
+    { i: Math.round(0.475 * NSAMP), lat:  4.0, r: 4.4, spin: -1.4, pull: 0.8 },
+    { i: Math.round(0.735 * NSAMP), lat:  0.4, r: 5.0, spin:  2.4, pull: 2.0, whirl: true },  // THE DRAIN
+  ],
 })[LVL.id];
 EDDIES.forEach(e => { e.pos = S.pos[e.i].clone().addScaledVector(S.side[e.i], e.lat); });
 
@@ -633,7 +673,8 @@ const REEDS = [];
 (({ spillway: [[0.06, 1], [0.35, -1], [0.62, 1], [0.785, -1]],
     millrace: [[0.10, 1], [0.475, -1], [0.775, 1]],
     undergrove: [[0.30, 1], [0.71, -1]],
-    canopy: [[0.13, -1], [0.38, 1], [0.72, -1]] })[LVL.id]
+    canopy: [[0.13, -1], [0.38, 1], [0.72, -1]],
+    porcelain: [[0.06, 1], [0.35, -1], [0.62, 1], [0.79, -1]] })[LVL.id]   // suds patches — slack soap foam
 ).forEach(([t, sgn]) => {
   const i = Math.round(t * NSAMP);
   REEDS.push({ i, pos: S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 1.6)), r: 2.6 });
@@ -656,6 +697,10 @@ const CHUTES = ({
     { t0: 0.255, t1: 0.295, latC: -0.5, halfW: 1.5 },  // moss chute
     { t0: 0.600, t1: 0.655, latC:  0.0, halfW: 1.6 },  // the rain gutter
   ],
+  porcelain: [
+    { t0: 0.095, t1: 0.135, latC: -1.5, halfW: 1.6 },  // tub jet stream
+    { t0: 0.560, t1: 0.600, latC:  1.5, halfW: 1.8 },  // the shampoo slick
+  ],
 })[LVL.id];
 // flood-gate shortcut: opens on the final lap of a 3-lap race
 CHUTES.push(({
@@ -663,6 +708,7 @@ CHUTES.push(({
   millrace: { t0: 0.085, t1: 0.155, latC: 1.6, halfW: 1.5, lapMin: 2 },
   undergrove: { t0: 0.275, t1: 0.335, latC: 2.0, halfW: 1.5, lapMin: 2 },
   canopy: { t0: 0.400, t1: 0.460, latC: -2.0, halfW: 1.5, lapMin: 2 },
+  porcelain: { t0: 0.300, t1: 0.360, latC: -2.0, halfW: 1.6, lapMin: 2 },
 })[LVL.id]);
 const SHOALS = ({
   spillway: [
@@ -681,6 +727,11 @@ const SHOALS = ({
   canopy: [
     { t0: 0.355, t1: 0.390, latC:  2.8, halfW: 2.2, mul: 0.35, mud: false },
     { t0: 0.705, t1: 0.735, latC: -2.4, halfW: 2.0, mul: 0.25, mud: true },
+  ],
+  porcelain: [   // rubber bath mats drag the hull; the scummy one really grabs
+    { t0: 0.185, t1: 0.212, latC: -3.2, halfW: 2.0, mul: 0.35, mud: false },
+    { t0: 0.630, t1: 0.656, latC:  2.8, halfW: 2.2, mul: 0.35, mud: false },
+    { t0: 0.755, t1: 0.783, latC: -3.5, halfW: 2.4, mul: 0.22, mud: true },
   ],
 })[LVL.id];
 [...CHUTES, ...SHOALS].forEach(z => { z.i0 = Math.round(z.t0 * NSAMP); z.i1 = Math.round(z.t1 * NSAMP); });
@@ -713,6 +764,12 @@ if (LVL.id === 'spillway') {
 } else if (LVL.id === 'canopy') {
   // knots and burls in the boughs
   addRock(0.27, -1.2, 1.1); addRock(0.30, 1.6, 1.0); addRock(0.44, 2.0, 1.2); addRock(0.47, -1.5, 1.1);
+} else if (LVL.id === 'porcelain') {
+  // the soap garden: drifting soap bars block the tub rapids
+  addRock(0.140, -2.2, 1.3); addRock(0.152, 2.6, 1.1); addRock(0.164, 0.2, 1.5);
+  addRock(0.176, -3.0, 1.0); addRock(0.188, 2.0, 1.2);
+  // canyon soap scatter
+  addRock(0.570, -1.8, 1.1); addRock(0.585, 2.2, 1.3); addRock(0.600, -0.6, 1.0);
 }
 
 // floating log barriers — angled, partially blocking the channel
@@ -734,6 +791,10 @@ if (LVL.id === 'spillway') {
 } else if (LVL.id === 'canopy') {
   addLog(0.115, 1.8, 6, -1.1);    // branches lying across the run
   addLog(0.335, -3.0, 7, 0.5);
+} else if (LVL.id === 'porcelain') {
+  addLog(0.075, 2.2, 7, -1.15);   // pool noodles adrift
+  addLog(0.415, -4.5, 6, 0.35);
+  addLog(0.645, 2.5, 8, -1.0);
 }
 
 // islands: fat capsule blockers that braid the channel (risky lane vs safe lane).
@@ -756,6 +817,7 @@ if (LVL.id === 'spillway') {
 }
 if (LVL.id === 'millrace') addIsland(0.505, 0.545, -2.0, 2.0);   // millpond bar
 if (LVL.id === 'undergrove') addIsland(0.225, 0.255, 1.0, 1.8);  // glen island under the moon-gap
+if (LVL.id === 'porcelain') { addIsland(0.445, 0.480, -1.2, 2.1); addIsland(0.525, 0.555, 0.4, 1.6); }   // sponge islands
 
 // critters: a lunging pike, a snapping turtle, cosmetic frogs
 const CRITTERS = { pike: [], turtle: [], frogs: [] };
@@ -1081,6 +1143,7 @@ function auInit() {
     millrace: 'audio/theme-millrace.mp3',      // "Banjo Something" — GP-0 (CC0)
     undergrove: 'audio/theme-undergrove.mp3',  // "Mysterious Ambience" — cynicmusic (CC0)
     canopy: 'audio/theme-canopy.mp3',          // "Happy Adventure Loop" — tinyworlds (CC0)
+    porcelain: 'audio/theme-porcelain.mp3',    // "8bit Bossa" — Cleyton Kauffman (CC0)
   };
   const mkLoop = (src) => { const a = new Audio(src); a.loop = true; a.volume = 0; return a; };
   AU.track = mkLoop(THEME_FILES[LVL.id] || THEME_FILES.spillway);
@@ -1904,6 +1967,25 @@ const WOODTEX = (() => {
   t2.wrapS = t2.wrapT = THREE.RepeatWrapping;
   return t2;
 })();
+const TILETEX = (() => {   // porcelain bathroom tile: white squares, soft grout lines
+  const c2 = document.createElement('canvas'); c2.width = c2.height = 128;
+  const x2 = c2.getContext('2d');
+  x2.fillStyle = '#ffffff'; x2.fillRect(0, 0, 128, 128);
+  for (let ty = 0; ty < 4; ty++) for (let tx = 0; tx < 4; tx++) {
+    x2.fillStyle = `rgba(210,222,228,${0.10 + ((tx * 7 + ty * 13) % 5) * 0.02})`;
+    x2.fillRect(tx * 32 + 1.5, ty * 32 + 1.5, 29, 29);
+    x2.fillStyle = 'rgba(255,255,255,0.5)';
+    x2.fillRect(tx * 32 + 3, ty * 32 + 3, 25, 6);   // glaze highlight
+  }
+  x2.strokeStyle = 'rgba(120,138,148,0.55)'; x2.lineWidth = 2.5;
+  for (let l2 = 0; l2 <= 4; l2++) {
+    x2.beginPath(); x2.moveTo(l2 * 32, 0); x2.lineTo(l2 * 32, 128); x2.stroke();
+    x2.beginPath(); x2.moveTo(0, l2 * 32); x2.lineTo(128, l2 * 32); x2.stroke();
+  }
+  const t2 = new THREE.CanvasTexture(c2);
+  t2.wrapS = t2.wrapT = THREE.RepeatWrapping;
+  return t2;
+})();
 const ROCKTEX = (() => {
   const c2 = document.createElement('canvas'); c2.width = c2.height = 128;
   const x2 = c2.getContext('2d');
@@ -1996,7 +2078,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   }
   const mottleTex = new THREE.CanvasTexture(mc2);
   mottleTex.wrapS = mottleTex.wrapT = THREE.RepeatWrapping;
-  var banksMesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, map: mottleTex, side: THREE.DoubleSide, flatShading: true }));
+  var banksMesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, map: LVL.id === 'porcelain' ? TILETEX : mottleTex, side: THREE.DoubleSide, flatShading: true }));
   banksMesh.receiveShadow = true;
   scene.add(banksMesh);
 }
@@ -2055,7 +2137,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const ob = randRange(3.5, 15);
     // course identity: Millrace has logged a third of its pines; Canopy has NO ground
     // pines at all (you're AT treetop height — its own crown billows fill the banks)
-    if ((LVL.id === 'millrace' && k % 3 === 0) || LVL.id === 'canopy') {
+    if ((LVL.id === 'millrace' && k % 3 === 0) || LVL.id === 'canopy' || LVL.id === 'porcelain') {
       q.identity(); m.compose(_tmpA.set(0, -300, 0), q, sc.set(0.001, 0.001, 0.001));
       trunks.setMatrixAt(k, m);
       for (let tr = 0; tr < 3; tr++) tiers[tr].setMatrixAt(k, m);
@@ -2129,11 +2211,11 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     spires.setColorAt(k, cCol.setScalar(0.82 + rand() * 0.32));
     if (LVL.id === 'spillway') blobAt(i, ob, sgn, 0.9 * sp2);
   }
-  // bushes
+  // bushes (the bathworks has none — nothing grows on porcelain)
   const nB = 150;
   const bushes = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.9, 0),
     new THREE.MeshLambertMaterial({ color: 0xffffff }), nB);
-  for (let k = 0; k < nB; k++) {
+  for (let k = 0; k < nB && LVL.id !== 'porcelain'; k++) {
     const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.4, 13);
     const bs2 = randRange(0.5, 1.3);
     place(bushes, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.3, bs2, rand() * 6);
@@ -2145,7 +2227,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   const flowers = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 5, 4),
     new THREE.MeshLambertMaterial({ color: 0xffffff }), nF);
   const petals = [0xfff8e7, 0xffd23f, 0xff6b6b, 0xc084fc, 0xff9ff3];
-  for (let k = 0; k < nF; k++) {
+  for (let k = 0; k < nF && LVL.id !== 'porcelain'; k++) {
     const i = k < 170 ? Math.floor((0.73 + rand() * 0.26) * NSAMP)
                       : Math.floor(rand() * 0.25 * NSAMP);
     const sgn = (k % 2) * 2 - 1, ob = randRange(1.2, 9);
@@ -2156,30 +2238,33 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   const nBo = 60;
   const boulders = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.8, 0),
     new THREE.MeshLambertMaterial({ color: 0x8f949a, map: ROCKTEX }), nBo);
-  for (let k = 0; k < nBo; k++) {
+  for (let k = 0; k < nBo && LVL.id !== 'porcelain'; k++) {
     const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.6, 14);
     const bo2 = randRange(0.4, 1.5);
     place(boulders, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.2, bo2, rand() * 6);
     boulders.setColorAt(k, cCol.setScalar(0.8 + rand() * 0.35));
     blobAt(i, ob, sgn, 0.95 * bo2);
   }
-  // reeds — dense in the reed patches (in the water), sparse along waterlines
+  // reeds — dense in the reed patches (in the water), sparse along waterlines.
+  // The bathworks grows SUDS instead: flattened white foam blobs in the same slots.
+  const isSuds = LVL.id === 'porcelain';
   const nR = 260;
-  const reedsIM = new THREE.InstancedMesh(new THREE.ConeGeometry(0.07, 1.5, 4),
-    new THREE.MeshLambertMaterial({ color: 0x9aa84e }), nR);
+  const reedsIM = new THREE.InstancedMesh(
+    isSuds ? new THREE.SphereGeometry(0.3, 6, 5) : new THREE.ConeGeometry(0.07, 1.5, 4),
+    new THREE.MeshLambertMaterial({ color: isSuds ? 0xf6faf9 : 0x9aa84e }), nR);
   for (let k = 0; k < nR; k++) {
     if (k < 150) {
       const rp = REEDS[k % REEDS.length];
       const a = rand() * Math.PI * 2, rr = Math.sqrt(rand()) * (rp.r - 0.3);
-      _tmpA.set(rp.pos.x + Math.cos(a) * rr, waterHeightAt(rp.i) + 0.5, rp.pos.z + Math.sin(a) * rr);
+      _tmpA.set(rp.pos.x + Math.cos(a) * rr, waterHeightAt(rp.i) + (isSuds ? 0.12 : 0.5), rp.pos.z + Math.sin(a) * rr);
     } else {
       const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1;
       const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - randRange(0, 0.7)));
-      _tmpA.set(p.x, waterHeightAt(i) + 0.45, p.z);
+      _tmpA.set(p.x, waterHeightAt(i) + (isSuds ? 0.1 : 0.45), p.z);
     }
-    q.setFromAxisAngle(_tmpB.set(1, 0, 0), randRange(-0.12, 0.12));
+    q.setFromAxisAngle(_tmpB.set(1, 0, 0), isSuds ? 0 : randRange(-0.12, 0.12));
     const s = randRange(0.7, 1.4);
-    m.compose(_tmpA, q, sc.set(s, s, s));
+    m.compose(_tmpA, q, sc.set(s, isSuds ? s * 0.45 : s, s));
     reedsIM.setMatrixAt(k, m);
   }
   // MILLRACE: stumps where the pines were felled — the working forest shows its work
@@ -2253,7 +2338,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   const tufts = new THREE.InstancedMesh(new THREE.ConeGeometry(0.15, 0.55, 4),
     new THREE.MeshLambertMaterial({ color: 0xffffff }), nG2);
   const tuftH = LVL.pal ? LVL.pal.tree[0] : 0.24;
-  for (let k = 0; k < nG2; k++) {
+  for (let k = 0; k < nG2 && LVL.id !== 'porcelain'; k++) {
     const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(0.5, 2.6);
     const s = randRange(0.6, 1.5);
     place(tufts, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.2 * s, s, rand() * 6);
@@ -2281,7 +2366,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   const capGeo = new THREE.ConeGeometry(4.6, 6.2, 7, 1);
   const caps = new THREE.InstancedMesh(capGeo,
     new THREE.MeshLambertMaterial({ color: 0xeef4f4, flatShading: true }), nM);
-  for (let k = 0; k < nM; k++) {
+  for (let k = 0; k < nM && LVL.id !== 'porcelain'; k++) {
     const i = Math.floor((k / nM) * NSAMP), sgn = (k % 2) * 2 - 1;
     const ob = randRange(30, 48), s = randRange(0.7, 1.6);
     // never let a mountain land on ANOTHER leg of the course (zigzag courses!)
@@ -2305,8 +2390,10 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
       0.18*zw[0] + 0.10*zw[1] + 0.40*zw[2] + 0.25*zw[3],
       0.44 + rand() * 0.08));
   }
+  if (LVL.id === 'porcelain') { mountains.count = 0; caps.count = 0; }
   scene.add(caps);
   if (LVL.id !== 'spillway') { cacti.count = 0; slabs.count = 0; spires.count = 0; mTrunks.count = 0; mCrowns.count = 0; }
+  if (LVL.id === 'porcelain') { bushes.count = 0; flowers.count = 0; boulders.count = 0; tufts.count = 0; }
   // contact shadows: one soft dark disc under every prop — grounds the whole world
   {
     const bg = new THREE.CircleGeometry(1, 10); bg.rotateX(-Math.PI / 2);
@@ -2332,12 +2419,25 @@ let whirlMesh;
   const mat = new THREE.MeshLambertMaterial({ color: 0x8a8f94, map: ROCKTEX });
   const pilingG = new THREE.CylinderGeometry(1, 1.1, 4, 8);
   const pilingM = new THREE.MeshLambertMaterial({ color: 0x7a5c40, map: WOODTEX });
+  const soapCols = [0xffb7c9, 0xa8e6cf, 0xc3b8f2, 0xfff3ad];
+  let soapIx = 0;
   for (const r of ROCKS) {
     if (r.type === 'piling') {
       const mesh = new THREE.Mesh(pilingG, pilingM);
       mesh.position.set(r.pos.x, waterHeightAt(r.i) + 1.2, r.pos.z);
       mesh.scale.set(r.r, 1, r.r);
       scene.add(mesh);
+    } else if (LVL.id === 'porcelain') {
+      // soap bars: rounded pastel blocks sitting proud of the water, wearing a foam collar
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(r.r * 2.0, r.r * 0.9, r.r * 1.4),
+        new THREE.MeshPhongMaterial({ color: soapCols[soapIx++ % soapCols.length], shininess: 70, specular: 0x888888 }));
+      bar.position.set(r.pos.x, waterHeightAt(r.i) + r.r * 0.18, r.pos.z);
+      bar.rotation.y = rand() * 3;
+      const collar = new THREE.Mesh(new THREE.TorusGeometry(r.r * 1.15, r.r * 0.22, 6, 14),
+        new THREE.MeshLambertMaterial({ color: 0xf6faf9 }));
+      collar.rotation.x = Math.PI / 2;
+      collar.position.set(r.pos.x, waterHeightAt(r.i) + 0.06, r.pos.z);
+      scene.add(bar, collar);
     } else {
       const mesh = new THREE.Mesh(g, mat);
       mesh.position.set(r.pos.x, waterHeightAt(r.i) - 0.2, r.pos.z);
@@ -2382,12 +2482,15 @@ let whirlMesh;
       }
     }
   }
-  // floating logs (static ones only — machinery draws its own)
+  // floating logs (static ones only — machinery draws its own); the bathworks floats POOL NOODLES
   {
     const logM = new THREE.MeshLambertMaterial({ color: 0x6e4c2e, map: WOODTEX });
+    const noodleCols = [0xff6b9d, 0x4dd6c1, 0xb8e356];
+    let nIx = 0;
     for (const L of LOGS) {
       if (L.dyn) continue;   // machinery draws its own meshes
-      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(L.r, L.r, L.len, 8), logM);
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(L.r, L.r, L.len, 8),
+        LVL.id === 'porcelain' ? new THREE.MeshLambertMaterial({ color: noodleCols[nIx++ % noodleCols.length] }) : logM);
       mesh.position.set(L.c.x, waterHeightAt(L.i) + 0.05, L.c.z);
       mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), L.dir);
       scene.add(mesh);
@@ -2690,6 +2793,122 @@ if (LVL.id === 'millrace') {
     pad.position.set(p.x, waterHeightAt(i) + 0.15, p.z);
     scene.add(pad);
   }
+} else if (LVL.id === 'porcelain') {
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const chrome = () => new THREE.MeshPhongMaterial({ color: 0xd8dde2, shininess: 110, specular: 0xffffff });
+  // THE FAUCET: a colossal chrome tap pours the falls into the basin
+  {
+    const fi3 = wrapI(_fI0 + 2);
+    const lipY = waterHeightAt(wrapI(_fI0 - 4));
+    const cPos = S.pos[fi3].clone();
+    const colBase = cPos.clone().addScaledVector(S.side[fi3], -(S.w[fi3] + 2.5));
+    const column = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.6, 14, 10), chrome());
+    column.position.set(colBase.x, lipY + 1.5, colBase.z);
+    scene.add(column);
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, S.w[fi3] + 3.5, 9), chrome());
+    arm.position.copy(colBase).addScaledVector(S.side[fi3], (S.w[fi3] + 3.5) / 2);
+    arm.position.y = lipY + 8.2;
+    arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), S.side[fi3]);
+    scene.add(arm);
+    const spout = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 0.9, 2.6, 9), chrome());
+    spout.position.copy(cPos); spout.position.y = lipY + 7.2;
+    scene.add(spout);
+    // the pour: a soft white column from spout to the drop
+    const pour = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 1.15, 6.2, 9),
+      new THREE.MeshLambertMaterial({ color: 0xeef6f6, transparent: true, opacity: 0.7 }));
+    pour.position.copy(cPos); pour.position.y = lipY + 2.9;
+    scene.add(pour);
+    // tap handles crown the column
+    for (const hx of [-1, 1]) {
+      const handle = new THREE.Mesh(new THREE.SphereGeometry(0.85, 8, 6), chrome());
+      handle.scale.set(1, 0.5, 0.4); handle.rotation.y = hx * 0.8;
+      handle.position.set(colBase.x, lipY + 9.2, colBase.z);
+      scene.add(handle);
+    }
+  }
+  // shampoo bottles tower over the basin bank
+  {
+    const bi3 = Math.round(0.47 * NSAMP);
+    const cols3 = [[0xff6b9d, 0xd94f78], [0x4dd6c1, 0x2a9a8a], [0xc3b8f2, 0x8a78c9]];
+    for (let bt2 = 0; bt2 < 3; bt2++) {
+      const i = bi3 + bt2 * 16, sgn = 1, obB = 5.5 + (bt2 % 2) * 2.5;
+      const gy = waterHeightAt(i) + bankH(i, obB, sgn);
+      const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + obB));
+      const h3 = randRange(6, 9);
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.7, h3, 10),
+        new THREE.MeshPhongMaterial({ color: cols3[bt2][0], shininess: 60, specular: 0x777777 }));
+      body.position.set(p.x, gy + h3 / 2, p.z);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.85, 1.4, 8), lam(cols3[bt2][1]));
+      cap.position.set(p.x, gy + h3 + 0.7, p.z);
+      scene.add(body, cap);
+    }
+  }
+  // the tile walls: the bathroom rises around the whole course
+  for (let tw = 0; tw < 26; tw++) {
+    const i = Math.floor((tw / 26) * NSAMP), sgn = (tw % 2) * 2 - 1;
+    const obW = randRange(32, 44);
+    const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + obW));
+    let clearW = true;
+    for (let ci = 0; ci <= NSAMP; ci += 25) {
+      const dx2 = p.x - S.pos[ci].x, dz2 = p.z - S.pos[ci].z;
+      if (dx2 * dx2 + dz2 * dz2 < 27 * 27) { clearW = false; break; }
+    }
+    if (!clearW) continue;
+    const wallT = TILETEX.clone(); wallT.needsUpdate = true; wallT.repeat.set(3, 2);
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(26, randRange(14, 18), 2),
+      new THREE.MeshLambertMaterial({ color: tw % 5 ? 0xffffff : 0xbfe9ea, map: wallT }));
+    wall.position.set(p.x, waterHeightAt(i) + 5.5, p.z);
+    wall.rotation.y = Math.atan2(S.side[i].x, S.side[i].z) + Math.PI / 2 + randRange(-0.15, 0.15);
+    scene.add(wall);
+  }
+  // the drain: a chrome grate under the whirlpool
+  {
+    const wp2 = EDDIES.find(e => e.whirl);
+    if (wp2) {
+      const grate = new THREE.Mesh(new THREE.CylinderGeometry(wp2.r * 0.75, wp2.r * 0.8, 0.25, 18), chrome());
+      grate.position.set(wp2.pos.x, waterHeightAt(wp2.i) - 0.14, wp2.pos.z);
+      scene.add(grate);
+      for (let sl = 0; sl < 6; sl++) {
+        const slot = new THREE.Mesh(new THREE.BoxGeometry(wp2.r * 1.1, 0.1, 0.4), lam(0x2a3238));
+        slot.position.set(wp2.pos.x, waterHeightAt(wp2.i) - 0.005, wp2.pos.z);
+        slot.rotation.y = sl * Math.PI / 6;
+        scene.add(slot);
+      }
+    }
+  }
+  // a toy sailboat moored off the basin
+  {
+    const si3 = Math.round(0.50 * NSAMP);
+    const p = S.pos[si3].clone().addScaledVector(S.side[si3], -(S.w[si3] - 1.4));
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.7, 1.2), lam(0xd94f30));
+    hull.position.set(p.x, waterHeightAt(si3) + 0.25, p.z);
+    hull.rotation.y = Math.atan2(S.tan[si3].x, S.tan[si3].z);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 5), lam(0xfff8e7));
+    mast.position.set(p.x, waterHeightAt(si3) + 1.6, p.z);
+    const sailG = new THREE.BufferGeometry();
+    sailG.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 1.8, 0, 1.3, 0, 0], 3));
+    sailG.computeVertexNormals();
+    const sail = new THREE.Mesh(sailG, new THREE.MeshLambertMaterial({ color: 0xfff8e7, side: THREE.DoubleSide }));
+    sail.position.set(p.x, waterHeightAt(si3) + 0.7, p.z);
+    sail.rotation.y = hull.rotation.y;
+    scene.add(hull, mast, sail);
+  }
+  // a soap dish shelf with spare bars, near the start rim
+  {
+    const di3 = Math.round(0.035 * NSAMP), sgn = -1, obD = 3.2;
+    const gy = waterHeightAt(di3) + bankH(di3, obD, sgn);
+    const p = S.pos[di3].clone().addScaledVector(S.side[di3], sgn * (S.w[di3] + obD));
+    const dish = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.3, 0.5, 12), lam(0xf4f8f7));
+    dish.position.set(p.x, gy + 0.25, p.z);
+    scene.add(dish);
+    for (let sb = 0; sb < 3; sb++) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 0.85),
+        new THREE.MeshPhongMaterial({ color: [0xffb7c9, 0xa8e6cf, 0xfff3ad][sb], shininess: 70 }));
+      bar.position.set(p.x + (sb - 1) * 0.9, gy + 0.75 + (sb === 1 ? 0.3 : 0), p.z + (sb - 1) * 0.3);
+      bar.rotation.y = sb * 0.6;
+      scene.add(bar);
+    }
+  }
 } else {
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
   // watermill on the forest's left bank (set back so the chase cam never grazes it)
@@ -2951,7 +3170,9 @@ const MOTES = { n: 240 };
   MOTES.vel = [];
   for (let i = 0; i < MOTES.n; i++) {
     mp[i * 3] = randRange(-30, 30); mp[i * 3 + 1] = randRange(-4, 14); mp[i * 3 + 2] = randRange(-30, 30);
-    MOTES.vel.push([randRange(-0.3, 0.3), LVL.id === 'canopy' ? randRange(-0.8, -0.25) : randRange(-0.25, 0.15), randRange(-0.3, 0.3), rand() * 6]);
+    MOTES.vel.push([randRange(-0.3, 0.3),
+      LVL.id === 'canopy' ? randRange(-0.8, -0.25) : LVL.id === 'porcelain' ? randRange(0.25, 0.6) : randRange(-0.25, 0.15),
+      randRange(-0.3, 0.3), rand() * 6]);
   }
   const mg = new THREE.BufferGeometry();
   mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
@@ -3057,21 +3278,33 @@ if (LVL.id === 'millrace') {
 let surgeMesh;
 {
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
-  // island mounds: grassy capsule humps with a tuft
+  // island mounds: grassy capsule humps with a tuft — or squishy yellow SPONGES in the bathworks
   for (const is2 of ISLANDS) {
     const len = is2.a.distanceTo(is2.b);
-    const mound = new THREE.Mesh(new THREE.CapsuleGeometry(is2.halfW, len, 4, 10), lam(0x6da05b));
+    const isSponge = LVL.id === 'porcelain';
+    const mound = new THREE.Mesh(new THREE.CapsuleGeometry(is2.halfW, len, 4, 10), lam(isSponge ? 0xf2d64b : 0x6da05b));
     mound.position.copy(is2.a).lerp(is2.b, 0.5);
     mound.position.y = waterHeightAt(is2.mid) - is2.halfW * 0.45;
     mound.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), is2.b.clone().sub(is2.a).normalize());
     mound.scale.set(1, 1, 0.55);
     scene.add(mound);
-    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(is2.halfW * 0.45, 0), lam(0x8f949a));
-    rock.position.copy(mound.position); rock.position.y = waterHeightAt(is2.mid) + is2.halfW * 0.32;
-    scene.add(rock);
-    const tuft = new THREE.Mesh(new THREE.ConeGeometry(is2.halfW * 0.5, is2.halfW * 1.3, 6), lam(0x3f7a3c));
-    tuft.position.copy(rock.position); tuft.position.y += is2.halfW * 0.8;
-    scene.add(tuft);
+    if (isSponge) {
+      for (let po = 0; po < 7; po++) {   // sponge pores
+        const pore = new THREE.Mesh(new THREE.SphereGeometry(is2.halfW * randRange(0.09, 0.16), 5, 4), lam(0xc9a82c));
+        const tt2 = rand();
+        pore.position.copy(is2.a).lerp(is2.b, tt2);
+        pore.position.x += randRange(-0.5, 0.5) * is2.halfW;
+        pore.position.y = waterHeightAt(is2.mid) + is2.halfW * randRange(0.05, 0.3);
+        scene.add(pore);
+      }
+    } else {
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(is2.halfW * 0.45, 0), lam(0x8f949a));
+      rock.position.copy(mound.position); rock.position.y = waterHeightAt(is2.mid) + is2.halfW * 0.32;
+      scene.add(rock);
+      const tuft = new THREE.Mesh(new THREE.ConeGeometry(is2.halfW * 0.5, is2.halfW * 1.3, 6), lam(0x3f7a3c));
+      tuft.position.copy(rock.position); tuft.position.y += is2.halfW * 0.8;
+      scene.add(tuft);
+    }
   }
   // pike: dark lurker that darts
   for (const pk of CRITTERS.pike) {
@@ -4470,7 +4703,7 @@ function applyQuality() {
   const qmap = { low: [1, 0.4], medium: [1.5, 0.75], high: [Math.min(devicePixelRatio, 2), 1] };
   const [pr, frac] = qmap[SETTINGS.quality] || qmap.high;
   renderer.setPixelRatio(pr);
-  if (window.SCATTER) SCATTER.forEach(im => { im.count = Math.max(1, Math.floor(im._full * frac)); });
+  if (window.SCATTER) SCATTER.forEach(im => { im.count = im._full === 0 ? 0 : Math.max(1, Math.floor(im._full * frac)); });   // never resurrect suppressed props
   sun.castShadow = SETTINGS.quality !== 'low';
   MOTES.mesh.visible = SETTINGS.quality !== 'low';
   bloomPass.enabled = SETTINGS.quality === 'high';
@@ -4716,6 +4949,10 @@ function frame(now) {
       if (LVL.id === 'canopy' && !fire) {   // CANOPY: a slow rain of falling leaves
         MOTES.mat.color.setHSL(0.19 + Math.sin(now / 5000) * 0.03, 0.6, 0.48);
         MOTES.mat.size = 0.17; MOTES.mat.opacity = 0.7;
+      }
+      if (LVL.id === 'porcelain') {   // PORCELAIN: soap bubbles rising through the steam
+        MOTES.mat.color.setRGB(0.9, 0.97, 1.0);
+        MOTES.mat.size = 0.26; MOTES.mat.opacity = 0.6;
       }
       const mpos = MOTES.mesh.geometry.attributes.position;
       const cx2 = camera.position.x, cy2 = camera.position.y, cz2 = camera.position.z;
