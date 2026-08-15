@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>SPILLWAY — a rubber duck derby</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,9 +10,9 @@
 <style>
   :root { --ink:#0e2a33; --cream:#fff8e7; --sun:#ffd23f; --rush:#2ec4b6; }
   * { margin:0; padding:0; box-sizing:border-box; }
-  html,body { width:100%; height:100%; overflow:hidden; background:#8ecfdf; }
+  html,body { width:100%; height:100%; height:100dvh; overflow:hidden; background:#8ecfdf; }
   body { font-family: Georgia, 'Times New Roman', serif; color:var(--ink); }
-  #c { position:fixed; inset:0; display:block; }
+  #c { position:fixed; inset:0; width:100%; height:100%; display:block; }
   .hud { position:fixed; pointer-events:none; user-select:none; }
   #hudTop { top:14px; left:50%; transform:translateX(-50%); display:flex; gap:14px; align-items:center; }
   .pill { background:rgba(255,248,231,.92); border:2px solid var(--ink); border-radius:999px;
@@ -255,6 +255,8 @@
   #hub { gap:8px; padding-top:10px; width:100vw; overflow-x:hidden; }
   #hubHead h1 { font-size:clamp(48px,6vw,76px); letter-spacing:1px; }
   #hubHead .sub { font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; letter-spacing:3px; font-style:normal; font-size:15px; }
+  #fullscreenBtn { margin-top:8px; padding:6px 14px; font-family:'Barlow Condensed',sans-serif; font-weight:900; letter-spacing:1.5px; color:var(--enamel); background:rgba(7,27,43,.72); border:2px solid rgba(255,255,255,.55); border-radius:8px; cursor:pointer; }
+  #fullscreenBtn:focus-visible { outline:3px solid var(--buoy); outline-offset:3px; }
   #hubHead::after { height:8px; margin-top:5px; max-width:520px; background:repeating-linear-gradient(135deg,var(--enamel) 0 12px,var(--enamel) 12px 24px,var(--raceNavy) 24px 36px,var(--raceNavy) 36px 48px); }
   #hubTabs { gap:5px; padding:5px; border-radius:15px; background:rgba(7,27,43,.72); border:2px solid rgba(255,255,255,.16); }
   #hubTabs button { font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; font-size:17px; padding:9px 18px; border-radius:9px; box-shadow:none; }
@@ -320,15 +322,53 @@
   @media (max-width:860px) {
     #hubTabs { max-width:96vw; overflow-x:auto; justify-content:flex-start; }
     #hubTabs button { flex:0 0 auto; }
-    #raceGoal { top:auto; bottom:12px; left:12px; max-width:150px; }
-    #raceCue { top:78px; min-width:230px; max-width:64vw; }
-    #flowPill { bottom:12px; width:42vw; min-width:160px; }
+    #hub { max-height:100dvh; padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left)); }
+    .panel { padding:18px 14px; }
+    #title .setRow { gap:8px; }
+    #title .btnRow { width:100%; }
+    #title .btnRow .go { flex:1 1 220px; max-width:280px; }
+    #fullscreenBtn { font-size:12px; padding:6px 12px; }
+    #hudTop { top:calc(7px + env(safe-area-inset-top)); left:calc(8px + env(safe-area-inset-left)); transform:none; max-width:calc(100vw - 112px - env(safe-area-inset-left) - env(safe-area-inset-right)); }
+    #hudTop .pill { min-width:0; }
+    #minimap { top:calc(8px + env(safe-area-inset-top)); right:calc(8px + env(safe-area-inset-right)); transform:scale(.72); transform-origin:top right; }
+    #raceGoal { top:calc(122px + env(safe-area-inset-top)); bottom:auto; left:50%; transform:translateX(-50%); width:min(340px,calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right))); max-width:none; padding:6px 10px; text-align:center; }
+    #raceGoal b { display:inline; margin-right:8px; }
+    #raceGoal span { font-size:14px; }
+    #raceCue { top:calc(166px + env(safe-area-inset-top)); min-width:0; width:min(320px,calc(100vw - 30px)); max-width:none; }
+    #flowPill { bottom:calc(164px + env(safe-area-inset-bottom)); width:min(230px,58vw); min-width:170px; }
+    #joy { left:calc(18px + env(safe-area-inset-left)); bottom:calc(22px + env(safe-area-inset-bottom)); }
+    #shoveTouch { right:calc(20px + env(safe-area-inset-right)); bottom:calc(34px + env(safe-area-inset-bottom)); }
+    #startMeter { top:50%; bottom:auto; transform:translate(-50%,-50%); width:min(330px,82vw); }
     .hubPane { transform:none; }
     .pill { min-height:52px; font-size:22px; padding:3px 9px; }
     #place { min-width:98px; font-size:27px; }
     .challengeBoard { grid-template-columns:1fr; }
-    #speedo { display:none; } #hudTop { top:7px; max-width:74vw; } #minimap { transform:scale(.78); transform-origin:top right; }
-    #raceCue { top:68px; font-size:14px; } #raceIntro { left:2%; top:15%; width:88vw; }
+    #speedo { display:none; }
+    #raceCue { font-size:14px; }
+    #raceIntro { left:calc(8px + env(safe-area-inset-left)); top:18%; width:calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)); padding:13px 32px 13px 14px; transform:translateY(-10px); }
+    #raceIntro.on { transform:none; }
+    #raceIntro strong { font-size:32px; }
+    #raceIntro span { font-size:14px; }
+    #rivalCallout { bottom:36%; max-width:calc(100vw - 28px); text-align:center; }
+    #tutToast { bottom:36%; max-width:calc(100vw - 28px); border-radius:12px; }
+    #transformBanner strong { max-width:100%; padding:6px 16px; font-size:30px; }
+  }
+  @media (max-width:860px) and (orientation:landscape) {
+    #hubHead h1 { font-size:38px; }
+    #hubHead .sub { display:none; }
+    #hubTabs button { padding:6px 11px; }
+    #hudTop { max-width:calc(100vw - 100px - env(safe-area-inset-left) - env(safe-area-inset-right)); }
+    #minimap { transform:scale(.62); }
+    #raceGoal { top:calc(68px + env(safe-area-inset-top)); left:calc(12px + env(safe-area-inset-left)); transform:none; width:180px; text-align:left; }
+    #raceGoal b { display:block; margin:0; }
+    #raceCue { top:calc(68px + env(safe-area-inset-top)); width:250px; }
+    #joy { width:98px; height:98px; bottom:calc(12px + env(safe-area-inset-bottom)); }
+    #joyNub { left:34px; top:34px; width:30px; height:30px; }
+    #shoveTouch { width:76px; height:76px; bottom:calc(18px + env(safe-area-inset-bottom)); }
+    #flowPill { bottom:calc(12px + env(safe-area-inset-bottom)); width:220px; }
+    #startMeter { top:52%; width:300px; }
+    #raceIntro { top:22%; width:min(430px,58vw); }
+    #rivalCallout,#tutToast { bottom:29%; }
   }
   @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; } }
 </style>
@@ -361,6 +401,7 @@
   <div id="hubHead">
     <h1><span class="duckMark">🦆</span> SPILLWAY <span class="duckMark rev">🦆</span></h1>
     <div class="sub" id="tagline">a rubber duck derby &mdash; eighty ducks, one river, no engines</div>
+    <button id="fullscreenBtn" type="button">⛶ FULLSCREEN</button>
   </div>
   <div id="hubTabs">
     <button data-tab="title" class="sel">🏁 RACE</button><button data-tab="duckPanel">🦆 YOUR DUCK</button><button data-tab="levelPanel">🗺️ COURSES</button><button data-tab="statsPanel">🏆 STATS</button><button data-tab="guidePanel">📖 GUIDE</button><button data-tab="settingsPanel">⚙️ SETTINGS</button>
@@ -5367,6 +5408,14 @@ addEventListener('pointerdown', auInit, { once: false });
 
 // ---- menu & settings wiring
 el('raceBtn').addEventListener('click', () => { ttMode = false; prepRace(); });
+{
+  const fsBtn=el('fullscreenBtn'),root=document.documentElement;
+  const canFS=!!(root.requestFullscreen||root.webkitRequestFullscreen);
+  if(!canFS)fsBtn.style.display='none';
+  const syncFS=()=>{const on=!!(document.fullscreenElement||document.webkitFullscreenElement);fsBtn.textContent=on?'↙ EXIT FULLSCREEN':'⛶ FULLSCREEN';fsBtn.setAttribute('aria-pressed',String(on));resize();};
+  fsBtn.addEventListener('click',async()=>{try{const on=document.fullscreenElement||document.webkitFullscreenElement;if(on){const exit=document.exitFullscreen||document.webkitExitFullscreen;await exit.call(document);}else{const enter=root.requestFullscreen||root.webkitRequestFullscreen;await enter.call(root,{navigationUI:'hide'});}}catch(e){eventToast('FULLSCREEN IS BLOCKED BY THIS BROWSER');}});
+  document.addEventListener('fullscreenchange',syncFS);document.addEventListener('webkitfullscreenchange',syncFS);syncFS();
+}
 el('ttBtn').addEventListener('click', () => { ttMode = true; prepRace(); });
 el('tutBtn').addEventListener('click', () => { auInit(); startTutorial(); });
 el('flowPill').addEventListener('pointerdown', e => { e.preventDefault(); auInit(); doFlowBurst(); });
@@ -5793,7 +5842,7 @@ function frame(now) {
     el('timer').firstChild.textContent = fmtTime(G.raceT || 0);
     el('speedo').firstChild.textContent = Math.round(Math.hypot(ducks[0].v.x, ducks[0].v.z) * 3.1);
     const sp2 = el('shovePill');
-    sp2.style.display = (ducks[0].inFlume || G.tt) ? 'none' : '';
+    sp2.style.display = (TOUCH.active || ducks[0].inFlume || G.tt) ? 'none' : '';
     sp2.classList.toggle('cooling', (ducks[0].shoveT || 0) > 0);
     if (G.mode === 'countdown') {
       const c = Math.ceil(G.countdown);
