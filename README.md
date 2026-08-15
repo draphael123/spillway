@@ -28,6 +28,14 @@ All music and ambience via [OpenGameArt](https://opengameart.org) — thank you 
   (https://opengameart.org/content/generator-loop)
 - Undergrove cave drips: "Dripping Water Loop" by qubodup — CC0
   (https://opengameart.org/content/dripping-water-loop)
+- Splash SFX: "40 CC0 water splash & slime SFX" by rubberduck — CC0
+  (https://opengameart.org/content/40-cc0-water-splash-slime-sfx)
+- Bump SFX: "Thwack Sounds" by AntumDeluge — CC0
+  (https://opengameart.org/content/thwack-sounds)
+- Duck squeaks: "Squeak Toy Sounds" by bart — CC0
+  (https://opengameart.org/content/squeak-toy-sounds)
+- Winner jingle: "And the winner is" by congusbongus — CC0
+  (https://opengameart.org/content/and-the-winner-is)
 - Everything else (code, art, remaining sound effects) is generated in-file —
   the sfx are synthesized WebAudio, the art is procedural Three.js.
 

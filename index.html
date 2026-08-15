@@ -1119,6 +1119,7 @@ function saveSettings() { localStorage.setItem('spillway-settings', JSON.stringi
 
 // ============================================================ AUDIO (procedural — zero assets)
 const AU = { ctx: null };
+window.AU = AU;   // debug/headless access
 function auInit() {
   if (AU.ctx) return;
   const ctx = AU.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1153,6 +1154,24 @@ function auInit() {
   if (LVL.dark) AU.drips = mkLoop('audio/cave-drips.mp3');                   // qubodup (CC0)
   [AU.track, AU.menu, AU.crowd, AU.machinery, AU.drips].forEach(a => a && a.play().catch(() => {}));
   AU.track.addEventListener('error', () => { AU.track = null; setInterval(musicTick, 380); });
+  // sampled SFX (real recordings, CC0 — see README): decoded once into buffers,
+  // played through the sfx bus with pitch jitter so they never sound repeated
+  AU.smp = {};
+  const loadSmp = (name, url) => fetch(url).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b))
+    .then(buf => AU.smp[name] = buf).catch(() => {});
+  ['splash1', 'splash2', 'splash3', 'thud1', 'thud2', 'winner'].forEach(n => loadSmp(n, `audio/sfx-${n}.ogg`));
+  ['squeak1', 'squeak2', 'squeak3'].forEach(n => loadSmp(n, `audio/sfx-${n}.wav`));
+}
+function playSmp(name, vol, rate) {
+  const ctx = AU.ctx, buf = AU.smp && AU.smp[name];
+  if (!ctx || !buf) return false;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = rate || 1;
+  const g = ctx.createGain(); g.gain.value = vol;
+  src.connect(g); g.connect(AU.sfx);
+  src.start();
+  return true;
 }
 // one-shot stingers (cheer at the line, fireworks for the champion)
 function playOnce(src, vol) {
@@ -1194,9 +1213,13 @@ function noiseBurst(dur, freq, q, vol) {
   src.start();
 }
 const SFX = {
-  splash() { noiseBurst(0.3, 1400, 0.8, 0.4); },
+  splash() {
+    if (playSmp('splash' + (1 + Math.floor(Math.random() * 3)), 0.55, randRange(0.85, 1.2))) return;
+    noiseBurst(0.3, 1400, 0.8, 0.4);   // procedural fallback while samples decode
+  },
   thud(mag) {
     if (!AU.ctx) return;
+    if (playSmp('thud' + (1 + Math.floor(Math.random() * 2)), Math.min(0.95, 0.35 + Math.abs(mag || 3) * 0.09), randRange(0.8, 1.1))) return;
     noiseBurst(0.12, 200, 1.2, Math.min(0.9, 0.25 + mag * 0.08));
     const ctx = AU.ctx, t = ctx.currentTime;
     const o = ctx.createOscillator(); o.type = 'sine';
@@ -1204,8 +1227,9 @@ const SFX = {
     const g = ctx.createGain(); g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
     o.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + 0.2);
   },
-  quack() {
+  quack() {   // a rubber duck doesn't quack — it SQUEAKS
     if (!AU.ctx) return;
+    if (playSmp('squeak' + (1 + Math.floor(Math.random() * 3)), 0.5, randRange(0.9, 1.18))) return;
     const ctx = AU.ctx, t = ctx.currentTime;
     const o = ctx.createOscillator(); o.type = 'sawtooth';
     o.frequency.setValueAtTime(480, t); o.frequency.exponentialRampToValueAtTime(190, t + 0.12);
@@ -1216,7 +1240,10 @@ const SFX = {
   },
   beep(hi) { pluck(hi ? 880 : 620, 0.25, AU.sfx, 0.35); },
   whistle() { pluck(1240, 0.22, AU.sfx, 0.5); setTimeout(() => pluck(990, 0.2, AU.sfx, 0.6), 130); },
-  fanfare() { [392, 523, 659, 784].forEach((f, ix) => setTimeout(() => pluck(f, 0.3, AU.sfx, 0.9), ix * 120)); },
+  fanfare() {
+    if (playSmp('winner', 0.75)) return;
+    [392, 523, 659, 784].forEach((f, ix) => setTimeout(() => pluck(f, 0.3, AU.sfx, 0.9), ix * 120));
+  },
 };
 
 const hash = new Map();
@@ -2294,42 +2321,66 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
                                      : cCol.setHSL(0.23 + rand() * 0.11, 0.55, 0.3 + rand() * 0.17));
       blobAt(i, ob, sgn, 1.5 * s);
     }
-    // great boughs arch over the water, trailing vines
+    // great boughs reach over the water from REAL trunks — never floating timber
     const boughM = new THREE.MeshLambertMaterial({ color: 0x6b4a2f, map: WOODTEX });
     const vineM = new THREE.MeshLambertMaterial({ color: 0x3f7a3c });
+    const leafM = new THREE.MeshLambertMaterial({ color: 0x4d9147 });
+    let bSide = 1;
     for (const bt of [0.075, 0.21, 0.335, 0.47, 0.635, 0.70, 0.905]) {
       const i = Math.round(bt * NSAMP);
-      const span = S.w[i] * 2 + 9;
-      const bough = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.44, span, 7), boughM);
-      bough.position.copy(S.pos[i]);
-      bough.position.y = waterHeightAt(i) + 6.2;
-      bough.quaternion.setFromUnitVectors(_tmpB.set(0, 1, 0), S.side[i]);
+      bSide = -bSide;
+      const wh2 = waterHeightAt(i), obT = 7.5;
+      const gy = wh2 + bankH(i, obT, bSide);
+      const tPos = S.pos[i].clone().addScaledVector(S.side[i], bSide * (S.w[i] + obT));
+      // the parent tree: thick trunk + crown standing on the bank
+      const th2 = (wh2 + 8.6) - gy;
+      const bTrunk = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.5, th2, 8), boughM);
+      bTrunk.position.set(tPos.x, gy + th2 / 2, tPos.z);
+      const bCrown = new THREE.Mesh(new THREE.IcosahedronGeometry(2.8, 0), leafM);
+      bCrown.position.set(tPos.x, gy + th2 + 1.2, tPos.z);
+      scene.add(bTrunk, bCrown);
+      // the bough: grows out of the trunk, tapers, droops gently toward its leaf tip
+      const reach = S.w[i] + obT + 4;
+      const dir = S.side[i].clone().multiplyScalar(-bSide);
+      const axis = dir.clone(); axis.y = -0.05; axis.normalize();
+      const bough = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.55, reach, 7), boughM);
+      bough.position.copy(tPos).addScaledVector(dir, reach / 2);
+      bough.position.y = wh2 + 6.7 - reach * 0.025;
+      bough.quaternion.setFromUnitVectors(_tmpB.set(0, 1, 0), axis);
       scene.add(bough);
-      // a nest with eggs perches on every other bough
+      const boughYAt = (lat) => wh2 + 6.7 - ((S.w[i] + obT) - bSide * lat) * 0.0499;
+      const tip = new THREE.Mesh(new THREE.IcosahedronGeometry(1.0, 0), leafM);
+      tip.position.copy(tPos).addScaledVector(dir, reach);
+      tip.position.y = boughYAt(-bSide * (reach - (S.w[i] + obT)));
+      scene.add(tip);
+      // a nest with eggs perches on every other bough, close to the trunk
       if (bt < 0.5) {
-        const nLat = randRange(-0.5, 0.5) * S.w[i];
+        const nLat = bSide * S.w[i] * 0.35;
         const nx = S.pos[i].x + S.side[i].x * nLat, nz = S.pos[i].z + S.side[i].z * nLat;
+        const ny = boughYAt(nLat) + 0.32;
         const nest = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.13, 6, 12), boughM);
         nest.rotation.x = Math.PI / 2;
-        nest.position.set(nx, waterHeightAt(i) + 6.62, nz);
+        nest.position.set(nx, ny, nz);
         scene.add(nest);
         const eggM = new THREE.MeshLambertMaterial({ color: 0xf2ecd8 });
         for (const ex of [-0.12, 0.13]) {
           const egg = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 5), eggM);
           egg.scale.y = 1.25;
-          egg.position.set(nx + ex, waterHeightAt(i) + 6.62, nz + ex * 0.5);
+          egg.position.set(nx + ex, ny, nz + ex * 0.5);
           scene.add(egg);
         }
       }
+      // vines trail from the bough into the air over the channel
       for (let v2 = 0; v2 < 3; v2++) {
-        const lat = randRange(-0.7, 0.7) * S.w[i];
+        const lat = randRange(-0.6, 0.6) * S.w[i];
         const len = randRange(1.6, 3.2);
+        const topY = boughYAt(lat) - 0.2;
         const vine = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.028, len, 4), vineM);
         vine.position.copy(S.pos[i]).addScaledVector(S.side[i], lat);
-        vine.position.y = waterHeightAt(i) + 6.2 - len / 2;
-        const tip = new THREE.Mesh(new THREE.IcosahedronGeometry(0.19, 0), vineM);
-        tip.position.copy(vine.position); tip.position.y -= len / 2;
-        scene.add(vine, tip);
+        vine.position.y = topY - len / 2;
+        const tip2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.19, 0), vineM);
+        tip2.position.copy(vine.position); tip2.position.y = topY - len;
+        scene.add(vine, tip2);
       }
     }
   } else canopyCr.count = 0;
