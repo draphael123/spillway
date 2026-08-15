@@ -214,6 +214,7 @@
   .lvlCard[data-lvl="undergrove"] { --stripe: linear-gradient(180deg, #8df26e, #17342a); }
   .lvlCard[data-lvl="canopy"]     { --stripe: linear-gradient(180deg, #ffc04a, #53d769); }
   .lvlCard[data-lvl="porcelain"]  { --stripe: linear-gradient(180deg, #ffffff, #7fd4e8); }
+  .lvlCard[data-lvl="harbor"]     { --stripe: linear-gradient(180deg, #ff7a2f, #087f8c); }
   .lvlCard b { font-size: 19px; letter-spacing: 1px; }
   .lvlCard .thumb { flex-shrink: 0; border: 2.5px solid var(--ink); border-radius: 10px;
     box-shadow: 0 2px 0 rgba(14,42,51,.3); }
@@ -390,7 +391,7 @@
     <div class="setRow"><span>Field</span><div class="segRow" id="duckRow">
       <button data-n="20">20</button><button data-n="40">40</button><button data-n="80">80</button><button data-n="120">120</button><button data-n="160">160</button><button data-n="200">200</button></div></div>
     <div class="setRow"><span>Course</span><div class="segRow wrapRow" id="lvlRow" style="max-width:300px">
-      <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button><button data-lvl="undergrove">UNDERGROVE</button><button data-lvl="canopy">CANOPY RUN</button><button data-lvl="porcelain">PORCELAIN RUN</button></div></div>
+      <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button><button data-lvl="undergrove">UNDERGROVE</button><button data-lvl="canopy">CANOPY RUN</button><button data-lvl="porcelain">PORCELAIN RUN</button><button data-lvl="harbor">HARBOR RUSH</button></div></div>
     <div class="setRow"><span>Championship</span><div class="segRow wrapRow" id="cupRow" style="max-width:330px"></div></div>
     <div class="btnRow" style="margin-top:14px">
       <div class="go" id="raceBtn">RACE <small>(SPACE)</small></div>
@@ -473,6 +474,7 @@
     <div class="lvlCard" data-lvl="undergrove"><canvas class="thumb" width="84" height="64"></canvas><div><b>UNDERGROVE</b><br><span>the drowned-dark forest &mdash; follow the lanterns</span></div><span class="bestLabel">best &mdash;</span></div>
     <div class="lvlCard" data-lvl="canopy"><canvas class="thumb" width="84" height="64"></canvas><div><b>CANOPY RUN</b><br><span>the flooded forest &mdash; race the treetops</span></div><span class="bestLabel">best &mdash;</span></div>
     <div class="lvlCard" data-lvl="porcelain"><canvas class="thumb" width="84" height="64"></canvas><div><b>PORCELAIN RUN</b><br><span>the bathworks &mdash; tub rapids &middot; faucet falls &middot; the drain</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="harbor"><canvas class="thumb" width="84" height="64"></canvas><div><b>HARBOR RUSH</b><br><span>storm drains &middot; tide locks &middot; container quay &middot; king tide</span></div><span class="bestLabel">best &mdash;</span></div>
   </div>
  </div>
 </div>
@@ -688,6 +690,31 @@ const LEVELS = {
       { x:  16, z:    6, y: 56.5, w: 5.5, s: 2.2  },  // crest — back to the rim
     ],
   },
+  harbor: {
+    id: 'harbor', name: 'HARBOR RUSH', sub: 'storm drains · tide locks · container quay · king tide',
+    weathers: ['storm', 'mist', 'golden', 'storm'],
+    surge: [[0.855, 0.985]], surgeCol: [1.0, 0.38, 0.10],
+    pal: { deep: [0.025, 0.20, 0.28], shal: [0.12, 0.48, 0.53], fog: [0.60, 0.70, 0.72],
+           ground: [0.28, 0.30, 0.30], tree: [0.18, 0.24, 0.24], skyMul: [0.78, 0.84, 0.88] },
+    ctrl: [
+      { x:   0, z:    0, y: 46.0, w: 10, s: 0.8 },  // flood-control start
+      { x: -12, z:  -34, y: 45.4, w: 8,  s: 1.3 },  // concrete channel
+      { x:   8, z:  -68, y: 44.5, w: 7,  s: 1.7 },
+      { x: -10, z: -102, y: 43.6, w: 6,  s: 2.0 },  // storm-drain tunnel
+      { x:   4, z: -136, y: 42.8, w: 7,  s: 1.7 },
+      { x:  28, z: -166, y: 42.0, w: 9,  s: 1.2 },  // lock approach
+      { x:  62, z: -184, y: 41.2, w: 6,  s: 2.1 },  // tide lock
+      { x:  94, z: -178, y: 38.0, w: 8,  s: 1.8 },  // lock drop
+      { x: 122, z: -158, y: 37.4, w: 12, s: 0.8 },  // harbor basin
+      { x: 142, z: -126, y: 37.0, w: 11, s: 1.0 },  // container quay
+      { x: 148, z:  -88, y: 36.6, w: 9,  s: 1.5 },
+      { x: 136, z:  -52, y: 36.2, w: 7,  s: 2.0 },  // breakwater slalom
+      { x: 112, z:  -24, y: 35.9, w: 10, s: 0.9 },  // tidal pool
+      { x:  80, z:   -8, y: 36.2, w: 8,  s: 1.5 },
+      { x:  50, z:    4, y: 39.0, w: 7,  s: 2.2 },  // compact pump lift
+      { x:  24, z:    8, y: 44.2, w: 7,  s: 2.3 },
+    ],
+  },
 };
 const LVL = LEVELS[localStorage.getItem('spillway-level')] || LEVELS.spillway;
 const SURGE_STYLE = ({
@@ -696,6 +723,7 @@ const SURGE_STYLE = ({
   undergrove: { name:'GLOWROOT CURRENT',   speed:1.02, sway:0.48, pulse:2.2, prop:'root' },
   canopy:     { name:'GREAT SAP-RISE',     speed:1.15, sway:0.34, pulse:3.2, prop:'leaf' },
   porcelain:  { name:'BUBBLE-LIFT JET',    speed:1.12, sway:0.56, pulse:5.4, prop:'bubble' },
+  harbor:     { name:'PUMP-STATION SURGE', speed:1.16, sway:0.42, pulse:3.8, prop:'buoy' },
 })[LVL.id];
 const CTRL = LVL.ctrl;
 // CLOSED CatmullRom: the course is a ring — the last control point flows back into the first
@@ -801,6 +829,10 @@ const EDDIES = ({
     { i: Math.round(0.475 * NSAMP), lat:  4.0, r: 4.4, spin: -1.4, pull: 0.8 },
     { i: Math.round(0.735 * NSAMP), lat:  0.4, r: 5.0, spin:  2.4, pull: 2.0, whirl: true },  // THE DRAIN
   ],
+  harbor: [
+    { i: Math.round(0.505 * NSAMP), lat: -5.0, r: 5.2, spin: -1.5, pull: 0.9 },
+    { i: Math.round(0.755 * NSAMP), lat:  1.0, r: 6.0, spin:  2.0, pull: 1.5, whirl: true },
+  ],
 })[LVL.id];
 EDDIES.forEach(e => { e.pos = S.pos[e.i].clone().addScaledVector(S.side[e.i], e.lat); });
 
@@ -810,7 +842,8 @@ const REEDS = [];
     millrace: [[0.10, 1], [0.475, -1], [0.775, 1]],
     undergrove: [[0.30, 1], [0.71, -1]],
     canopy: [[0.13, -1], [0.38, 1], [0.72, -1]],
-    porcelain: [[0.06, 1], [0.35, -1], [0.62, 1], [0.79, -1]] })[LVL.id]   // suds patches — slack soap foam
+    porcelain: [[0.06, 1], [0.35, -1], [0.62, 1], [0.79, -1]],
+    harbor: [[0.08, 1], [0.31, -1], [0.70, 1]] })[LVL.id]   // themed slack-water patches
 ).forEach(([t, sgn]) => {
   const i = Math.round(t * NSAMP);
   REEDS.push({ i, pos: S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] - 1.6)), r: 2.6 });
@@ -838,6 +871,10 @@ const CHUTES = ({
     { t0: 0.095, t1: 0.135, latC: -1.5, halfW: 1.6, name:'Faucet Jet', shortcut:true },
     { t0: 0.560, t1: 0.600, latC:  1.5, halfW: 1.8, name:'Shampoo Slick', shortcut:true },
   ],
+  harbor: [
+    { t0: 0.250, t1: 0.300, latC: -2.4, halfW: 1.9, name:'Drain Thread', shortcut:true },
+    { t0: 0.610, t1: 0.675, latC:  3.2, halfW: 2.2, name:'Quayside Cut', shortcut:true },
+  ],
 })[LVL.id];
 // flood-gate shortcut: opens on the final lap of a 3-lap race
 CHUTES.push(({
@@ -846,6 +883,7 @@ CHUTES.push(({
   undergrove: { t0: 0.275, t1: 0.335, latC: 2.0, halfW: 1.5, lapMin: 2 },
   canopy: { t0: 0.400, t1: 0.460, latC: -2.0, halfW: 1.5, lapMin: 2 },
   porcelain: { t0: 0.300, t1: 0.360, latC: -2.0, halfW: 1.6, lapMin: 2 },
+  harbor: { t0: 0.680, t1: 0.745, latC: -3.4, halfW: 2.0, lapMin: 2 },
 })[LVL.id]);
 CHUTES[CHUTES.length - 1].name = 'Final-Lap Floodgate';
 CHUTES[CHUTES.length - 1].shortcut = true;
@@ -871,6 +909,10 @@ const SHOALS = ({
     { t0: 0.185, t1: 0.212, latC: -3.2, halfW: 2.0, mul: 0.35, mud: false },
     { t0: 0.630, t1: 0.656, latC:  2.8, halfW: 2.2, mul: 0.35, mud: false },
     { t0: 0.755, t1: 0.783, latC: -3.5, halfW: 2.4, mul: 0.22, mud: true },
+  ],
+  harbor: [
+    { t0: 0.350, t1: 0.390, latC:  3.8, halfW: 2.5, mul: 0.34, mud: false },
+    { t0: 0.545, t1: 0.585, latC: -4.0, halfW: 2.6, mul: 0.24, mud: true },
   ],
 })[LVL.id];
 [...CHUTES, ...SHOALS].forEach(z => { z.i0 = Math.round(z.t0 * NSAMP); z.i1 = Math.round(z.t1 * NSAMP); });
@@ -909,6 +951,10 @@ if (LVL.id === 'spillway') {
   addRock(0.176, -3.0, 1.0); addRock(0.188, 2.0, 1.2);
   // canyon soap scatter
   addRock(0.570, -1.8, 1.1); addRock(0.585, 2.2, 1.3); addRock(0.600, -0.6, 1.0);
+} else if (LVL.id === 'harbor') {
+  addRock(0.325, -2.8, 0.8); addRock(0.325, 0, 0.8); addRock(0.325, 2.8, 0.8);
+  ROCKS.slice(-3).forEach(r => r.type = 'piling');
+  addRock(0.735, 2.4, 1.1); addRock(0.770, -2.2, 1.2);
 }
 
 // floating log barriers — angled, partially blocking the channel
@@ -934,6 +980,9 @@ if (LVL.id === 'spillway') {
   addLog(0.075, 2.2, 7, -1.15);   // pool noodles adrift
   addLog(0.415, -4.5, 6, 0.35);
   addLog(0.645, 2.5, 8, -1.0);
+} else if (LVL.id === 'harbor') {
+  addLog(0.455, -3.5, 7, 0.55);
+  addLog(0.790, 3.2, 8, -0.85);
 }
 
 // islands: fat capsule blockers that braid the channel (risky lane vs safe lane).
@@ -957,6 +1006,7 @@ if (LVL.id === 'spillway') {
 if (LVL.id === 'millrace') addIsland(0.505, 0.545, -2.0, 2.0);   // millpond bar
 if (LVL.id === 'undergrove') addIsland(0.225, 0.255, 1.0, 1.8);  // glen island under the moon-gap
 if (LVL.id === 'porcelain') { addIsland(0.445, 0.480, -1.2, 2.1); addIsland(0.525, 0.555, 0.4, 1.6); }   // sponge islands
+if (LVL.id === 'harbor') addIsland(0.500, 0.545, 0.5, 2.4); // central harbor breakwater
 
 // critters: a lunging pike, a snapping turtle, cosmetic frogs
 const CRITTERS = { pike: [], turtle: [], frogs: [] };
@@ -1190,8 +1240,9 @@ const COURSE_EVENTS = {
   undergrove:{ name:'BLACKOUT', detail:'The cave darkens; follow the luminous current', duration:9, state:'THE LIGHTS GO OUT' },
   canopy:   { name:'CANOPY BREAK', detail:'Falling limbs reshape the safe racing line', duration:8, state:'THE CANOPY BREAKS' },
   porcelain:{ name:'OVERFLOW', detail:'The basin fills and pulls toward the drain', duration:8, state:'THE BATH OVERFLOWS' },
+  harbor:   { name:'KING TIDE', detail:'The submerged quay opens as the harbor surge rolls in', duration:9, state:'KING TIDE FLOODS THE QUAY' },
 };
-const EXPERT_TARGET={spillway:34,millrace:48,undergrove:33,canopy:39,porcelain:40};
+const EXPERT_TARGET={spillway:34,millrace:48,undergrove:33,canopy:39,porcelain:40,harbor:37};
 
 const ducks = [];
 function safeStored(key,fallback){try{const v=localStorage.getItem(key);return v==null?fallback:JSON.parse(v)}catch(e){localStorage.removeItem(key);return fallback}}
@@ -1763,6 +1814,7 @@ function step(dt) {
       else if (LVL.id === 'undergrove') { const latE=(d.p.x-S.pos[si].x)*sideE.x+(d.p.z-S.pos[si].z)*sideE.z; if (latE<0){d.v.x+=fwdE.x*2.5*dt;d.v.z+=fwdE.z*2.5*dt;} }
       else if (LVL.id === 'canopy') { const gust=Math.sin(G.raceT*2.3)>-.2?1:-.25; d.v.x+=sideE.x*gust*3.6*dt; d.v.z+=sideE.z*gust*3.6*dt; }
       else if (LVL.id === 'porcelain') { const latE=(d.p.x-S.pos[si].x)*sideE.x+(d.p.z-S.pos[si].z)*sideE.z; d.v.x-=sideE.x*latE*.32*dt; d.v.z-=sideE.z*latE*.32*dt; }
+      else if (LVL.id === 'harbor') { const latE=(d.p.x-S.pos[si].x)*sideE.x+(d.p.z-S.pos[si].z)*sideE.z; const tide=Math.sin(G.raceT*1.7+si*.025); d.v.x+=sideE.x*(tide*1.9-latE*.08)*dt; d.v.z+=sideE.z*(tide*1.9-latE*.08)*dt; if(si>816&&si<900){d.v.x+=fwdE.x*2.6*dt;d.v.z+=fwdE.z*2.6*dt;} }
     }
     if (d.launchT < 0) { d.launchT = Math.min(0,d.launchT+dt); d.v.multiplyScalar(1-.75*dt); }
     else d.launchT = Math.max(0,(d.launchT||0)-dt);
@@ -2184,7 +2236,7 @@ scene.add(waterReflectCam);
       uCamPos: { value: new THREE.Vector3() }, uSunDir: { value: new THREE.Vector3(-0.6, 0.7, -0.26) },
       uSunCol: { value: new THREE.Color(0xfff2d0) }, uGlint: { value: 0.9 }, uDark: { value: 1.0 },
       uEnvMap: { value: waterReflectRT.texture }, uReflectMix: { value: SETTINGS.quality === 'low' ? 0.0 : 0.34 },
-      uBiome: { value: ({spillway:0,millrace:1,undergrove:2,canopy:3,porcelain:4})[LVL.id] }, uRain: { value: 0 }, uEvent: { value: 0 },
+      uBiome: { value: ({spillway:0,millrace:1,undergrove:2,canopy:3,porcelain:4,harbor:5})[LVL.id] }, uRain: { value: 0 }, uEvent: { value: 0 },
       uSurgeCol: { value: new THREE.Color((LVL.surgeCol || [0.2, 0.9, 0.85])[0], (LVL.surgeCol || [0.2, 0.9, 0.85])[1], (LVL.surgeCol || [0.2, 0.9, 0.85])[2]) },
     },
     vertexShader: `
@@ -2310,6 +2362,7 @@ scene.add(waterReflectCam);
         if(uBiome>.5&&uBiome<1.5)c+=vec3(.10,.07,.025)*sin(flow*2.+vUv.x*8.)*.035;
         if(uBiome>2.5&&uBiome<3.5)c*=.94+.06*sin(vUv.x*24.+flow*.8);
         if(uBiome>3.5)c+=vec3(.12,.16,.17)*pow(noise(vec2(vUv.x*26.,flow*11.)),10.)*detail;
+        if(uBiome>4.5){c=mix(c,vec3(.015,.20,.25),.18);c+=vec3(.85,.32,.06)*pow(noise(vec2(vUv.x*34.+flow,flow*13.)),14.)*.18*uEvent;}
         c+=uSurgeCol*uEvent*.08*(.5+.5*sin(flow*7.-uT*5.));
         // shore: crisp bright waterline rim + breathing lace, then alpha-fade into the sand
         float shore = min(vUv.x, 1. - vUv.x);
@@ -3358,6 +3411,28 @@ if (LVL.id === 'millrace') {
       scene.add(bar);
     }
   }
+} else if (LVL.id === 'harbor') {
+  const lam = c => new THREE.MeshLambertMaterial({color:c});
+  const metal = c => new THREE.MeshStandardMaterial({color:c,roughness:.48,metalness:.55});
+  // Flood-control walls and sodium lamps frame the municipal channel.
+  for(let n=0;n<18;n++){
+    const i=Math.round((.02+n*.046)*NSAMP),sgn=n%2?1:-1,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+3.8));
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(8,2.6,.7),lam(n%3?0x686d6d:0xd5632a));wall.position.set(p.x,waterHeightAt(i)+1.1,p.z);wall.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(wall);
+    if(n%3===0){const post=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,4.2,6),metal(0x27343a));post.position.set(p.x,waterHeightAt(i)+3,p.z);const lamp=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),new THREE.MeshBasicMaterial({color:0xffb23e}));lamp.position.set(p.x,waterHeightAt(i)+5,p.z);scene.add(post,lamp);}
+  }
+  // Working container quay: stacked color blocks, crane silhouettes, and lock towers.
+  for(let n=0;n<12;n++){
+    const i=Math.round((.50+n*.018)*NSAMP),sgn=1,p=S.pos[i].clone().addScaledVector(S.side[i],S.w[i]+8+(n%3)*3);
+    const box=new THREE.Mesh(new THREE.BoxGeometry(7,2.3,2.7),lam([0xd95d39,0x167d87,0xe2a93b,0x314c66][n%4]));box.position.set(p.x,waterHeightAt(i)+1.2+(n%2)*2.35,p.z);box.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(box);
+  }
+  for(const t of [.37,.43]){
+    const i=Math.round(t*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],-(S.w[i]+5));
+    const tower=new THREE.Mesh(new THREE.BoxGeometry(3,10,3),lam(0x50595b));tower.position.set(p.x,waterHeightAt(i)+5,p.z);const light=new THREE.Mesh(new THREE.BoxGeometry(2.2,.35,2.2),new THREE.MeshBasicMaterial({color:0xff7a2f}));light.position.set(p.x,waterHeightAt(i)+9,p.z);scene.add(tower,light);
+  }
+  for(let n=0;n<9;n++){
+    const i=Math.round((.59+n*.026)*NSAMP),sgn=-1,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+2.2));
+    const buoy=new THREE.Mesh(new THREE.CylinderGeometry(.3,.48,1.15,9),lam(n%2?0xff6b21:0xf3e7c9));buoy.position.set(p.x,waterHeightAt(i)+.5,p.z);scene.add(buoy);
+  }
 } else {
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
   // watermill on the forest's left bank (set back so the chase cam never grazes it)
@@ -3639,7 +3714,7 @@ const TRACK_FANS=[], FISH_SHADOWS=[];
 // Shortcut marshals and moving gates make alternate lines physical landmarks.
 const SHORTCUT_GATES=[], COURSE_CREW=[];
 {
-  const gateCol={spillway:0xe4572e,millrace:0x536471,undergrove:0x79e66b,canopy:0xffb52e,porcelain:0x55c8de}[LVL.id];
+  const gateCol={spillway:0xe4572e,millrace:0x536471,undergrove:0x79e66b,canopy:0xffb52e,porcelain:0x55c8de,harbor:0xff6b21}[LVL.id];
   for(const c of CHUTES){
     const i=c.i0,p=S.pos[i].clone().addScaledVector(S.side[i],c.latC),g=new THREE.Group();
     const mat=new THREE.MeshStandardMaterial({color:gateCol,roughness:.55,metalness:LVL.id==='millrace'?0.55:.08});
@@ -3656,7 +3731,7 @@ const SHORTCUT_GATES=[], COURSE_CREW=[];
 }
 const EVENT_BEACONS=[];
 {
-  const col={spillway:0x9deeff,millrace:0xffb347,undergrove:0x8dff72,canopy:0xffe36e,porcelain:0xb7f5ff}[LVL.id];
+  const col={spillway:0x9deeff,millrace:0xffb347,undergrove:0x8dff72,canopy:0xffe36e,porcelain:0xb7f5ff,harbor:0xff8a3d}[LVL.id];
   for(let n=0;n<12;n++){const i=Math.round((.12+n*.071)%1*NSAMP),ringE=new THREE.Mesh(new THREE.TorusGeometry(1.1,.055,6,28),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0,depthWrite:false}));ringE.rotation.x=Math.PI/2;ringE.position.set(S.pos[i].x,waterHeightAt(i)+.18,S.pos[i].z);ringE.visible=false;scene.add(ringE);EVENT_BEACONS.push({mesh:ringE,ph:n*.55});}
 }
 
@@ -4415,6 +4490,9 @@ const SURGE_PROPS = [];
     } else if(SURGE_STYLE.prop==='bubble'){
       const nozzle=new THREE.Mesh(new THREE.CylinderGeometry(.4,.55,.9,12),darkM);nozzle.position.y=-.35;grp.add(nozzle);
       for(let k=0;k<4;k++){const bub=new THREE.Mesh(new THREE.SphereGeometry(.18+k*.04,10,7),glowM);bub.position.set(Math.sin(k*2.1)*.4,.35+k*.5,Math.cos(k*1.7)*.2);grp.add(bub);}
+    } else if(SURGE_STYLE.prop==='buoy'){
+      const buoy=new THREE.Mesh(new THREE.SphereGeometry(.42,10,7),new THREE.MeshStandardMaterial({color:0xff6b21,roughness:.42}));buoy.scale.y=1.35;grp.add(buoy);
+      const mast=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.75,6),glowM);mast.position.y=.75;grp.add(mast);
     } else {
       const mon=new THREE.Mesh(new THREE.OctahedronGeometry(.72,0),darkM);mon.scale.y=1.8;grp.add(mon);
       const core=new THREE.Mesh(new THREE.OctahedronGeometry(.28,0),glowM);core.position.y=.3;grp.add(core);
@@ -4794,7 +4872,7 @@ function drawMap() {
   mapCtx.stroke();
   // surge stretches glow on the map
   if (LVL.surge) {
-    mapCtx.strokeStyle = LVL.id === 'undergrove' ? '#8df26e' : LVL.id === 'millrace' ? '#7ab8ff' : LVL.id === 'canopy' ? '#ffc04a' : '#5af2df';
+    mapCtx.strokeStyle = LVL.id === 'undergrove' ? '#8df26e' : LVL.id === 'millrace' ? '#7ab8ff' : LVL.id === 'canopy' ? '#ffc04a' : LVL.id === 'harbor' ? '#ff7a2f' : '#5af2df';
     for (const [a, b] of LVL.surge) {
       mapCtx.beginPath();
       const i0 = Math.floor(a * (mapPts.length - 1)), i1 = Math.ceil(b * (mapPts.length - 1));
@@ -5241,10 +5319,10 @@ el('menuBtn').addEventListener('click', () => { if (GP && GP.active) clearGP(); 
 // page reloads by living in localStorage.
 const CUP_DEFS=[
  {id:'creek',name:'CREEK CUP',courses:['spillway','millrace','canopy'],diff:'easy'},
- {id:'wild',name:'WILDWATER CUP',courses:['undergrove','spillway','porcelain'],diff:'medium'},
- {id:'works',name:'BATHWORKS CUP',courses:['millrace','porcelain','canopy','undergrove'],diff:'medium'},
+ {id:'wild',name:'WILDWATER CUP',courses:['undergrove','spillway','harbor','porcelain'],diff:'medium'},
+ {id:'works',name:'BATHWORKS CUP',courses:['millrace','porcelain','harbor','canopy','undergrove'],diff:'medium'},
  {id:'moon',name:'MOONLIGHT CUP',courses:['undergrove','canopy','spillway','porcelain'],diff:'hard'},
- {id:'crown',name:'SPILLWAY CROWN',courses:['spillway','millrace','undergrove','canopy','porcelain'],diff:'insane'},
+ {id:'crown',name:'SPILLWAY CROWN',courses:['spillway','millrace','undergrove','canopy','porcelain','harbor'],diff:'insane'},
 ];
 let selectedCup=localStorage.getItem('spillway-cup-select')||'creek';
 let GP = safeStored('spillway-gp',null);
