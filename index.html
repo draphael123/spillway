@@ -394,6 +394,22 @@
     #rivalCallout { bottom:36%; max-width:calc(100vw - 28px); text-align:center; }
     #tutToast { bottom:36%; max-width:calc(100vw - 28px); border-radius:12px; }
     #transformBanner strong { max-width:100%; padding:6px 16px; font-size:30px; }
+    /* Phone layout is a true vertical control deck, not a clipped desktop form. */
+    #title { width:calc(100vw - 12px); min-width:0; overflow:hidden; }
+    #title .setRow { display:grid; grid-template-columns:1fr; align-items:start; margin:12px 0; }
+    #title .setRow>span:first-child { margin-bottom:6px; }
+    #title .segRow,#title .wrapRow { width:100%; max-width:none!important; justify-content:flex-start; }
+    #title .segRow button { flex:1 1 auto; min-width:48px; }
+    #title #lvlRow button { flex:1 1 calc(50% - 6px); }
+    #title #cupRow button { flex:1 1 calc(50% - 6px); }
+    #title .btnRow { position:relative; margin:18px 0 0; padding:0 0 calc(8px + env(safe-area-inset-bottom)); background:none; }
+    #title .btnRow .go { flex:1 1 100%; max-width:none; }
+    #raceIntro { top:18%; }
+    #raceIntro span { display:none; }
+    #startMeter { top:46%; }
+    #raceGoal { top:calc(108px + env(safe-area-inset-top)); }
+    #raceCue { top:calc(148px + env(safe-area-inset-top)); }
+    .dtag { font-size:11px; padding:1px 6px; }
   }
   @media (max-width:860px) and (orientation:landscape) {
     #hubHead h1 { font-size:38px; }
@@ -1428,6 +1444,12 @@ const WEATHERS = {
   mist:   { label: 'MISTY MORNING',  sun: 0xe8eef0, sunInt: 0.7,  hemi: 1.10, fogNear: 25, fogFar: 110, tint: [.94,.98,1.0],      sky: [[.62,.72,.78],[.80,.86,.88],[.88,.92,.92]], rain: false, cloud: 0.55, cloudCol: [.9, .93, .94] },
   storm:  { label: 'STORM WATER',    sun: 0xb9c4cc, sunInt: 0.55, hemi: 0.85, fogNear: 40, fogFar: 150, tint: [.75,.80,.85],      sky: [[.35,.42,.50],[.55,.62,.68],[.60,.66,.70]], rain: true,  cloud: 0.85, cloudCol: [.5, .55, .61] },
 };
+// Per-world photographic intent: preserve readable silhouettes instead of applying one flat rig everywhere.
+const WORLD_LIGHT = ({
+  spillway:{sun:1.00,hemi:.88,amb:.82,fog:1.08,glint:.82}, millrace:{sun:1.08,hemi:.78,amb:.72,fog:1.04,glint:.70},
+  undergrove:{sun:.86,hemi:.68,amb:.62,fog:.92,glint:.52}, canopy:{sun:1.12,hemi:.76,amb:.68,fog:1.06,glint:.74},
+  porcelain:{sun:.72,hemi:.62,amb:.58,fog:1.18,glint:.48}, harbor:{sun:.88,hemi:.70,amb:.66,fog:1.04,glint:.58}
+})[LVL.id];
 const DUSK = { top: [.28,.30,.55], hor: [.95,.55,.40], low: [1,.75,.5], sun: 0xff9a55 };
 
 // ---- persisted settings
@@ -2205,6 +2227,8 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = IS_BATHWORLD ? .88 : 1.0;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
@@ -2430,7 +2454,7 @@ scene.add(waterReflectCam);
         // two crossing wave trains break the old one-directional texture scroll.
         float crossRipple = sin(flow * 8.2 + vUv.x * 17. + uT * 0.6)
                           * sin(flow * 5.6 - vUv.x * 23. - uT * 0.35);
-        c += vec3(0.035, 0.055, 0.055) * crossRipple * detail;
+        c += vec3(0.026, 0.040, 0.040) * crossRipple * detail;
         // broad slow tone bands — gives the surface body without any fizz
         float band = noise(vec2(vUv.x * 5., flow * 1.3));
         c += vec3(0.05, 0.065, 0.06) * (band - 0.5) * (0.6 + 0.7 * smoothstep(0.9, 1.9, vSpd));
@@ -2442,10 +2466,10 @@ scene.add(waterReflectCam);
         float filamentN = noise(vec2(vUv.x * 34. + sin(flow * .38) * 2., flow * 0.72));
         float filament = smoothstep(.82, .94, filamentN) * smoothstep(.82, 1.85, vSpd);
         filament *= .35 + .65 * smoothstep(.15, .9, depth);
-        c += vec3(.18,.27,.26) * filament * (.25 + .75 * detail);
+        c += vec3(.13,.20,.19) * filament * (.20 + .62 * detail);
         // rare sparkle glints, only up close
         float sp = pow(noise(vec2(vUv.x * 30., flow * 16.)), 12.) * smoothstep(1.1, 2.3, vSpd);
-        c += vec3(1.0, 0.98, 0.9) * sp * detail * detail * 1.6;
+        c += vec3(1.0, 0.98, 0.9) * sp * detail * detail * .85;
         // true sun glint: specular off a wave-perturbed surface — the water reads WET
         {
           vec3 vdir = normalize(vWorld - uCamPos);
@@ -4199,7 +4223,8 @@ let rainMesh, rainVel = [];
     const banner = new THREE.Mesh(new THREE.PlaneGeometry(w * 2 + 1.2, 1.35),
       new THREE.MeshBasicMaterial({ map: bannerTex, side: THREE.FrontSide }));
     banner.position.copy(S.pos[fi]).addScaledVector(S.tan[fi], flip * 0.04);
-    banner.position.y = waterHeightAt(fi) + 4.4;
+    // Keep the chase-camera sightline beneath the cloth on the opening launch.
+    banner.position.y = waterHeightAt(fi) + 6.15;
     banner.lookAt(banner.position.clone().addScaledVector(S.tan[fi], flip));
     scene.add(banner);
   }
@@ -5018,7 +5043,7 @@ function fmtTime(t) {
 }
 function updateRaceRead() {
   const d = ducks[0], cue = el('raceCue'), cueText = el('cueText');
-  if (G.mode !== 'race' || d.finished) { cue.style.display = 'none'; return; }
+  if (G.mode !== 'race' || d.finished || G.raceT < 2.4) { cue.style.display = 'none'; return; }
   let best = null;
   const offer = (i, msg, cls) => {
     const ahead = wrapDS(i, d.si);
@@ -5077,26 +5102,30 @@ function updateTags() {
   if (G.mode === 'race' && !el('screen').classList.contains('hidden')) { /* menu overlay open — skip */ }
   else if (G.mode === 'race' && !G.tt) {
     const byProg = ducks.filter(d2 => d2.idx !== 0 && !d2.finished).sort((a, b) => b.progress - a.progress);
-    const cands = new Set(byProg.slice(0, 3));
+    const cands = new Set(byProg.slice(0, innerWidth < 700 ? 1 : 3));
     for (const d2 of ducks) {
       if (d2.idx === 0 || d2.finished) continue;
       if(SETTINGS.clarity==='clear'&&!d2.rogue)continue;
       const dx = d2.p.x - ducks[0].p.x, dz = d2.p.z - ducks[0].p.z;
-      if (dx * dx + dz * dz < 64) cands.add(d2);
+      if (dx * dx + dz * dz < (innerWidth < 700 ? 20 : 42)) cands.add(d2);
     }
+    const placed=[];
     for (const d2 of cands) {
-      if (used >= TAG_POOL.length) break;
+      if (used >= (innerWidth < 700 ? 2 : 3)) break;
       _tagV.set(d2.p.x, d2.y + 1.1, d2.p.z).project(camera);
       if (_tagV.z > 1 || Math.abs(_tagV.x) > 1.05 || Math.abs(_tagV.y) > 1.05) continue;
       const dx = d2.p.x - ducks[0].p.x, dz = d2.p.z - ducks[0].p.z;
       const dist = Math.hypot(dx, dz);
       if (dist > 70) continue;   // far tags read as clutter through terrain
+      const sx=(_tagV.x+1)*.5*innerWidth,sy=(1-_tagV.y)*.5*innerHeight;
+      if(placed.some(p=>Math.abs(p.x-sx)<92&&Math.abs(p.y-sy)<28))continue;
+      placed.push({x:sx,y:sy});
       const tag = TAG_POOL[used++];
       tag.style.display = '';
       tag.textContent = d2.name;
       tag.classList.toggle('nem', !!d2.isNemesis);
-      tag.style.left = ((_tagV.x + 1) / 2 * innerWidth) + 'px';
-      tag.style.top = ((1 - _tagV.y) / 2 * innerHeight) + 'px';
+      tag.style.left = sx + 'px';
+      tag.style.top = sy + 'px';
       tag.style.opacity = Math.max(0.25, Math.min(0.95, 1.2 - dist / 60));
     }
   }
@@ -5276,7 +5305,7 @@ function prepRace(skipFly) {
   if (G.tt) for (const rr of Object.values(rogueRigs)) rr.position.set(0, -500, 0);
   const wPool = LVL.weathers || ['clear', 'golden', 'mist', 'storm'];
   G.weather = wPool[Math.floor(rand() * wPool.length)];
-  setTimeout(() => eventToast(`${WEATHERS[G.weather].label}${G.laps > 1 ? ` — ${G.laps} LAPS` : ''}`), 600);
+  setTimeout(() => { if(G.mode!=='menu') eventToast(`${WEATHERS[G.weather].label}${G.laps > 1 ? ` — ${G.laps} LAPS` : ''}`); }, 4400);
   resetDucks();
   snapCam();
   if (skipFly || G.seenFly) { G.mode = 'countdown'; G.countdown = 3.2; }
@@ -5288,7 +5317,7 @@ function prepRace(skipFly) {
   el('results').style.display = 'none';
   el('hudTop').style.display = 'flex';
   el('minimap').style.display = 'block';
-  el('raceGoal').style.display = 'block';
+  el('raceGoal').style.display = 'none';
   el('raceCue').style.display = 'none';
   el('flowPill').style.display = G.guided ? 'none' : 'block';
   const nemGoal = ducks.find(d => d.isNemesis);
@@ -5299,7 +5328,8 @@ function prepRace(skipFly) {
   const featured = nemGoal || ducks.find(d=>d.rogue && (d.rogue.trait==='bruiser'||d.rogue.trait==='shortcut')) || ducks[1];
   el('introCourse').textContent = LVL.name || LVL.id;
   el('introRival').textContent = featured && featured.rogue ? `RIVAL WATCH · ${featured.name.toUpperCase()} · ${featured.rogue.role} · “${featured.rogue.quote}”` : 'THE FIELD IS READY';
-  el('raceIntro').classList.add('on'); setTimeout(()=>el('raceIntro').classList.remove('on'),4200);
+  el('raceIntro').classList.add('on'); setTimeout(()=>el('raceIntro').classList.remove('on'),2200);
+  setTimeout(()=>{if(G.mode!=='menu'&&!ducks[0].finished)el('raceGoal').style.display='block';},2400);
   el('startMeter').style.display='block'; el('startFill').style.width='0%'; el('startLabel').textContent='HOLD PADDLE ON 2 · HIT GOLD AT GO';
   el('finishFlash').classList.remove('on');
   el('transformBanner').classList.remove('on');
@@ -6046,7 +6076,7 @@ function frame(now) {
     el('flowHint').textContent = ducks[0].burstT > 0 ? 'BURSTING!' : flowReady ? 'READY · E / CTRL' : `${Math.round(flow * 100)}%`;
     // first-race tips
     if (G.tutOn && G.mode === 'race') {
-      const steps = [[1, 'PADDLE — WASD or arrows · SHIFT to shove'], [9, 'The dark fast water is your friend. Reeds and eddies are not.'], [19, 'Rocks, logs, a whirlpool… and THE FALLS. Good luck.']];
+      const steps = [[5, 'PADDLE — WASD or arrows · SHIFT to shove'], [13, 'The dark fast water is your friend. Reeds and eddies are not.'], [23, 'Rocks, logs, a whirlpool… and THE FALLS. Good luck.']];
       if (G.tutStep < 3 && G.raceT > steps[G.tutStep][0]) {
         tutToast(steps[G.tutStep][1]); G.tutStep++;
         if (G.tutStep === 3) { localStorage.setItem('spillway-tut', '1'); G.tutOn = false; }
@@ -6076,17 +6106,17 @@ function frame(now) {
     const cf = 1 - cave * 0.85;
     G._cave = cave;
     scene.fog.color.setRGB(fr * cf, fg * cf, fb * cf);
-    scene.fog.near = wx.fogNear * (1 - cave * 0.7); scene.fog.far = wx.fogFar * (1 - cave * 0.68);
+    scene.fog.near = wx.fogNear * WORLD_LIGHT.fog * (1 - cave * 0.7); scene.fog.far = wx.fogFar * WORLD_LIGHT.fog * (1 - cave * 0.68);
     waterMat.uniforms.uFog.value.copy(scene.fog.color);
     waterMat.uniforms.uDark.value = cf;
     sun.color.set(wx.sun).lerp(_duskSun.set(DUSK.sun), td * 0.8);
-    sun.intensity = wx.sunInt * (1 - td * 0.3) * (1 - cave * 0.93);
-    hemi.intensity = wx.hemi * (1 - td * 0.25) * (1 - cave * 0.8);
-    ambLight.intensity = 0.32 * (1 - cave * 0.72);
+    sun.intensity = wx.sunInt * WORLD_LIGHT.sun * (1 - td * 0.3) * (1 - cave * 0.93);
+    hemi.intensity = wx.hemi * WORLD_LIGHT.hemi * (1 - td * 0.25) * (1 - cave * 0.8);
+    ambLight.intensity = 0.32 * WORLD_LIGHT.amb * (1 - cave * 0.72);
     // water glint uniforms
     waterMat.uniforms.uCamPos.value.copy(camera.position);
     waterMat.uniforms.uSunCol.value.copy(sun.color).multiplyScalar(sun.intensity * 0.8);
-    waterMat.uniforms.uGlint.value = 0.85 * (wx.sunInt / 1.35);
+    waterMat.uniforms.uGlint.value = WORLD_LIGHT.glint * (wx.sunInt / 1.35);
     // god rays live in clear/golden light, die in mist/storm and at night
     const rayOp = (G.weather === 'clear' ? 0.10 : G.weather === 'golden' ? 0.16 : 0) * (1 - td * 0.5);
     for (const rm of RAYS) rm.opacity = rayOp * (0.7 + 0.3 * Math.sin(now / 700 + rm.id || 0));
