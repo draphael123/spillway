@@ -849,6 +849,14 @@ const SURGE_STYLE = ({
   porcelain:  { name:'FAUCET JET',         speed:1.12, sway:0.56, pulse:5.4, prop:'bubble', cue:'READ THE ROTATING SPRAY' },
   harbor:     { name:'LOCK ELEVATOR',      speed:1.16, sway:0.42, pulse:3.8, prop:'buoy',   cue:'RIDE THE RISING LOCK' },
 })[LVL.id];
+const COURSE_IDENTITY = ({
+  spillway:   { hook:'CHASE THE DAM RELEASE THROUGH THE FALLS', finish:'FLOOD CONTROL LINE CLEARED', flyH:13, flySway:4.5, water:'mountain' },
+  millrace:   { hook:'READ THE GATES · DODGE THE LOG DRIVE', finish:'MILL SHIFT SURVIVED', flyH:8, flySway:2.2, water:'machine' },
+  undergrove: { hook:'FOLLOW THE GLOW THROUGH THE BLACKOUT', finish:'THE GLOWROOTS GUIDED YOU HOME', flyH:6.5, flySway:1.5, water:'glowroot' },
+  canopy:     { hook:'CHAIN THE DROPS ABOVE THE FOREST', finish:'TREETOP CIRCUIT CLEARED', flyH:18, flySway:6.5, water:'gust' },
+  porcelain:  { hook:'SURVIVE THE FAUCET · ESCAPE THE DRAIN', finish:'THE BATHWORKS ARE BEATEN', flyH:9, flySway:3.2, water:'slick' },
+  harbor:     { hook:'TIME THE LOCKS · RIDE THE KING TIDE', finish:'HARBOR CONTROL GRANTS CLEARANCE', flyH:10, flySway:5.5, water:'tide' },
+})[LVL.id];
 const CTRL = LVL.ctrl;
 // CLOSED CatmullRom: the course is a ring — the last control point flows back into the first
 const curve = new THREE.CatmullRomCurve3(CTRL.map(p => new THREE.Vector3(p.x, p.y, p.z)), true, 'centripetal', 0.35);
@@ -1259,6 +1267,22 @@ function waterVelAt(p, si, out) {
   const spd = BASE_FLOW * S.sMul[si] * prof * (S.surge[si] ? SURGE_STYLE.speed*climbMul : 1);
   out.set(tan.x * spd, 0, tan.z * spd);
   if(S.surge[si]){out.x+=side.x*climbCross;out.z+=side.z*climbCross;}
+  // Course water has a recognizable hand even away from hazards and climbs.
+  // These forces are readable but modest: steering still wins over spectacle.
+  const ct=si/NSAMP, waterPulse=G.time;
+  if(COURSE_IDENTITY.water==='mountain'){
+    const rush=Math.min(2.4,(S.slope[si]||0)*1.35);out.x+=tan.x*rush;out.z+=tan.z*rush;
+  }else if(COURSE_IDENTITY.water==='machine'&&ct>.24&&ct<.46){
+    const valve=Math.sin(waterPulse*2.8-si*.045)*1.05;out.x+=side.x*valve;out.z+=side.z*valve;
+  }else if(COURSE_IDENTITY.water==='glowroot'){
+    const rootLine=Math.sin(si*.071)*w*.36,guide=(rootLine-lat)*.075;out.x+=side.x*guide;out.z+=side.z*guide;
+  }else if(COURSE_IDENTITY.water==='gust'&&((ct>.12&&ct<.24)||(ct>.48&&ct<.61))){
+    const gust=Math.max(-.35,Math.sin(waterPulse*1.7+si*.021))*1.15;out.x+=side.x*gust;out.z+=side.z*gust;
+  }else if(COURSE_IDENTITY.water==='slick'&&ct>.61&&ct<.79){
+    const swirl=Math.sin(waterPulse*2.4+si*.033)*1.35;out.x+=side.x*swirl;out.z+=side.z*swirl;
+  }else if(COURSE_IDENTITY.water==='tide'){
+    const tide=Math.sin(waterPulse*.82+si*.014)*1.12;out.x+=side.x*tide;out.z+=side.z*tide;
+  }
   const HZ = (DIFF[G.difficulty] || DIFF.medium).haz;
   _zone.chute = false; _zone.mud = false; _zone.cutQuality=0;
   // lap 2+: high water — everything runs faster
@@ -1766,7 +1790,7 @@ function step(dt) {
       G.surge += (22 / COURSE_LEN) * dt;
       if (G.surge > 1.05) { G.surge = -1; G.surgeLapT = G.raceT; }
     }
-    if (!G.transformed && G.raceT - (G.courseEventBase || 0) > 18) {
+    if (G.courseEventLap !== G.raceLap && G.raceT - (G.courseEventBase || 0) > 18) {
       const ev = COURSE_EVENTS[LVL.id]; G.courseEventLap = G.raceLap; G.courseEventT = ev.duration;
       G.transformed=true;G.heroRevealT=2.8;
       eventToast(`${ev.name} · ${ev.detail}`); SFX.whistle(); setTimeout(() => SFX.thud(3.5), 380);
@@ -5314,7 +5338,7 @@ function onPlayerFinish() {
   const d = ducks[0];
   toast(`P${d.place}!`, 1600);
   el('finishPlace').textContent = d.place === 1 ? 'VICTORY!' : `P${d.place}`;
-  el('finishLine').textContent = d.place <= 3 ? 'PODIUM SECURED · OFFICIAL TIME PENDING' : 'CLASSIFIED FINISHER';
+  el('finishLine').textContent = `${COURSE_IDENTITY.finish} · ${d.place <= 3 ? 'PODIUM SECURED' : 'CLASSIFIED FINISHER'}`;
   el('finishFlash').classList.add('on'); setTimeout(()=>el('finishFlash').classList.remove('on'),2600);
   SFX.fanfare();
   G.podT = 0;
@@ -5442,7 +5466,7 @@ function prepRace(skipFly) {
   resetDucks();
   snapCam();
   if (skipFly || G.seenFly) { G.mode = 'countdown'; G.countdown = 3.2; }
-  else { G.mode = 'flyover'; G.flyT = 0; G.seenFly = true; eventToast('THE COURSE — SPACE to skip'); }
+  else { G.mode = 'flyover'; G.flyT = 0; G.seenFly = true; eventToast(`${COURSE_IDENTITY.hook} · SPACE TO SKIP`); }
   el('screen').classList.add('hidden');
   el('settingsPanel').classList.add('hidden');
   el('levelPanel').classList.add('hidden');
@@ -5460,7 +5484,7 @@ function prepRace(skipFly) {
   G.playerShove = false;
   const featured = nemGoal || ducks.find(d=>d.rogue && (d.rogue.trait==='bruiser'||d.rogue.trait==='shortcut')) || ducks[1];
   el('introCourse').textContent = LVL.name || LVL.id;
-  el('introRival').textContent = featured && featured.rogue ? `RIVAL WATCH · ${featured.name.toUpperCase()} · ${featured.rogue.role} · “${featured.rogue.quote}”` : 'THE FIELD IS READY';
+  el('introRival').textContent = featured && featured.rogue ? `${COURSE_IDENTITY.hook} · RIVAL: ${featured.name.toUpperCase()}` : COURSE_IDENTITY.hook;
   el('raceIntro').classList.add('on'); setTimeout(()=>el('raceIntro').classList.remove('on'),2200);
   setTimeout(()=>{if(G.mode!=='menu'&&!ducks[0].finished)el('raceGoal').style.display='block';},2400);
   el('startMeter').style.display='block'; el('startFill').style.width='0%'; el('startLabel').textContent='HOLD PADDLE ON 2 · HIT GOLD AT GO';
@@ -6144,16 +6168,16 @@ function frame(now) {
     const e2 = ft < 0.5 ? 2 * ft * ft : 1 - Math.pow(-2 * ft + 2, 2) / 2;
     const fi = wrapI(Math.round(e2 * (NSAMP - 30)));
     // duck under the cave vaults (Undergrove) — the flyover must fly INSIDE the dark
-    let flyH = 11;
+    let flyH = COURSE_IDENTITY.flyH;
     if (LVL.dark) {
       const ftPos = fi / NSAMP;
       for (const [c0, c1] of LVL.dark)
         if (ftPos > c0 - 0.03 && ftPos < c1 + 0.03) flyH = 5.5;
     }
     camera.position.set(
-      S.pos[fi].x + S.side[fi].x * Math.sin(now / 900) * 3,
+      S.pos[fi].x + S.side[fi].x * Math.sin(now / 900) * COURSE_IDENTITY.flySway,
       waterHeightAt(fi) + flyH,
-      S.pos[fi].z + S.side[fi].z * Math.sin(now / 900) * 3);
+      S.pos[fi].z + S.side[fi].z * Math.sin(now / 900) * COURSE_IDENTITY.flySway);
     const li = wrapI(fi + 50);
     camera.lookAt(S.pos[li].x, S.pos[li].y + 1, S.pos[li].z);
     if (G.flyT >= 1) { G.mode = 'countdown'; G.countdown = 3.2; snapCam(); }
