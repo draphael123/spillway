@@ -1467,6 +1467,7 @@ if (!SETTINGS.keys) SETTINGS.keys = { up: 'w', down: 's', left: 'a', right: 'd',
 if (!SETTINGS.camView) SETTINGS.camView = 'behind';
 const PAD = { up: false, down: false, left: false, right: false, on: false, name: '' };
 const TOUCH = { up: false, down: false, left: false, right: false, active: 'ontouchstart' in window };
+const MOBILE_GPU = TOUCH.active || matchMedia('(pointer:coarse)').matches || matchMedia('(max-width:900px)').matches;
 if (TOUCH.active && !localStorage.getItem('spillway-settings')) SETTINGS.quality = 'medium';
 // progression: race stats feed gear unlocks
 const STATS = Object.assign({ races: 0, wins: {}, winsByLevel: {}, nemesisBeaten: 0, shortcuts:0, cups:0, mastery:{}, masteryGoals:{}, rivalWins:{}, challengeWins:{}, cupTrophies:{} },
@@ -2235,7 +2236,7 @@ function placeOf(d) {
 // ============================================================ THREE SCENE
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE_GPU ? 1.35 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = IS_BATHWORLD ? .88 : 1.0;
@@ -2269,7 +2270,10 @@ const fxaaPass = new ShaderPass(FXAAShader);
 composer.addPass(fxaaPass);
 composer.addPass(new OutputPass());
 function renderFrame() {
-  if (SETTINGS.quality === 'low') renderer.render(scene, camera);
+  // Phone GPUs get the complete scene through the direct renderer. Full-screen
+  // post-processing allocates several viewport-sized framebuffers and can leave
+  // iOS/low-memory Android showing menus over a lost or blank WebGL canvas.
+  if (MOBILE_GPU || window._gpuFallback || SETTINGS.quality === 'low') renderer.render(scene, camera);
   else composer.render();
 }
 
@@ -5991,13 +5995,13 @@ function refreshSettingsUI() {
   el('padStatus').textContent = PAD.on || PAD.name ? `controller: ${(PAD.name || 'connected').slice(0, 40)}` : 'controller: none detected — plug in & press a button';
 }
 function applyQuality() {
-  const qmap = { low: [1, 0.4], medium: [1.5, 0.75], high: [Math.min(devicePixelRatio, 2), 1] };
+  const qmap = { low: [1, 0.4], medium: [MOBILE_GPU ? 1.2 : 1.5, 0.75], high: [Math.min(devicePixelRatio, MOBILE_GPU ? 1.35 : 2), MOBILE_GPU ? .82 : 1] };
   const [pr, frac] = qmap[SETTINGS.quality] || qmap.high;
   renderer.setPixelRatio(pr);
   if (window.SCATTER) SCATTER.forEach(im => { im.count = im._full === 0 ? 0 : Math.max(1, Math.floor(im._full * frac)); });   // never resurrect suppressed props
-  sun.castShadow = SETTINGS.quality !== 'low';
+  sun.castShadow = !MOBILE_GPU && SETTINGS.quality !== 'low';
   MOTES.mesh.visible = SETTINGS.quality !== 'low';
-  bloomPass.enabled = SETTINGS.quality === 'high';
+  bloomPass.enabled = !MOBILE_GPU && SETTINGS.quality === 'high';
   camera.fov = SETTINGS.fov; camera.updateProjectionMatrix();
   resize();
 }
@@ -6077,7 +6081,9 @@ refreshSettingsUI(); setDiff(SETTINGS.difficulty); setLaps(SETTINGS.laps); apply
 
 // ============================================================ MAIN LOOP
 function resize() {
-  const w = innerWidth, h = innerHeight;
+  // The CSS canvas is the source of truth. Mobile browser chrome changes the
+  // visual viewport without always updating innerHeight in the same frame.
+  const rect=canvas.getBoundingClientRect(),w=Math.max(1,Math.round(rect.width||innerWidth)),h=Math.max(1,Math.round(rect.height||innerHeight));
   renderer.setSize(w, h, false);
   composer.setSize(w, h);
   const pr = renderer.getPixelRatio();
@@ -6085,7 +6091,12 @@ function resize() {
   fxaaPass.material.uniforms.resolution.value.set(1 / (w * pr), 1 / (h * pr));
   camera.aspect = w / h; camera.updateProjectionMatrix();
 }
-addEventListener('resize', resize); resize();
+addEventListener('resize', resize);
+addEventListener('orientationchange',()=>setTimeout(resize,120));
+window.visualViewport?.addEventListener('resize',resize);
+canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();window._gpuFallback=true;eventToast('RESTORING THE RACE FIELD…');});
+canvas.addEventListener('webglcontextrestored',()=>{applyQuality();resize();eventToast('RACE FIELD RESTORED');});
+resize();
 
 // everything opaque casts a shadow; the ground catches them (grounds every prop)
 scene.traverse(o => {
@@ -6555,7 +6566,7 @@ function frame(now) {
   }
   // A local cubemap follows the race and catches banks, bridges, trees, ducks and sky.
   // Updating intermittently keeps the reflection alive without doubling every frame's cost.
-  const reflectEvery = SETTINGS.quality === 'high' ? 18 : SETTINGS.quality === 'medium' ? 34 : 0;
+  const reflectEvery = MOBILE_GPU ? 0 : SETTINGS.quality === 'high' ? 18 : SETTINGS.quality === 'medium' ? 34 : 0;
   if (reflectEvery && waterMesh && (++reflectFrame % reflectEvery === 0)) {
     waterReflectCam.position.set(ducks[0].p.x, waterHeightAt(ducks[0].si) + 1.4, ducks[0].p.z);
     waterMesh.visible = false;
