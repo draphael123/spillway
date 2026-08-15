@@ -2897,7 +2897,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     tufts.setColorAt(k, cCol.setHSL(tuftH + rand() * 0.08, 0.48, 0.28 + rand() * 0.15));
   }
   // distant mountains — ridged silhouettes w/ snow caps, tinted by the biome they stand in
-  const nM = 30;
+  const nM = LVL.id === 'spillway' ? 18 : 30;
   const mtnGeo = new THREE.ConeGeometry(14, 20, 7, 2);
   {
     const pa = mtnGeo.attributes.position;
@@ -2933,7 +2933,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
       place(caps, k, i, ob, sgn, -200, 0.001, 0);
       continue;
     }
-    const ry2 = rand() * 6, my = waterHeightAt(i) + 4 + s * 6;
+    const ry2 = rand() * 6, my = waterHeightAt(i) + bankH(i, ob, sgn) + 10 * s - .7;
     place(mountains, k, i, ob, sgn, my, s, ry2);
     place(caps, k, i, ob, sgn, my + 7.4 * s, s, ry2);
     const zw = zoneW(i);
@@ -3563,35 +3563,31 @@ if (LVL.id === 'millrace') {
     const ai = Math.round(0.335 * NSAMP);
     const wh = waterHeightAt(ai), w = S.w[ai];
     const yaw = Math.atan2(S.side[ai].x, S.side[ai].z);
-    const stone = [0x7f858b, 0x8a9096, 0x767c82];
-    // piers: three stacked, slightly jittered stone blocks each side, grounded on the banks
+    const deckY = wh + 10.2;
+    // Tapered masonry piers meet both the terrain and deck, so the crossing reads as load-bearing.
     for (const sgn of [-1, 1]) {
       const gy = wh + bankH(ai, 1.2, sgn) - 0.4;
       const p = S.pos[ai].clone().addScaledVector(S.side[ai], sgn * (w + 1.4));
-      let y = gy;
-      for (let b = 0; b < 3; b++) {
-        const bw = 2.2 - b * 0.25, bh = 2.2;
-        const blk = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bw), lam(stone[b % 3]));
-        blk.position.set(p.x + (rand() - 0.5) * 0.15, y + bh / 2, p.z + (rand() - 0.5) * 0.15);
-        blk.rotation.y = yaw + (rand() - 0.5) * 0.08;
-        scene.add(blk); y += bh;
-      }
+      const ph = Math.max(2.4, deckY - gy - 0.25);
+      const pier = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 1.18, ph, 6), lam(0x747b80));
+      pier.position.set(p.x, gy + ph / 2, p.z); pier.rotation.y = yaw;
+      pier.castShadow = pier.receiveShadow = true; scene.add(pier);
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.48, 1.75), lam(0x8a9094));
+      cap.position.set(p.x, deckY - 0.35, p.z); cap.rotation.y = yaw;
+      cap.castShadow = true; scene.add(cap);
     }
-    // the arc: wedge stones sweeping across the river, keystone at the crown
-    const span = w + 1.4, rise = 3.2, baseY = wh + 6.6;
-    const NSEG = 9;
-    for (let sg = 0; sg <= NSEG; sg++) {
-      const u = sg / NSEG;                       // 0..1 across
-      const latA = -span + u * span * 2;
-      const yA = baseY + Math.sin(u * Math.PI) * rise;
-      const ang = Math.cos(u * Math.PI) * -0.5;  // stones lean along the curve
-      const wedge = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.5, sg === Math.floor(NSEG / 2) ? 1.7 : 1.3),
-        lam(stone[sg % 3]));
-      wedge.position.copy(S.pos[ai]).addScaledVector(S.side[ai], latA);
-      wedge.position.y = yA;
-      wedge.rotation.y = yaw;
-      wedge.rotateZ(ang);
-      scene.add(wedge);
+    // A slim maintenance crossing keeps the gorge readable without occluding the chase camera.
+    const span = w + 2.3;
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(span * 2, 0.65, 1.7), lam(0x747b80));
+    deck.position.copy(S.pos[ai]); deck.position.y = deckY; deck.rotation.y = yaw;
+    deck.castShadow = deck.receiveShadow = true; scene.add(deck);
+    for (const railZ of [-0.72, 0.72]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(span * 2, 0.22, 0.16), lam(0x3d484a));
+      rail.position.set(0, 0.72, railZ); deck.add(rail);
+    }
+    for (let lat = -span + 1.2; lat < span; lat += 2.4) {
+      const brace = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.15, 1.45), lam(0xb86338));
+      brace.position.set(lat, 0.22, 0); deck.add(brace);
     }
   }
   // hoodoo stacks in the canyon
@@ -3672,6 +3668,33 @@ if (LVL.id === 'millrace') {
     const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.1, 8), lam(bu % 2 ? 0xfff8e7 : 0xd94f30));
     stripe.position.copy(buoy.position);
     scene.add(buoy, stripe);
+  }
+  // Authored horizon: continuous watershed ridges replace the old field of disconnected cone peaks.
+  for(const [obR,hR,colR] of [[38,13,0x607979],[52,19,0x789092]]){
+    for(const sgn of [-1,1]){
+      const ps=[],ix=[];let row=0;
+      for(let i=0;i<=NSAMP;i+=20){const ii=wrapI(i),p=S.pos[ii].clone().addScaledVector(S.side[ii],sgn*(S.w[ii]+obR)),gy=waterHeightAt(ii)+bankH(ii,Math.min(26,obR),sgn),crest=gy+hR+vnoise(ii*.025+obR,sgn*17)*7;ps.push(p.x,gy-7,p.z,p.x,crest,p.z);if(row){const k=(row-1)*2;ix.push(k,k+2,k+1,k+1,k+2,k+3);}row++;}
+      const gR=new THREE.BufferGeometry();gR.setAttribute('position',new THREE.Float32BufferAttribute(ps,3));gR.setIndex(ix);gR.computeVertexNormals();const ridge=new THREE.Mesh(gR,new THREE.MeshLambertMaterial({color:colR,side:THREE.DoubleSide,flatShading:true}));ridge.receiveShadow=true;scene.add(ridge);
+    }
+  }
+  // Upper flood-control station: a memorable destination silhouette above the magic climb.
+  {
+    const i=Math.round(.885*NSAMP),sgn=1,ob=17,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,16,sgn),yaw=Math.atan2(S.tan[i].x,S.tan[i].z),g=new THREE.Group();
+    const concrete=lam(0x7d8584),dark=lam(0x30494d),orange=lam(0xe46b32);
+    const plinth=new THREE.Mesh(new THREE.BoxGeometry(15,2.2,8),concrete);plinth.position.y=1.0;g.add(plinth);
+    const hall=new THREE.Mesh(new THREE.BoxGeometry(9,5.5,6),dark);hall.position.set(-1.8,4.5,0);g.add(hall);
+    const roof2=new THREE.Mesh(new THREE.BoxGeometry(10,.55,6.8),orange);roof2.position.set(-1.8,7.45,0);g.add(roof2);
+    for(const x of [-5.2,-1.8,1.6]){const gate=new THREE.Mesh(new THREE.BoxGeometry(2.2,2.7,.35),lam(0x162f37));gate.position.set(x,3.6,-3.18);g.add(gate);}
+    const tower=new THREE.Mesh(new THREE.BoxGeometry(2.6,9,2.6),concrete);tower.position.set(5.2,5.4,1.2);g.add(tower);
+    const beacon=new THREE.Mesh(new THREE.SphereGeometry(.28,8,6),new THREE.MeshBasicMaterial({color:0xffb23e}));beacon.position.set(5.2,10.1,1.2);g.add(beacon);
+    for(const x of [-4,0,4]){const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,8,8),orange);pipe.rotation.z=Math.PI/2;pipe.position.set(x,-.1,3.4);g.add(pipe);}
+    g.position.set(p.x,gy,p.z);g.rotation.y=yaw;scene.add(g);window._spillwayStation=g;
+  }
+  // Canyon fire lookout gives the middle distance a human-scale vertical landmark.
+  {
+    const i=Math.round(.59*NSAMP),sgn=-1,ob=15,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,15,sgn),g=new THREE.Group(),wood=lam(0x654b35);
+    for(const [x,z] of [[-1,-1],[1,-1],[-1,1],[1,1]]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(.12,.18,8,6),wood);leg.position.set(x,4,z);leg.rotation.z=x*.035;g.add(leg);}
+    const deck=new THREE.Mesh(new THREE.BoxGeometry(4.2,.45,4.2),wood);deck.position.y=8;const cabin=new THREE.Mesh(new THREE.BoxGeometry(3,2.2,3),lam(0xb96d3b));cabin.position.y=9.25;const roof3=new THREE.Mesh(new THREE.ConeGeometry(2.7,1.4,4),lam(0x384b42));roof3.position.y=11;roof3.rotation.y=Math.PI/4;g.add(deck,cabin,roof3);g.position.set(p.x,gy-.25,p.z);scene.add(g);
   }
 }
 
