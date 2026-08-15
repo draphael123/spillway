@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SPILLWAY — a rubber duck derby</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
 <style>
   :root { --ink:#0e2a33; --cream:#fff8e7; --sun:#ffd23f; --rush:#2ec4b6; }
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -147,6 +150,79 @@
   .statGrid .big { font-size:26px; font-weight:bold; }
   .statGrid .lockDone { color:#2a8a5f; }
   .statGrid .lockTodo { opacity:.6; }
+  /* ================= KART THEME: chunky, glossy, angled, gold ================= */
+  :root { --gold:#ffcd2e; --goldHi:#ffe886; --goldLo:#e8960f; }
+  .kart, .panel h1, .panel h2, #hubHead h1, #hubTabs button, .go, .diffRow button, .segRow button,
+  .pill, .lvlCard b, #lapBanner, #toast, #resultsTitle, .statGrid h3, .statGrid .big {
+    font-family: 'Lilita One', Georgia, serif; font-weight: normal; }
+  #hubHead h1 { font-size: 74px; letter-spacing: 2px; color: var(--gold); transform: skewX(-5deg);
+    -webkit-text-stroke: 2.5px var(--ink);
+    text-shadow: 0 6px 0 var(--ink), 0 10px 16px rgba(14,42,51,.45); }
+  #hubHead .sub { font-style: italic; font-weight: bold; }
+  #hubHead::after { content: ''; display: block; height: 12px; margin: 10px auto 0; max-width: 420px;
+    border-radius: 6px; border: 2px solid var(--ink); box-shadow: 0 3px 0 rgba(14,42,51,.4);
+    background: repeating-linear-gradient(90deg, var(--ink) 0 14px, var(--cream) 14px 28px); }
+  #hubTabs button {
+    transform: skewX(-8deg); font-size: 19px; letter-spacing: 1px; padding: 11px 24px;
+    border-width: 3px; border-radius: 12px;
+    background: linear-gradient(180deg, #fffef6 0%, #f3ead0 55%, #e4d3ac 100%);
+    position: relative; overflow: hidden; }
+  #hubTabs button::before { content: ''; position: absolute; left: 6%; right: 6%; top: 7%; height: 34%;
+    border-radius: 8px; background: rgba(255,255,255,.6); pointer-events: none; }
+  #hubTabs button.sel {
+    background: linear-gradient(180deg, var(--goldHi) 0%, var(--gold) 55%, var(--goldLo) 100%);
+    animation: selGlow 1.6s ease-in-out infinite; }
+  #hubTabs button:hover { transform: skewX(-8deg) translateY(-3px) scale(1.04); }
+  #hubTabs button:active { transform: skewX(-8deg) translateY(1px); }
+  @keyframes selGlow {
+    0%, 100% { box-shadow: 0 3px 0 rgba(14,42,51,.4), 0 0 10px 2px rgba(255,205,46,.55); }
+    50%      { box-shadow: 0 3px 0 rgba(14,42,51,.4), 0 0 22px 6px rgba(255,205,46,.85); } }
+  .panel { border-width: 4px; border-radius: 24px;
+    background: linear-gradient(180deg, #fffdf2 0%, var(--cream) 45%, #f4e8c8 100%);
+    box-shadow: 0 10px 0 rgba(14,42,51,.45), 0 18px 30px rgba(14,42,51,.25); }
+  .panel h2 { font-size: 34px; letter-spacing: 2px; transform: skewX(-4deg);
+    color: var(--ink); text-shadow: 0 3px 0 rgba(255,205,46,.9); }
+  .go { font-size: 24px; letter-spacing: 1px; transform: skewX(-6deg);
+    border-width: 3px; border-radius: 14px; padding: 12px 34px; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, var(--goldHi) 0%, var(--gold) 55%, var(--goldLo) 100%);
+    text-shadow: 0 2px 0 rgba(255,255,255,.5); }
+  .go::before { content: ''; position: absolute; left: 5%; right: 5%; top: 8%; height: 32%;
+    border-radius: 10px; background: rgba(255,255,255,.55); pointer-events: none; }
+  .go:hover { transform: skewX(-6deg) translateY(-3px) scale(1.03); }
+  .go:active { transform: skewX(-6deg) translateY(1px); }
+  .btnRow .go { font-size: 17px; }
+  .btnRow .go[id="courseBtn"], .btnRow .go[id="menuBtn"] {
+    background: linear-gradient(180deg, #fffef6, #ece1c2) !important; }
+  .diffRow button, .segRow button { transform: skewX(-6deg); border-width: 2.5px; border-radius: 10px;
+    background: linear-gradient(180deg, #fffef6, #efe5c8); font-size: 15px; }
+  .diffRow button:hover, .segRow button:hover { transform: skewX(-6deg) translateY(-2px); }
+  .diffRow button:active, .segRow button:active { transform: skewX(-6deg) translateY(1px); }
+  .diffRow button.sel, .segRow button.sel {
+    background: linear-gradient(180deg, var(--goldHi), var(--gold) 55%, var(--goldLo));
+    animation: selGlow 1.6s ease-in-out infinite; }
+  .diffRow button[data-d="insane"].sel { background: linear-gradient(180deg, #ff8a68, #d94f30 55%, #a83318); animation: none; }
+  .lvlCard { position: relative; overflow: hidden; padding-left: 30px; border-width: 3px; border-radius: 16px;
+    background: linear-gradient(180deg, #fffef6, #f1e7ca); }
+  .lvlCard::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 16px;
+    border-right: 2.5px solid var(--ink); background: var(--stripe, var(--rush)); }
+  .lvlCard[data-lvl="spillway"]   { --stripe: linear-gradient(180deg, #2ec4b6, #53d769); }
+  .lvlCard[data-lvl="millrace"]   { --stripe: linear-gradient(180deg, #9fc4ec, #5a6a78); }
+  .lvlCard[data-lvl="undergrove"] { --stripe: linear-gradient(180deg, #8df26e, #17342a); }
+  .lvlCard[data-lvl="canopy"]     { --stripe: linear-gradient(180deg, #ffc04a, #53d769); }
+  .lvlCard b { font-size: 19px; letter-spacing: 1px; }
+  .lvlCard.sel { background: linear-gradient(180deg, var(--goldHi), var(--gold) 60%, var(--goldLo));
+    animation: selGlow 1.6s ease-in-out infinite; }
+  .pill { transform: skewX(-7deg); border-width: 3px; border-radius: 12px; font-size: 21px;
+    background: linear-gradient(180deg, #fffef6 0%, #f3ead0 60%, #e6d6b0 100%); }
+  .pill small { font-size: 11px; letter-spacing: 2px; }
+  #place { font-size: 26px; color: #b3541e; }
+  #hudTop { background: rgba(14,42,51,.3); border-radius: 16px; }
+  #lapBanner { font-size: 54px; letter-spacing: 3px; transform: translateX(-50%) skewX(-6deg);
+    -webkit-text-stroke: 1.5px var(--ink); }
+  #toast { font-family: 'Lilita One', Georgia, serif; -webkit-text-stroke: 2px var(--ink); }
+  #resultsList .you { background: linear-gradient(90deg, var(--goldHi), var(--gold)); border: 2px solid var(--ink); }
+  kbd { font-family: Georgia, serif; }
+  @media (max-width: 860px) { #hubHead h1 { font-size: 44px; } #hubTabs button { font-size: 14px; padding: 8px 13px; } }
 </style>
 </head>
 <body>
@@ -1765,13 +1841,56 @@ let waterMat;
         float edgeLine = smoothstep(0.05, 0.018, shore) * 0.45;
         float lace = smoothstep(0.10, 0.015, shore) * smoothstep(0.4, 0.75, noise(vec2(vUv.x * 20., flow * 24. + sin(uT * 1.3) * 0.6))) * 0.8;
         c = mix(c, vec3(0.95, 0.98, 0.97), clamp(foam + lace + edgeLine, 0., 1.));
-        c *= 0.3 + 0.7 * uDark;   // cave darkness reaches the river itself (foam included)
+        c *= 0.2 + 0.8 * uDark;   // cave darkness reaches the river itself (foam included)
         c = mix(c, uFog, vFog);
         float alpha = mix(0.45, 0.95, smoothstep(0.0, 0.09, shore));
         gl_FragColor = vec4(c, alpha); }`,
   });
   scene.add(new THREE.Mesh(g, waterMat));
 }
+
+// ---------- baked detail textures: wood grain + rock speckle (canvas, tiling, zero assets)
+const WOODTEX = (() => {
+  const c2 = document.createElement('canvas'); c2.width = c2.height = 128;
+  const x2 = c2.getContext('2d');
+  x2.fillStyle = '#ffffff'; x2.fillRect(0, 0, 128, 128);
+  for (let l = 0; l < 42; l++) {   // wavy grain lines running along V (the length of planks/logs)
+    const gx = rand() * 128, wob = randRange(1.5, 5), ph2 = rand() * 6;
+    x2.strokeStyle = `rgba(70,42,16,${randRange(0.05, 0.13)})`;
+    x2.lineWidth = randRange(0.8, 2.6);
+    x2.beginPath();
+    for (let yy = -4; yy <= 132; yy += 6) {
+      const xx = gx + Math.sin(yy * 0.05 + ph2) * wob;
+      yy <= -4 + 0.1 ? x2.moveTo(xx, yy) : x2.lineTo(xx, yy);
+    }
+    x2.stroke();
+  }
+  for (let kn = 0; kn < 4; kn++) {   // knots
+    const kx = rand() * 128, ky = rand() * 128;
+    x2.strokeStyle = 'rgba(70,42,16,0.18)'; x2.lineWidth = 1.4;
+    for (let rr = 2; rr < 7; rr += 2) { x2.beginPath(); x2.ellipse(kx, ky, rr, rr * 1.6, 0, 0, 7); x2.stroke(); }
+  }
+  const t2 = new THREE.CanvasTexture(c2);
+  t2.wrapS = t2.wrapT = THREE.RepeatWrapping;
+  return t2;
+})();
+const ROCKTEX = (() => {
+  const c2 = document.createElement('canvas'); c2.width = c2.height = 128;
+  const x2 = c2.getContext('2d');
+  x2.fillStyle = '#ffffff'; x2.fillRect(0, 0, 128, 128);
+  for (let d2 = 0; d2 < 900; d2++) {   // mineral speckle
+    x2.fillStyle = rand() < 0.5 ? `rgba(30,34,40,${randRange(0.04, 0.12)})` : `rgba(255,255,255,${randRange(0.05, 0.12)})`;
+    x2.fillRect(rand() * 128, rand() * 128, randRange(0.7, 2.2), randRange(0.7, 2.2));
+  }
+  for (let p2 = 0; p2 < 26; p2++) {   // weather stains
+    const g3 = x2.createRadialGradient(rand() * 128, rand() * 128, 1, rand() * 128, rand() * 128, randRange(8, 22));
+    g3.addColorStop(0, `rgba(40,46,52,${randRange(0.04, 0.09)})`); g3.addColorStop(1, 'rgba(128,128,128,0)');
+    x2.fillStyle = g3; x2.fillRect(0, 0, 128, 128);
+  }
+  const t2 = new THREE.CanvasTexture(c2);
+  t2.wrapS = t2.wrapT = THREE.RepeatWrapping;
+  return t2;
+})();
 
 // ---------- banks / valley (noise heights + colour patches; shared with scatter placement)
 function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
@@ -1805,7 +1924,11 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
         if (ob < 0.8) { if (LVL.pal) cTmp.setHSL(gh, gs * 0.6, Math.min(0.7, gl + 0.10)); else cTmp.setHSL(0.10 - zw[2] * 0.035, 0.32 + zw[2] * 0.15, 0.62); }  // sand lip follows the course palette
         else if (ob < 2) cTmp.setHSL(gh, gs * 0.7, gl + 0.14).lerp(new THREE.Color(0xb9a878), 0.35 * (1 - patch));
         else if ((nearFalls || zw[1] > 0.5) && ob > 6) cTmp.set(0x8d9298).offsetHSL(0, 0, (patch - .5) * .12);  // gorge rock walls
-        else if (zw[2] > 0.5 && ob > 8) cTmp.setHSL(0.035, 0.5, 0.34 + (patch - .5) * 0.12); // canyon mesa bands
+        else if (zw[2] > 0.5 && ob > 8) {   // canyon mesas: real sedimentary strata by elevation
+          const strat = Math.sin((y0 + h) * 1.9);
+          cTmp.setHSL(0.035 + (strat > 0.3 ? 0.014 : 0), 0.5,
+            0.34 + (patch - .5) * 0.07 + (strat > 0.3 ? 0.055 : strat < -0.5 ? -0.035 : 0));
+        }
         else cTmp.setHSL(gh + patch * 0.045, gs, gl - 0.02 + patch * 0.14 - Math.min(1, ob / 26) * 0.06);
         // fake AO: wet-sand darkening at the waterline, soft crease just above it
         const ao = ob < 0.6 ? 0.74 : ob < 2 ? 0.90 : 1.0;
@@ -1947,7 +2070,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   }
   const nSl = 34;
   const slabs = new THREE.InstancedMesh(new THREE.BoxGeometry(1.6, 1.0, 1.1),
-    new THREE.MeshLambertMaterial({ color: 0xa8593c }), nSl);
+    new THREE.MeshLambertMaterial({ color: 0xa8593c, map: ROCKTEX }), nSl);
   for (let k = 0; k < nSl; k++) {
     const i = Math.floor((0.50 + rand() * 0.26) * NSAMP);
     const sgn = (k % 2) * 2 - 1, ob = randRange(4.5, 13);   // clear of the waterline — slabs must never float
@@ -1959,7 +2082,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   // gorge spires — jagged gray teeth around the falls
   const nSp = 26;
   const spires = new THREE.InstancedMesh(new THREE.ConeGeometry(0.9, 3.4, 5),
-    new THREE.MeshLambertMaterial({ color: 0x81868c }), nSp);
+    new THREE.MeshLambertMaterial({ color: 0x81868c, map: ROCKTEX }), nSp);
   for (let k = 0; k < nSp; k++) {
     const i = Math.floor((0.27 + rand() * 0.24) * NSAMP);
     const sgn = (k % 2) * 2 - 1, ob = randRange(1.6, 10);
@@ -1994,7 +2117,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   // bank boulders
   const nBo = 60;
   const boulders = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.8, 0),
-    new THREE.MeshLambertMaterial({ color: 0x8f949a }), nBo);
+    new THREE.MeshLambertMaterial({ color: 0x8f949a, map: ROCKTEX }), nBo);
   for (let k = 0; k < nBo; k++) {
     const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.6, 14);
     const bo2 = randRange(0.4, 1.5);
@@ -2020,6 +2143,17 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const s = randRange(0.7, 1.4);
     m.compose(_tmpA, q, sc.set(s, s, s));
     reedsIM.setMatrixAt(k, m);
+  }
+  // grass tufts crowd the waterline — the bare-bank killer
+  const nG2 = 440;
+  const tufts = new THREE.InstancedMesh(new THREE.ConeGeometry(0.15, 0.55, 4),
+    new THREE.MeshLambertMaterial({ color: 0xffffff }), nG2);
+  const tuftH = LVL.pal ? LVL.pal.tree[0] : 0.24;
+  for (let k = 0; k < nG2; k++) {
+    const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(0.5, 2.6);
+    const s = randRange(0.6, 1.5);
+    place(tufts, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.2 * s, s, rand() * 6);
+    tufts.setColorAt(k, cCol.setHSL(tuftH + rand() * 0.08, 0.48, 0.28 + rand() * 0.15));
   }
   // distant mountains — ridged silhouettes w/ snow caps, tinted by the biome they stand in
   const nM = 30;
@@ -2082,7 +2216,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     bIM.frustumCulled = false; bIM.renderOrder = 1;
     scene.add(bIM);
   }
-  window.SCATTER = [trunks, crowns, tiers[1], tiers[2], mTrunks, mCrowns, cacti, slabs, spires, bushes, flowers, boulders, reedsIM];
+  window.SCATTER = [trunks, crowns, tiers[1], tiers[2], mTrunks, mCrowns, cacti, slabs, spires, bushes, flowers, boulders, reedsIM, tufts];
   SCATTER.forEach(im => { im._full = im.count; });
   scene.add(...SCATTER, mountains);
 }
@@ -2091,9 +2225,9 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
 let whirlMesh;
 {
   const g = new THREE.DodecahedronGeometry(1, 0);
-  const mat = new THREE.MeshLambertMaterial({ color: 0x8a8f94 });
+  const mat = new THREE.MeshLambertMaterial({ color: 0x8a8f94, map: ROCKTEX });
   const pilingG = new THREE.CylinderGeometry(1, 1.1, 4, 8);
-  const pilingM = new THREE.MeshLambertMaterial({ color: 0x7a5c40 });
+  const pilingM = new THREE.MeshLambertMaterial({ color: 0x7a5c40, map: WOODTEX });
   for (const r of ROCKS) {
     if (r.type === 'piling') {
       const mesh = new THREE.Mesh(pilingG, pilingM);
@@ -2113,8 +2247,8 @@ let whirlMesh;
     const bi = Math.round(0.615 * NSAMP);
     const yaw = Math.atan2(S.tan[bi].x, S.tan[bi].z);
     const wSpan = S.w[bi] * 2 + 7;   // long enough to land on both banks
-    const plankM = new THREE.MeshLambertMaterial({ color: 0x8a6a48 });
-    const plankM2 = new THREE.MeshLambertMaterial({ color: 0x7a5a3a });
+    const plankM = new THREE.MeshLambertMaterial({ color: 0x8a6a48, map: WOODTEX });
+    const plankM2 = new THREE.MeshLambertMaterial({ color: 0x7a5a3a, map: WOODTEX });
     const deckY = waterHeightAt(bi) + 3.2;
     for (let pk = 0; pk < 7; pk++) {
       const plank = new THREE.Mesh(new THREE.BoxGeometry(wSpan, 0.22, 0.36), pk % 2 ? plankM : plankM2);
@@ -2146,7 +2280,7 @@ let whirlMesh;
   }
   // floating logs (static ones only — machinery draws its own)
   {
-    const logM = new THREE.MeshLambertMaterial({ color: 0x6e4c2e });
+    const logM = new THREE.MeshLambertMaterial({ color: 0x6e4c2e, map: WOODTEX });
     for (const L of LOGS) {
       if (L.dyn) continue;   // machinery draws its own meshes
       const mesh = new THREE.Mesh(new THREE.CylinderGeometry(L.r, L.r, L.len, 8), logM);
@@ -2619,7 +2753,7 @@ const WISPS = [];
 
 // ---------- millrace machinery meshes (driven by MDYN each frame)
 if (LVL.id === 'millrace') {
-  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c, map: WOODTEX });
   for (const g2 of MDYN.gates) {
     const i = g2.i, w = S.w[i];
     // frame posts on both edges of this gate's half
