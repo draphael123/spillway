@@ -6,7 +6,7 @@
 <title>SPILLWAY — a rubber duck derby</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Lilita+One&family=Nunito+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root { --ink:#0e2a33; --cream:#fff8e7; --sun:#ffd23f; --rush:#2ec4b6; }
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -224,6 +224,9 @@
     -webkit-text-stroke: 1.5px var(--ink); }
   #toast { font-family: 'Lilita One', Georgia, serif; -webkit-text-stroke: 2px var(--ink); }
   #resultsList .you { background: linear-gradient(90deg, var(--goldHi), var(--gold)); border: 2px solid var(--ink); }
+  .goalResult { margin:0 0 10px; padding:8px 12px; border-radius:8px; border:2px solid var(--raceNavy); font-family:'Barlow Condensed',sans-serif; font-weight:900; letter-spacing:1px; text-align:center; }
+  .goalResult.win { background:#c9f6df; color:#176348; }
+  .goalResult.try { background:#ffe5bd; color:#8b471b; }
   kbd { font-family: Georgia, serif; }
   @media (max-width: 860px) { #hubHead h1 { font-size: 44px; } #hubTabs button { font-size: 14px; padding: 8px 13px; } }
   /* character pass: mascot ducks, hand-tilted panels, duck wisdom */
@@ -237,6 +240,67 @@
   .wisdom { margin-top: 14px; font-size: 14px; opacity: .82; font-style: italic; line-height: 1.5;
     border-top: 2px dashed rgba(14,42,51,.25); padding-top: 10px; }
   .wisdom b { font-style: normal; }
+  /* ================= 2.9 REGATTA BROADCAST =================
+     Enamel race boards, buoy colour, course tape and compact broadcast data. */
+  :root { --raceNavy:#071b2b; --raceBlue:#123b50; --buoy:#ffd12e; --signal:#ef4b35; --enamel:#fffaf0; --current:#22c7bb; --foam:#f4ffff; }
+  body { font-family:'Nunito Sans', Georgia, serif; }
+  #screen { background:
+    radial-gradient(circle at 50% 20%, rgba(34,199,187,.16), transparent 42%),
+    linear-gradient(180deg, rgba(7,27,43,.30), rgba(7,27,43,.78)); }
+  #hub { gap:8px; padding-top:10px; width:100vw; overflow-x:hidden; }
+  #hubHead h1 { font-size:clamp(48px,6vw,76px); letter-spacing:1px; }
+  #hubHead .sub { font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; letter-spacing:3px; font-style:normal; font-size:15px; }
+  #hubHead::after { height:8px; margin-top:5px; max-width:520px; background:repeating-linear-gradient(135deg,var(--enamel) 0 12px,var(--enamel) 12px 24px,var(--raceNavy) 24px 36px,var(--raceNavy) 36px 48px); }
+  #hubTabs { gap:5px; padding:5px; border-radius:15px; background:rgba(7,27,43,.72); border:2px solid rgba(255,255,255,.16); }
+  #hubTabs button { font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; font-size:17px; padding:9px 18px; border-radius:9px; box-shadow:none; }
+  #hubTabs button.sel { color:var(--raceNavy); }
+  .panel { padding:24px 36px; border-color:var(--raceNavy); border-radius:18px; background:linear-gradient(160deg,#fffdf7 0%,#fff7df 72%,#efe1bd 100%); box-shadow:0 9px 0 rgba(7,27,43,.7),0 24px 54px rgba(0,0,0,.28); }
+  .panel::after { content:''; display:block; height:5px; margin:22px -24px -20px; background:repeating-linear-gradient(90deg,var(--signal) 0 38px,var(--buoy) 38px 76px,var(--current) 76px 114px); opacity:.85; }
+  .panel h2 { font-family:'Barlow Condensed',sans-serif; font-weight:900; text-transform:uppercase; letter-spacing:3px; }
+  .setRow > span:first-child { font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; letter-spacing:1.5px; color:#315364; }
+  .go,.segRow button,.lvlCard b,#hubTabs button { font-family:'Barlow Condensed',sans-serif; font-weight:900; text-transform:uppercase; }
+  .go { border-color:var(--raceNavy); box-shadow:0 4px 0 var(--raceNavy),0 9px 18px rgba(7,27,43,.18); }
+  #raceBtn { min-width:190px; font-size:30px; }
+  #raceBtn::after { content:'  ›'; }
+  .lvlCard { border-color:var(--raceNavy); }
+  #duckRow { flex-wrap:wrap; justify-content:flex-end; max-width:310px; }
+  .lvlCard.sel { box-shadow:inset 0 0 0 3px rgba(255,255,255,.65),0 5px 0 var(--raceNavy); }
+  .hud { font-family:'Barlow Condensed',sans-serif; }
+  #hudTop { top:12px; padding:0; gap:6px; background:none; border-radius:0; filter:drop-shadow(0 6px 10px rgba(0,0,0,.22)); }
+  .pill { transform:none; min-height:64px; border:3px solid var(--raceNavy); border-radius:10px; padding:3px 15px 1px; font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:28px; line-height:.95; background:linear-gradient(180deg,#fff 0%,var(--enamel) 62%,#e8dcc1 100%); box-shadow:0 4px 0 var(--raceNavy); }
+  .pill small { margin-top:5px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:11px; letter-spacing:2.5px; color:#48606b; opacity:1; }
+  #place { min-width:132px; font-size:34px; color:var(--signal); background:linear-gradient(180deg,#fff5bf,var(--buoy)); }
+  #minimap { top:12px; right:12px; padding:6px; border:3px solid var(--raceNavy); border-radius:14px; background:var(--enamel); box-shadow:0 5px 0 var(--raceNavy); }
+  #minimap::before { content:'COURSE MAP'; display:block; text-align:center; font-weight:900; letter-spacing:2px; font-size:11px; margin-bottom:3px; }
+  #minimap canvas { border:0; border-radius:8px; box-shadow:none; background:#eaf6ef; }
+  #raceCue { top:92px; left:50%; transform:translateX(-50%); display:none; min-width:310px; text-align:center; color:var(--enamel); background:rgba(7,27,43,.90); border:2px solid rgba(255,255,255,.75); border-radius:9px; padding:7px 18px 8px; box-shadow:0 4px 0 rgba(7,27,43,.7); }
+  #raceCue b { display:block; color:var(--buoy); font-size:13px; letter-spacing:3px; }
+  #raceCue span { font-weight:800; font-size:18px; letter-spacing:.5px; }
+  #raceGoal { top:14px; left:14px; display:none; color:var(--enamel); background:rgba(7,27,43,.88); border-left:7px solid var(--buoy); border-radius:6px; padding:8px 14px; box-shadow:0 4px 0 rgba(7,27,43,.55); }
+  #raceGoal b { display:block; color:var(--buoy); font-size:11px; letter-spacing:2.5px; }
+  #raceGoal span { font-size:17px; font-weight:900; }
+  #flowPill { bottom:18px; left:50%; transform:translateX(-50%); display:none; width:min(330px,52vw); padding:8px 10px 9px; background:rgba(7,27,43,.9); border:3px solid var(--raceNavy); border-radius:12px; color:var(--enamel); box-shadow:0 4px 0 rgba(0,0,0,.28); pointer-events:auto; cursor:pointer; }
+  #flowLabel { display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:900; letter-spacing:2px; }
+  #flowLabel span:last-child { color:var(--buoy); }
+  #flowTrack { height:13px; margin-top:5px; overflow:hidden; border:2px solid var(--enamel); border-radius:999px; background:#102d3d; }
+  #flowFill { height:100%; width:0%; background:linear-gradient(90deg,var(--current),#75fff0 70%,var(--buoy)); transition:width .12s linear; }
+  #flowPill.ready { animation:flowReady .8s ease-in-out infinite alternate; }
+  #flowPill.ready #flowLabel span:last-child { color:#fff; }
+  @keyframes flowReady { to { box-shadow:0 0 22px rgba(34,199,187,.85),0 4px 0 rgba(0,0,0,.28); } }
+  #shovePill { border-radius:10px; background:var(--enamel); }
+  #eventToast { padding:9px 22px; border-radius:8px; background:rgba(7,27,43,.86); border-left:6px solid var(--signal); letter-spacing:1px; }
+  .dtag { font-family:'Barlow Condensed',sans-serif; font-size:13px; border:2px solid var(--raceNavy); border-radius:6px; box-shadow:0 2px 0 rgba(7,27,43,.35); }
+  @media (max-width:860px) {
+    #hubTabs { max-width:96vw; overflow-x:auto; justify-content:flex-start; }
+    #hubTabs button { flex:0 0 auto; }
+    #raceGoal { top:auto; bottom:12px; left:12px; max-width:150px; }
+    #raceCue { top:78px; min-width:230px; max-width:64vw; }
+    #flowPill { bottom:12px; width:42vw; min-width:160px; }
+    .hubPane { transform:none; }
+    .pill { min-height:52px; font-size:22px; padding:3px 9px; }
+    #place { min-width:98px; font-size:27px; }
+  }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; } }
 </style>
 </head>
 <body>
@@ -248,6 +312,9 @@
   <div class="pill" id="timer">0:00.0<small>TIME</small></div>
   <div class="pill" id="speedo">0<small>FT/S</small></div>
 </div>
+<div class="hud" id="raceGoal"><b>RACE GOAL</b><span id="goalText">FINISH ON THE PODIUM</span></div>
+<div class="hud" id="raceCue"><b>RIVER READ</b><span id="cueText">FAST WATER AHEAD</span></div>
+<div class="hud" id="flowPill"><div id="flowLabel"><span>FLOW BURST</span><span id="flowHint">E / CTRL</span></div><div id="flowTrack"><div id="flowFill"></div></div></div>
 <div class="hud" id="minimap" style="display:none"><canvas id="mapC" width="160" height="160"></canvas></div>
 <div class="hud" id="toast"></div>
 <div class="hud" id="eventToast"></div>
@@ -269,7 +336,7 @@
         <b>THE RIVER</b>
         <p>You can't outswim the current — only read it. The middle runs fastest. Dark glassy tongues with chevrons are <b>fast chutes</b>. Pale sandbars and brown mud kill your speed. Reeds are slack water.</p>
         <b>MOVES</b>
-        <p><kbd>WASD</kbd>/<kbd>&larr;&uarr;&darr;&rarr;</kbd> or stick: rhythmic paddle strokes. <kbd>SHIFT</kbd>/<kbd>A</kbd>: <b>splash shove</b> — slam nearby ducks away (4s cooldown). Weight class changes your size, power, and how hard you hit.</p>
+        <p><kbd>WASD</kbd>/<kbd>&larr;&uarr;&darr;&rarr;</kbd> or stick: rhythmic paddle strokes. <kbd>SHIFT</kbd>/<kbd>A</kbd>: <b>splash shove</b> — slam nearby ducks away. Hold clean fast-water lines to charge <b>Flow</b>, then press <kbd>E</kbd>/<kbd>CTRL</kbd> or controller <kbd>B</kbd> for a tactical burst.</p>
       </div>
       <div>
         <b>HAZARDS</b>
@@ -286,7 +353,7 @@
     <div class="setRow"><span>Laps</span><div class="segRow" id="lapRow">
       <button data-l="1">1</button><button data-l="2">2</button><button data-l="3">3</button></div></div>
     <div class="setRow"><span>Field</span><div class="segRow" id="duckRow">
-      <button data-n="20">20</button><button data-n="40">40</button><button data-n="80">80</button></div></div>
+      <button data-n="20">20</button><button data-n="40">40</button><button data-n="80">80</button><button data-n="120">120</button><button data-n="160">160</button><button data-n="200">200</button></div></div>
     <div class="setRow"><span>Course</span><div class="segRow wrapRow" id="lvlRow" style="max-width:300px">
       <button data-lvl="spillway">SPILLWAY RUN</button><button data-lvl="millrace">MILLRACE</button><button data-lvl="undergrove">UNDERGROVE</button><button data-lvl="canopy">CANOPY RUN</button><button data-lvl="porcelain">PORCELAIN RUN</button></div></div>
     <div class="btnRow" style="margin-top:14px">
@@ -296,7 +363,7 @@
       <div class="go" id="tutBtn" style="font-size:15px;background:linear-gradient(180deg,#fffef6,#ece1c2)">🎓 TUTORIAL</div>
     </div>
     <div class="keys">
-      <kbd>W A S D</kbd> paddle &middot; <kbd>SHIFT</kbd> shove &middot; controller supported
+      <kbd>W A S D</kbd> paddle &middot; <kbd>SHIFT</kbd> shove &middot; <kbd>E</kbd> flow burst &middot; controller supported
     </div>
     <div class="wisdom" id="wisdom"></div>
   </div>
@@ -391,6 +458,10 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// Field size is resolved before course construction so the river can widen with the grid.
+const FIELD_COUNT = Math.min(200, Math.max(20, +(localStorage.getItem('spillway-ducks') || 40)));
+const RIVER_WIDTH_SCALE = FIELD_COUNT >= 180 ? 2.05 : FIELD_COUNT >= 120 ? 1.85 : FIELD_COUNT >= 80 ? 1.65 : 1.48;
 
 // ============================================================ RNG (seeded)
 let seed = 1337;
@@ -598,7 +669,7 @@ const S = { pos: [], tan: [], side: [], w: [], sMul: [], dist: [] };
     const fi = t * CTRL.length, i0 = Math.floor(fi) % CTRL.length, i1 = (i0 + 1) % CTRL.length, ft = fi - Math.floor(fi);
     if (i > 0) acc += p.distanceTo(pts[i - 1]);
     S.pos.push(p); S.tan.push(tan); S.side.push(side);
-    S.w.push(wCurve[i0] * (1 - ft) + wCurve[i1] * ft);
+    S.w.push((wCurve[i0] * (1 - ft) + wCurve[i1] * ft) * RIVER_WIDTH_SCALE);
     S.sMul.push(sCurve[i0] * (1 - ft) + sCurve[i1] * ft);
     S.dist.push(acc);
   }
@@ -1005,7 +1076,7 @@ function waterHeightAt(si) { return S.pos[si].y + 0.55; }
 
 // ============================================================ DUCKS
 const DUCK_NAMES = ['Sir Quacksalot','Quackie Chan','Bill Murray','Duck Norris','Featherweight','The Yellow Baron','Puddles','Cap\'n Squeak','Waddlesworth','Beaker','Old Mallard','Duckota Fanning','Quack Sparrow','Floaty McFloatface','Ducky Balboa','The Drifter','Sudsy','Bathtub Bandit','Rubber Soul','Pond James Pond','Squeakquel','Duck Vader','Mother Clucker','Bobbin','Downstream Dan','Eddy Current','Whitewater Walt','Plucky','Soggy Bottom','Sink or Swim','Duckleberry Finn','Marsh Mellow','Ripples','Splashdance','Wet Willie','Drybones','The Undertoad','Foam Ranger','Buoy Wonder','Gushy','Torrent Tina','Rapid Roy','Cascade Kid','Drizzle','Misty','Chute Star','Flume Rider','Weir-do','Duck Duck Goose','Portage Patty','Bailer','Keelhaul Kate','Ottertube','Galosh','Puddle Jumper','Storm Drain Stan','Gutterball','Monsoon Moe','Sprinkler','Hosewater Hank','Tidepool Ted','Duckzilla','Quackpot','Waverly','Bubbles LaRue','Dew Drop','Squirt','The Big Leak','Faucet','Drainpipe Dave','Wash Out','Ducktape','Mildew Mike','Damp Dana','Sog','Riverdance','Paddlin\' Madeline','Duck Season','Wabbit Season'];
-const N_DUCKS = Math.min(80, Math.max(20, +(localStorage.getItem('spillway-ducks') || 80)));   // field size: 20 / 40 / 80
+const N_DUCKS = FIELD_COUNT;   // 20–200; river geometry scales with the selected field
 const DUCK_R = 0.5;
 
 // the rogues' gallery: 15 signature rivals — fixed looks, matching personalities.
@@ -1039,7 +1110,7 @@ function makeDuckState(idx) {
     skill: randRange(0.6, 1.4),            // personality: how sharp a racer it is
     wanderPh: rand() * Math.PI * 2, wanderF: randRange(0.15, 0.5),
     progress: 0, finished: false, finishTime: 0, place: 0, lap: 0, tot: 0,
-    inFlume: false, flumeS: 0, shoveT: 0, _sq: 0,
+    inFlume: false, flumeS: 0, shoveT: 0, flow: 0, burstT: 0, _sq: 0,
     spinV: 0,
   };
 }
@@ -1056,9 +1127,11 @@ function resetDucks() {
       if (d.isNemesis) d.skill *= 1.06;   // your nemesis shows up sharp
     }
     d.nemPts = 0;
-    // packed into the start pool in rows
+    // packed into the start pool in rows, with the player in the leading wave
     const row = Math.floor(i / 10), col = i % 10;
-    const si = 6 + row * 5;
+    const rows = Math.ceil(N_DUCKS / 10);
+    const gridRow = i === 0 ? rows - 1 : Math.max(0, rows - 1 - row);
+    const si = 6 + gridRow * 5;
     d.si = si; d.tot = si;
     d.p.copy(S.pos[si]).addScaledVector(S.side[si], (col - 4.5) * 1.35);
     d.p.x += randRange(-0.3, 0.3); d.p.z += randRange(-0.3, 0.3);
@@ -1293,6 +1366,19 @@ function doShove(d) {
   d.v.x *= 0.8; d.v.z *= 0.8;   // the slam costs you a beat
 }
 
+// FLOW BURST: clean racing charges the meter; the player chooses when to cash it in.
+// It rewards reading fast water and holding an intentional line rather than waiting on luck.
+function doFlowBurst() {
+  const d = ducks[0];
+  if (G.mode !== 'race' || d.finished || d.air || d.inFlume || d.flow < 0.995 || d.burstT > 0) return;
+  d.flow = 0; d.burstT = 1.35; d._sq = 0.4;
+  const fwd = S.tan[d.si];
+  d.v.x += fwd.x * 7.5; d.v.z += fwd.z * 7.5;
+  G.camShake = 0.18;
+  splash({ x:d.p.x, y:d.y, z:d.p.z }, 12); spawnWave(d.p.x, d.y, d.p.z);
+  eventToast('FLOW BURST — HOLD THE FAST LINE'); SFX.whistle();
+}
+
 function step(dt) {
   G.time += dt;
   if (G.mode === 'countdown') {
@@ -1411,8 +1497,8 @@ function step(dt) {
       let ax = 0, az = 0;
       if (input.up || PAD.up || TOUCH.up)       { ax += fwd.x;  az += fwd.z; }
       if (input.down || PAD.down || TOUCH.down)   { ax -= fwd.x * 0.7; az -= fwd.z * 0.7; }
-      if (input.left || PAD.left || TOUCH.left)   { ax -= side.x; az -= side.z; }
-      if (input.right || PAD.right || TOUCH.right) { ax += side.x; az += side.z; }
+      if (input.left || PAD.left || TOUCH.left)   { ax -= side.x * 1.15; az -= side.z * 1.15; }
+      if (input.right || PAD.right || TOUCH.right) { ax += side.x * 1.15; az += side.z * 1.15; }
       const m = Math.hypot(ax, az);
       d._stroking = m > 0.01;
       if (m > 0.01) {
@@ -1427,6 +1513,18 @@ function step(dt) {
           splash({ x: d.p.x - ux * 0.5, y: d.y, z: d.p.z - uz * 0.5 }, 1);
         }
       } else d._strokeT = 0;
+      // Flow is earned fastest in chutes, then in the deep middle; banks and collisions drain it.
+      const latFlow = (d.p.x - S.pos[si].x) * side.x + (d.p.z - S.pos[si].z) * side.z;
+      const centreFlow = 1 - Math.min(1, Math.abs(latFlow) / Math.max(1, w));
+      const speedFlow = Math.min(1, Math.hypot(d.v.x, d.v.z) / 10);
+      const gainFlow = (_zone.chute ? 0.20 : 0.075) * centreFlow * speedFlow;
+      d.flow = Math.max(0, Math.min(1, (d.flow || 0) + gainFlow * dt - (centreFlow < 0.18 ? 0.06 * dt : 0)));
+      d.burstT = Math.max(0, (d.burstT || 0) - dt);
+      if (d.burstT > 0) {
+        const burst = d.burstT / 1.35;
+        d.v.x += fwd.x * (8 + 5 * burst) * dt; d.v.z += fwd.z * (8 + 5 * burst) * dt;
+        if (rand() < dt * 18) splash({ x:d.p.x - fwd.x, y:d.y, z:d.p.z - fwd.z }, 2);
+      }
       // splash shove
       d.shoveT = (d.shoveT || 0) - dt;
       if (G.playerShove) { G.playerShove = false; if (d.shoveT <= 0 && !d.air) doShove(d); }
@@ -1553,6 +1651,7 @@ function step(dt) {
           d.v.x *= stopMul; d.v.z *= stopMul;
           d.spinV += vn * 14 * (rand() - .5);
           if (vn < -3) { splash({ x: d.p.x, y: d.y, z: d.p.z }, 8); if (d.idx === 0) { G.camShake = 0.35; SFX.thud(-vn); } }
+          if (d.idx === 0) d.flow = Math.max(0, (d.flow || 0) - 0.22);
         }
       }
     }
@@ -1702,7 +1801,7 @@ window.SPILLWAY = {
   sim: (seconds) => { const n = Math.round(seconds / FIXED); for (let i = 0; i < n; i++) step(FIXED); return window.SPILLWAY.state(); },
   start: () => { startRace(); G.countdown = 0; G.mode = 'race'; G.raceT = 0; },
   state: () => ({ mode: G.mode, t: G.raceT, finished: G.finishedCount, laps: G.laps, weather: G.weather,
-    player: { place: placeOf(ducks[0]), si: ducks[0].si, t01: ducks[0].si / NSAMP, lap: ducks[0].lap, inFlume: ducks[0].inFlume, finished: ducks[0].finished, time: ducks[0].finishTime },
+    player: { place: placeOf(ducks[0]), si: ducks[0].si, t01: ducks[0].si / NSAMP, lap: ducks[0].lap, inFlume: ducks[0].inFlume, finished: ducks[0].finished, time: ducks[0].finishTime, flow: +(ducks[0].flow || 0).toFixed(2), bursting: (ducks[0].burstT || 0) > 0 },
     top: G.results.slice(0, 5).map(d => ({ name: d.name, time: +d.finishTime.toFixed(2) })) }),
   ducks, G,
   dbg: () => ({ cam: camera.position.toArray().map(v => +v.toFixed(1)), fov: +camera.fov.toFixed(1),
@@ -1930,12 +2029,28 @@ let waterMat;
         float detail = 1. - smoothstep(22., 80., dCam);
         // body: shallow bright edges into a deep centre
         vec3 c = mix(vShal, vDeep, smoothstep(0., 0.85, depth * 0.95));
+        // layered subsurface colour: broad moving light bands make the ribbon feel deep,
+        // while bank shallows retain a hint of the pale riverbed beneath them.
+        float causticA = sin(vUv.x * 32. + flow * 3.4 + sin(flow * 0.7) * 2.0);
+        float causticB = sin(vUv.x * 21. - flow * 4.1 + cos(vUv.x * 11.) * 1.6);
+        float caustic = smoothstep(1.15, 1.78, causticA + causticB) * (1. - depth) * detail;
+        c += vec3(0.13, 0.25, 0.22) * caustic * 0.55;
+        // two crossing wave trains break the old one-directional texture scroll.
+        float crossRipple = sin(flow * 8.2 + vUv.x * 17. + uT * 0.6)
+                          * sin(flow * 5.6 - vUv.x * 23. - uT * 0.35);
+        c += vec3(0.035, 0.055, 0.055) * crossRipple * detail;
         // broad slow tone bands — gives the surface body without any fizz
         float band = noise(vec2(vUv.x * 5., flow * 1.3));
         c += vec3(0.05, 0.065, 0.06) * (band - 0.5) * (0.6 + 0.7 * smoothstep(0.9, 1.9, vSpd));
         // long glossy streaks, fast water only, near camera only
         float st = smoothstep(0.74, 0.95, noise(vec2(vUv.x * 10., flow * 2.1)));
         c += vec3(0.05, 0.075, 0.07) * st * smoothstep(1.15, 2.1, vSpd) * (0.25 + 0.75 * detail);
+        // long directional filaments are the primary racing-language layer: they reveal
+        // speed and flow at a glance without turning the whole surface into white noise.
+        float filamentN = noise(vec2(vUv.x * 34. + sin(flow * .38) * 2., flow * 0.72));
+        float filament = smoothstep(.82, .94, filamentN) * smoothstep(.82, 1.85, vSpd);
+        filament *= .35 + .65 * smoothstep(.15, .9, depth);
+        c += vec3(.18,.27,.26) * filament * (.25 + .75 * detail);
         // rare sparkle glints, only up close
         float sp = pow(noise(vec2(vUv.x * 30., flow * 16.)), 12.) * smoothstep(1.1, 2.3, vSpd);
         c += vec3(1.0, 0.98, 0.9) * sp * detail * detail * 1.6;
@@ -1948,6 +2063,9 @@ let waterMat;
           vec3 n = normalize(vec3((h0 - hx) * 1.4, 1.0, (h0 - hy) * 1.4));
           float sg = pow(max(dot(reflect(vdir, n), uSunDir), 0.0), 80.0) * uGlint;
           c += uSunCol * sg * (0.4 + 0.6 * detail);
+          // grazing angles reflect the bright sky; overhead views keep the course colour.
+          float fresnel = pow(1. - max(dot(-vdir, n), 0.), 3.2);
+          c = mix(c, uFog + vec3(.10,.14,.13), fresnel * .34 * uDark);
         }
         // ---- STRUCTURED whitewater ----
         float foamAmt = clamp(smoothstep(1.35, 2.5, vSpd) * 0.7 + vFoam + smoothstep(0.07, 0.24, vSlope), 0., 1.25);
@@ -1984,8 +2102,9 @@ let waterMat;
         }
         // shore: crisp bright waterline rim + breathing lace, then alpha-fade into the sand
         float shore = min(vUv.x, 1. - vUv.x);
-        float edgeLine = smoothstep(0.05, 0.018, shore) * 0.45;
-        float lace = smoothstep(0.10, 0.015, shore) * smoothstep(0.4, 0.75, noise(vec2(vUv.x * 20., flow * 24. + sin(uT * 1.3) * 0.6))) * 0.8;
+        float edgePulse = sin(flow * 7.5 + uT * 1.4 + vUv.x * 9.) * .008;
+        float edgeLine = smoothstep(0.052 + edgePulse, 0.018 + edgePulse, shore) * 0.48;
+        float lace = smoothstep(0.11, 0.014, shore) * smoothstep(0.43, 0.77, noise(vec2(vUv.x * 20., flow * 18. + sin(uT * 1.3) * 0.6))) * 0.82;
         c = mix(c, vec3(0.95, 0.98, 0.97), clamp(foam + lace + edgeLine, 0., 1.));
         c *= 0.2 + 0.8 * uDark;   // cave darkness reaches the river itself (foam included)
         c = mix(c, uFog, vFog);
@@ -4231,6 +4350,27 @@ function fmtTime(t) {
   const m = Math.floor(t / 60), s = t - m * 60;
   return `${m}:${s < 10 ? '0' : ''}${s.toFixed(1)}`;
 }
+function updateRaceRead() {
+  const d = ducks[0], cue = el('raceCue'), cueText = el('cueText');
+  if (G.mode !== 'race' || d.finished) { cue.style.display = 'none'; return; }
+  let best = null;
+  const offer = (i, msg, cls) => {
+    const ahead = wrapDS(i, d.si);
+    if (ahead > 4 && ahead < 115 && (!best || ahead < best.ahead)) best = { ahead, msg, cls };
+  };
+  for (const c of CHUTES) {
+    if (c.lapMin && d.lap < c.lapMin) continue;
+    const side = c.latC < -0.4 ? 'LEFT' : c.latC > 0.4 ? 'RIGHT' : 'CENTRE';
+    offer(c.i0, `${side} FAST CHUTE · CHARGES FLOW`, 'fast');
+  }
+  for (const s of SHOALS) offer(s.i0, `${s.latC < 0 ? 'RIGHT' : 'LEFT'} LINE · ${s.mud ? 'MUD' : 'SHALLOWS'} AHEAD`, 'hazard');
+  for (const e of EDDIES) offer(e.i, `${e.lat < 0 ? 'KEEP RIGHT' : 'KEEP LEFT'} · ${e.whirl ? 'WHIRLPOOL' : 'EDDY'}`, 'hazard');
+  for (const r of ROCKS) offer(r.i, `ROCKS AHEAD · READ THE GAP`, 'hazard');
+  const inFast = CHUTES.some(c => (!c.lapMin || d.lap >= c.lapMin) && d.si >= c.i0 && d.si <= c.i1);
+  if (inFast) best = { ahead:0, msg:'FAST WATER · HOLD THIS LINE', cls:'fast' };
+  if (best) { cueText.textContent = best.msg; cue.style.display = 'block'; cue.dataset.kind = best.cls; }
+  else cue.style.display = 'none';
+}
 const mapCtx = el('mapC').getContext('2d');
 const mapPts = [];   // the circuit as a closed ring, start/finish at the top
 {
@@ -4351,6 +4491,7 @@ function showResults() {
   const me = ducks[0];
   if (!me.finished) return;   // race was restarted before the results timer fired
   const list = el('resultsList');
+  el('raceGoal').style.display = 'none'; el('raceCue').style.display = 'none'; el('flowPill').style.display = 'none';
   const rows = [];
   const top = G.results.slice(0, 8);
   top.forEach(d => rows.push(row(d)));
@@ -4406,7 +4547,9 @@ function showResults() {
     el('againBtn').innerHTML = 'RACE AGAIN <small>(R)</small>';
     el('courseBtn').style.display = '';
   }
-  list.innerHTML = rows.join('') + gpHTML;
+  const goalWon = G.tt ? !!bestNote : me.place > 0 && me.place <= 3;
+  const goalHTML = G.guided ? '' : `<div class="goalResult ${goalWon ? 'win' : 'try'}">${goalWon ? '✓ RACE GOAL COMPLETE' : 'RACE GOAL · PODIUM NEXT RUN'}</div>`;
+  list.innerHTML = goalHTML + rows.join('') + gpHTML;
   el('results').style.display = 'block';
   for (const p of ['title', 'duckPanel', 'levelPanel', 'statsPanel', 'settingsPanel', 'guidePanel']) el(p).classList.add('hidden');
   document.querySelectorAll('#hubTabs button').forEach(b => b.classList.remove('sel'));
@@ -4446,6 +4589,11 @@ function prepRace(skipFly) {
   el('results').style.display = 'none';
   el('hudTop').style.display = 'flex';
   el('minimap').style.display = 'block';
+  el('raceGoal').style.display = 'block';
+  el('raceCue').style.display = 'none';
+  el('flowPill').style.display = G.guided ? 'none' : 'block';
+  const nemGoal = ducks.find(d => d.isNemesis);
+  el('goalText').textContent = G.guided ? 'LEARN THE RIVER' : G.tt ? 'SET A NEW COURSE RECORD' : nemGoal ? `PODIUM · BEAT ${nemGoal.name.toUpperCase()}` : 'FINISH ON THE PODIUM';
   el('shovePill').style.display = TOUCH.active ? 'none' : '';
   if (window._showTouchUI) _showTouchUI(true);
   G.playerShove = false;
@@ -4528,6 +4676,9 @@ function toTitle() {
   showHub('title');
   el('hudTop').style.display = 'none';
   el('minimap').style.display = 'none';
+  el('raceGoal').style.display = 'none';
+  el('raceCue').style.display = 'none';
+  el('flowPill').style.display = 'none';
   el('shovePill').style.display = 'none';
   if (window._showTouchUI) _showTouchUI(false);
 }
@@ -4604,6 +4755,7 @@ addEventListener('keydown', e => {
   if (k === K.left || k === 'arrowleft') input.left = true;
   if (k === K.right || k === 'arrowright') input.right = true;
   if (k === K.shove && G.mode === 'race') G.playerShove = true;
+  if ((k === 'e' || k === 'control') && G.mode === 'race') doFlowBurst();
   if (k === ' ') {
     e.preventDefault();
     if (G.mode === 'title') prepRace();
@@ -4649,11 +4801,14 @@ function pollPad() {
     else if (G.mode === 'race') G.playerShove = true;
   }
   PAD._a = a;
+  const bBurst = btn(1);
+  if (bBurst && !PAD._b && G.mode === 'race') doFlowBurst();
+  PAD._b = bBurst;
   const st2 = btn(9);
   if (st2 && !PAD._st && G.mode !== 'title') prepRace();
   PAD._st = st2;
 }
-addEventListener('gamepadconnected', e2 => { eventToast(`CONTROLLER CONNECTED — A to race, stick to paddle`); PAD.name = e2.gamepad.id; });
+addEventListener('gamepadconnected', e2 => { eventToast(`CONTROLLER CONNECTED — A shove · B flow burst`); PAD.name = e2.gamepad.id; });
 
 // ---- touch controls: virtual stick + shove button (touch devices only)
 if (TOUCH.active) {
@@ -4689,6 +4844,7 @@ addEventListener('pointerdown', auInit, { once: false });
 el('raceBtn').addEventListener('click', () => { ttMode = false; prepRace(); });
 el('ttBtn').addEventListener('click', () => { ttMode = true; prepRace(); });
 el('tutBtn').addEventListener('click', () => { auInit(); startTutorial(); });
+el('flowPill').addEventListener('pointerdown', e => { e.preventDefault(); auInit(); doFlowBurst(); });
 if (localStorage.getItem('spillway-tutreq') === '1') setTimeout(startTutorial, 400);
 el('againBtn').addEventListener('click', () => raceAgain());
 el('courseBtn').addEventListener('click', () => { toTitle(); showTab('levelPanel'); });
@@ -5085,6 +5241,12 @@ function frame(now) {
     }
     drawMap();
     updateTags();
+    updateRaceRead();
+    const flow = Math.max(0, Math.min(1, ducks[0].flow || 0));
+    el('flowFill').style.width = `${Math.round(flow * 100)}%`;
+    const flowReady = flow >= 0.995;
+    el('flowPill').classList.toggle('ready', flowReady);
+    el('flowHint').textContent = ducks[0].burstT > 0 ? 'BURSTING!' : flowReady ? 'READY · E / CTRL' : `${Math.round(flow * 100)}%`;
     // first-race tips
     if (G.tutOn && G.mode === 'race') {
       const steps = [[1, 'PADDLE — WASD or arrows · SHIFT to shove'], [9, 'The dark fast water is your friend. Reeds and eddies are not.'], [19, 'Rocks, logs, a whirlpool… and THE FALLS. Good luck.']];
