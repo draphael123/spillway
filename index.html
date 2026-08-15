@@ -64,6 +64,9 @@
   .go { cursor:pointer; }
   #shovePill { bottom:20px; left:20px; text-align:center; border-width:3px; transition:border-color .2s, opacity .2s; }
   #shovePill.cooling { opacity:.55; border-color:#8aa0a8; }
+  #cameraControls { position:fixed; right:20px; bottom:20px; z-index:32; display:none; gap:5px; padding:6px; border:2px solid rgba(255,255,255,.72); border-radius:11px; background:rgba(7,27,43,.88); box-shadow:0 4px 0 rgba(0,0,0,.3); pointer-events:auto; }
+  #cameraControls button { min-width:48px; padding:7px 8px 6px; border:2px solid #fff8e7; border-radius:7px; background:#173847; color:#fff8e7; font:900 12px 'Barlow Condensed',sans-serif; letter-spacing:.8px; cursor:pointer; }
+  #cameraControls button.sel { color:#071b2b; background:#ffd23f; border-color:#ffd23f; }
   #joy { position:fixed; left:22px; bottom:70px; width:130px; height:130px; border-radius:50%;
     border:3px solid rgba(255,248,231,.7); background:rgba(14,42,51,.25); touch-action:none; z-index:30; }
   #joyNub { position:absolute; left:45px; top:45px; width:40px; height:40px; border-radius:50%;
@@ -382,6 +385,8 @@
     #flowPill { bottom:calc(164px + env(safe-area-inset-bottom)); width:min(230px,58vw); min-width:170px; }
     #joy { left:calc(18px + env(safe-area-inset-left)); bottom:calc(22px + env(safe-area-inset-bottom)); }
     #shoveTouch { right:calc(20px + env(safe-area-inset-right)); bottom:calc(34px + env(safe-area-inset-bottom)); }
+    #cameraControls { top:calc(90px + env(safe-area-inset-top)); right:calc(8px + env(safe-area-inset-right)); bottom:auto; display:none; flex-direction:column; padding:4px; gap:3px; }
+    #cameraControls button { min-width:58px; padding:5px 6px; font-size:10px; }
     #startMeter { top:50%; bottom:auto; transform:translate(-50%,-50%); width:min(330px,82vw); }
     .hubPane { transform:none; }
     .pill { min-height:52px; font-size:22px; padding:3px 9px; }
@@ -425,6 +430,7 @@
     #joy { width:98px; height:98px; bottom:calc(12px + env(safe-area-inset-bottom)); }
     #joyNub { left:34px; top:34px; width:30px; height:30px; }
     #shoveTouch { width:76px; height:76px; bottom:calc(18px + env(safe-area-inset-bottom)); }
+    #cameraControls { top:calc(72px + env(safe-area-inset-top)); }
     #flowPill { bottom:calc(12px + env(safe-area-inset-bottom)); width:220px; }
     #startMeter { top:52%; width:300px; }
     #raceIntro { top:22%; width:min(430px,58vw); }
@@ -600,6 +606,9 @@
 <div id="joy" style="display:none"><div id="joyNub"></div></div>
 <div id="shoveTouch" style="display:none">SHOVE</div>
 <div class="hud pill" id="shovePill" style="display:none">SHOVE<small>SHIFT</small></div>
+<div id="cameraControls" aria-label="Race camera views">
+  <button data-camera="chase">CHASE</button><button data-camera="close">CLOSE</button><button data-camera="wide">WIDE</button><button data-camera="reverse">FRONT</button><button data-camera="bird">BIRD</button>
+</div>
 <div id="wipe"></div>
 
 <script type="importmap">
@@ -1494,6 +1503,7 @@ if (!SETTINGS.duck) SETTINGS.duck = { color: '#ffd23f', beak: '#ff8c1a', hat: 'n
 SETTINGS.duck = Object.assign({ eyes: 'classic', pattern: 'none', patternColor: '#fff8e7', face: 'none', body: 'none' }, SETTINGS.duck);
 if (!SETTINGS.keys) SETTINGS.keys = { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' };
 if (!SETTINGS.camView) SETTINGS.camView = 'behind';
+if (!SETTINGS.raceCam) SETTINGS.raceCam = SETTINGS.camView==='front'?'reverse':SETTINGS.camDist==='near'?'close':SETTINGS.camDist==='far'?'wide':'chase';
 const PAD = { up: false, down: false, left: false, right: false, on: false, name: '' };
 const TOUCH = { up: false, down: false, left: false, right: false, active: 'ontouchstart' in window };
 const MOBILE_GPU = TOUCH.active || matchMedia('(pointer:coarse)').matches || matchMedia('(max-width:900px)').matches;
@@ -5047,6 +5057,17 @@ function updateSplashes(dt) {
 // ============================================================ CAMERA
 const camState = { pos: new THREE.Vector3(0, 70, 20), look: new THREE.Vector3() };
 const CAMS = { near: [7, 4.2], std: [9, 5.2], far: [12, 6.6] };
+const RACE_CAMERAS=['chase','close','wide','reverse','bird'];
+function setRaceCamera(mode,notify=true){
+  if(!RACE_CAMERAS.includes(mode))mode='chase';
+  SETTINGS.raceCam=mode;SETTINGS.camView=mode==='reverse'?'front':'behind';
+  if(mode==='close')SETTINGS.camDist='near';else if(mode==='wide')SETTINGS.camDist='far';else SETTINGS.camDist='std';
+  document.querySelectorAll('#cameraControls button').forEach(b=>b.classList.toggle('sel',b.dataset.camera===mode));
+  saveSettings();if(G.mode!=='title')snapCam();if(notify)eventToast(`CAMERA · ${mode.toUpperCase()}`);
+}
+function cycleRaceCamera(){const i=RACE_CAMERAS.indexOf(SETTINGS.raceCam);setRaceCamera(RACE_CAMERAS[(i+1)%RACE_CAMERAS.length]);}
+document.querySelectorAll('#cameraControls button').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setRaceCamera(b.dataset.camera);}));
+setRaceCamera(SETTINGS.raceCam,false);
 const CAM_BLOCKERS=[],camRay=new THREE.Raycaster(),camRayOrigin=new THREE.Vector3(),camRayDir=new THREE.Vector3();
 function updateCamera(dt) {
   const d = ducks[0];
@@ -5063,7 +5084,8 @@ function updateCamera(dt) {
     return;
   }
   let [camBack, camH] = CAMS[SETTINGS.camDist] || CAMS.std;
-  const front = SETTINGS.camView === 'front';
+  const front = SETTINGS.raceCam==='reverse'||SETTINGS.camView === 'front';
+  const bird = SETTINGS.raceCam==='bird';
   // on a circuit there's no runout — the camera always follows the duck
   const si = d.si;
   const anchor = d.p;
@@ -5073,19 +5095,21 @@ function updateCamera(dt) {
     const pt = si / NSAMP;
     for (const [c0, c1] of LVL.dark) caveF = Math.max(caveF, sstep(c0 - 0.02, c0 + 0.02, pt) * (1 - sstep(c1 - 0.02, c1 + 0.02, pt)));
   }
+  const birdActive=bird&&caveF<.1;
   camH = camH * (1 - caveF * 0.42);
   camBack = camBack * (1 - caveF * 0.22);
-  const back = S.tan[si].clone().multiplyScalar(front ? camBack * 0.95 : -camBack);
+  const back = S.tan[si].clone().multiplyScalar(birdActive?-3:front ? camBack * 0.95 : -camBack);
   const target = _tmpA.set(anchor.x, 0, anchor.z).add(back);
-  target.y = d.y + camH * (front ? 0.85 : 1);
+  target.y = d.y + (birdActive?(MOBILE_GPU?12:15):camH * (front ? 0.85 : 1));
   const reveal=Math.min(1,(G.heroRevealT||0)/1.35);
-  if(reveal>0&&!front){target.addScaledVector(S.tan[si],-3.5*reveal);target.y+=3.2*reveal;}
+  if(reveal>0&&!front&&!birdActive){target.addScaledVector(S.tan[si],-3.5*reveal);target.y+=3.2*reveal;}
   // over the falls, pull the camera up and back so you see the drop (not under a cave roof)
   const t01 = si / NSAMP;
-  if (t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4 * (1 - caveF); target.add(S.tan[si].clone().multiplyScalar(-4 * (1 - caveF * 0.6))); }
+  if (!birdActive&&t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4 * (1 - caveF); target.add(S.tan[si].clone().multiplyScalar(-4 * (1 - caveF * 0.6))); }
   // Pull in front of substantial scenery instead of letting an authored landmark fill the screen.
   G._camOccT=(G._camOccT||0)-dt;
-  if(G._camOccT<=0&&CAM_BLOCKERS.length){G._camOccT=.09;camRayOrigin.set(anchor.x,d.y+1.1,anchor.z);camRayDir.copy(target).sub(camRayOrigin);const rayLen=camRayDir.length();camRayDir.normalize();camRay.set(camRayOrigin,camRayDir);camRay.near=2.2;camRay.far=rayLen;const hit=camRay.intersectObjects(CAM_BLOCKERS,false)[0];if(hit&&hit.distance<rayLen-.35){const safe=Math.max(2.6,hit.distance-.7);G._camOccPos=camRayOrigin.clone().addScaledVector(camRayDir,safe);}else G._camOccPos=null;}
+  if(!birdActive&&G._camOccT<=0&&CAM_BLOCKERS.length){G._camOccT=.09;camRayOrigin.set(anchor.x,d.y+1.1,anchor.z);camRayDir.copy(target).sub(camRayOrigin);const rayLen=camRayDir.length();camRayDir.normalize();camRay.set(camRayOrigin,camRayDir);camRay.near=2.2;camRay.far=rayLen;const hit=camRay.intersectObjects(CAM_BLOCKERS,false)[0];if(hit&&hit.distance<rayLen-.35){const safe=Math.max(2.6,hit.distance-.7);G._camOccPos=camRayOrigin.clone().addScaledVector(camRayDir,safe);}else G._camOccPos=null;}
+  if(birdActive)G._camOccPos=null;
   if(G._camOccPos)target.lerp(G._camOccPos,.88);
   const k = 1 - Math.pow(0.0004, dt);
   camState.pos.lerp(target, k);
@@ -5103,7 +5127,9 @@ function updateCamera(dt) {
     const minY = waterHeightAt(ci) + 1.1;
     if (camState.pos.y < minY) camState.pos.y = minY;
   }
-  const lookT = front
+  const lookT = birdActive
+    ? _tmpB.set(anchor.x,d.y+.2,anchor.z).addScaledVector(S.tan[si],5)
+    : front
     ? _tmpB.set(d.p.x, d.y + 0.8, d.p.z).addScaledVector(S.tan[si], -2.5)   // broadcast view: watch your duck & the chasing pack
     : _tmpB.set(anchor.x, d.y + 1.2+reveal*.8, anchor.z).addScaledVector(S.tan[si], 6+reveal*4);
   camState.look.lerp(lookT, 1 - Math.pow(0.0002, dt));
@@ -5128,7 +5154,7 @@ function updateCamera(dt) {
   G._bank = prevBank + (bankT - prevBank) * Math.min(1, 5 * dt);
   camera.rotateZ(G._bank);
   const spd = Math.hypot(d.v.x, d.v.z);
-  const fovT = SETTINGS.fov + Math.min(12, Math.max(0, spd - 6) * 0.55)+reveal*5;
+  const fovT = SETTINGS.fov+(birdActive?8:0) + Math.min(12, Math.max(0, spd - 6) * 0.55)+reveal*5;
   camera.fov += (fovT - camera.fov) * Math.min(1, 3 * dt);
   camera.updateProjectionMatrix();
 }
@@ -5523,6 +5549,7 @@ function prepRace(skipFly) {
   const nemGoal = ducks.find(d => d.isNemesis);
   el('goalText').textContent = G.guided ? 'LEARN THE RIVER' : G.tt ? 'SET A NEW COURSE RECORD' : nemGoal ? `PODIUM · BEAT ${nemGoal.name.toUpperCase()}` : 'FINISH ON THE PODIUM';
   el('shovePill').style.display = TOUCH.active ? 'none' : '';
+  el('cameraControls').style.display='flex';setRaceCamera(SETTINGS.raceCam,false);
   if (window._showTouchUI) _showTouchUI(true);
   G.playerShove = false;
   const featured = nemGoal || ducks.find(d=>d.rogue && (d.rogue.trait==='bruiser'||d.rogue.trait==='shortcut')) || ducks[1];
@@ -5622,6 +5649,7 @@ function toTitle() {
   el('raceCue').style.display = 'none';
   el('flowPill').style.display = 'none';
   el('shovePill').style.display = 'none';
+  el('cameraControls').style.display='none';
   if (window._showTouchUI) _showTouchUI(false);
 }
 function openSettings() { showHub('settingsPanel'); }
@@ -5698,6 +5726,7 @@ addEventListener('keydown', e => {
   if (k === K.right || k === 'arrowright') input.right = true;
   if (k === K.shove && G.mode === 'race') G.playerShove = true;
   if ((k === 'e' || k === 'control') && G.mode === 'race') doFlowBurst();
+  if(k==='c'&&G.mode!=='title')cycleRaceCamera();
   if (k === ' ') {
     e.preventDefault();
     if (G.mode === 'title') prepRace();
@@ -5746,6 +5775,7 @@ function pollPad() {
   const bBurst = btn(1);
   if (bBurst && !PAD._b && G.mode === 'race') doFlowBurst();
   PAD._b = bBurst;
+  const yCam=btn(3);if(yCam&&!PAD._y&&G.mode!=='title')cycleRaceCamera();PAD._y=yCam;
   const st2 = btn(9);
   if (st2 && !PAD._st && G.mode !== 'title') prepRace();
   PAD._st = st2;
@@ -6003,8 +6033,8 @@ function segWire(id, key, after) {
   }));
 }
 segWire('setQuality', 'quality', () => applyQuality());
-segWire('setCam', 'camDist');
-segWire('setView', 'camView');
+segWire('setCam','camDist',()=>{SETTINGS.raceCam=SETTINGS.camView==='front'?'reverse':SETTINGS.camDist==='near'?'close':SETTINGS.camDist==='far'?'wide':'chase';saveSettings();});
+segWire('setView','camView',()=>{SETTINGS.raceCam=SETTINGS.camView==='front'?'reverse':SETTINGS.camDist==='near'?'close':SETTINGS.camDist==='far'?'wide':'chase';saveSettings();});
 segWire('setClarity','clarity');
 for(const [id,key] of [['setShake','shake'],['setFlashes','flashes']])document.querySelectorAll('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{SETTINGS[key]=b.dataset.v==='on';saveSettings();refreshSettingsUI();}));
 function refreshKeyBtns() {
