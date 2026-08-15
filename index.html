@@ -210,6 +210,8 @@
   .lvlCard[data-lvl="undergrove"] { --stripe: linear-gradient(180deg, #8df26e, #17342a); }
   .lvlCard[data-lvl="canopy"]     { --stripe: linear-gradient(180deg, #ffc04a, #53d769); }
   .lvlCard b { font-size: 19px; letter-spacing: 1px; }
+  .lvlCard .thumb { flex-shrink: 0; border: 2.5px solid var(--ink); border-radius: 10px;
+    box-shadow: 0 2px 0 rgba(14,42,51,.3); }
   .lvlCard.sel { background: linear-gradient(180deg, var(--goldHi), var(--gold) 60%, var(--goldLo));
     animation: selGlow 1.6s ease-in-out infinite; }
   .pill { transform: skewX(-7deg); border-width: 3px; border-radius: 12px; font-size: 21px;
@@ -334,10 +336,10 @@
   </div>
   <div class="panel hubPane hidden" id="levelPanel">
     <h2>COURSES</h2>
-    <div class="lvlCard" data-lvl="spillway"><div><b>SPILLWAY RUN</b><br><span>rapids &middot; the falls &middot; canyon &middot; the magic climb</span></div><span class="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard" data-lvl="millrace"><div><b>MILLRACE</b><br><span>the working forest &mdash; mind the machines</span></div><span class="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard" data-lvl="undergrove"><div><b>UNDERGROVE</b><br><span>the drowned-dark forest &mdash; follow the lanterns</span></div><span class="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard" data-lvl="canopy"><div><b>CANOPY RUN</b><br><span>the flooded forest &mdash; race the treetops</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="spillway"><canvas class="thumb" width="84" height="64"></canvas><div><b>SPILLWAY RUN</b><br><span>rapids &middot; the falls &middot; canyon &middot; the magic climb</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="millrace"><canvas class="thumb" width="84" height="64"></canvas><div><b>MILLRACE</b><br><span>the working forest &mdash; mind the machines</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="undergrove"><canvas class="thumb" width="84" height="64"></canvas><div><b>UNDERGROVE</b><br><span>the drowned-dark forest &mdash; follow the lanterns</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="canopy"><canvas class="thumb" width="84" height="64"></canvas><div><b>CANOPY RUN</b><br><span>the flooded forest &mdash; race the treetops</span></div><span class="bestLabel">best &mdash;</span></div>
   </div>
  </div>
 </div>
@@ -2023,6 +2025,14 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
                      : Math.floor((0.26 + rand() * 0.24) * NSAMP);
     const sgn = (k % 2) * 2 - 1;
     const ob = randRange(3.5, 15);
+    // course identity: Millrace has logged a third of its pines; Canopy has NO ground
+    // pines at all (you're AT treetop height — its own crown billows fill the banks)
+    if ((LVL.id === 'millrace' && k % 3 === 0) || LVL.id === 'canopy') {
+      q.identity(); m.compose(_tmpA.set(0, -300, 0), q, sc.set(0.001, 0.001, 0.001));
+      trunks.setMatrixAt(k, m);
+      for (let tr = 0; tr < 3; tr++) tiers[tr].setMatrixAt(k, m);
+      continue;
+    }
     const y = groundAt(i, ob, sgn), s = randRange(0.75, 1.6);
     const ry = rand() * 6;
     const p = place(trunks, k, i, ob, sgn, y + 1.0 * s, s, ry);
@@ -2144,6 +2154,56 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     m.compose(_tmpA, q, sc.set(s, s, s));
     reedsIM.setMatrixAt(k, m);
   }
+  // MILLRACE: stumps where the pines were felled — the working forest shows its work
+  const nSt = 64;
+  const stumps = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.34, 0.46, 0.55, 7),
+    new THREE.MeshLambertMaterial({ color: 0x9a7a52, map: WOODTEX }), nSt);
+  if (LVL.id === 'millrace') {
+    for (let k = 0; k < nSt; k++) {
+      const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(2.5, 14);
+      const s = randRange(0.8, 1.7);
+      place(stumps, k, i, ob, sgn, groundAt(i, ob, sgn) + 0.26 * s, s, rand() * 6);
+      stumps.setColorAt(k, cCol.setScalar(0.82 + rand() * 0.34));
+      blobAt(i, ob, sgn, 0.6 * s);
+    }
+  } else stumps.count = 0;
+  // CANOPY: giant crown billows at bank level — the flooded forest's treetops themselves
+  const nCC = 120;
+  const canopyCr = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.0, 0),
+    new THREE.MeshLambertMaterial({ color: 0xffffff }), nCC);
+  if (LVL.id === 'canopy') {
+    for (let k = 0; k < nCC; k++) {
+      const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.5, 15);
+      const s = randRange(0.8, 2.3);
+      place(canopyCr, k, i, ob, sgn, groundAt(i, ob, sgn) + randRange(0.4, 1.7), s, rand() * 6);
+      const blossom = rand() < 0.12;
+      canopyCr.setColorAt(k, blossom ? cCol.setHSL(0.93, 0.5, 0.74)
+                                     : cCol.setHSL(0.23 + rand() * 0.11, 0.55, 0.3 + rand() * 0.17));
+      blobAt(i, ob, sgn, 1.5 * s);
+    }
+    // great boughs arch over the water, trailing vines
+    const boughM = new THREE.MeshLambertMaterial({ color: 0x6b4a2f, map: WOODTEX });
+    const vineM = new THREE.MeshLambertMaterial({ color: 0x3f7a3c });
+    for (const bt of [0.075, 0.21, 0.335, 0.47, 0.635, 0.70, 0.905]) {
+      const i = Math.round(bt * NSAMP);
+      const span = S.w[i] * 2 + 9;
+      const bough = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.44, span, 7), boughM);
+      bough.position.copy(S.pos[i]);
+      bough.position.y = waterHeightAt(i) + 6.2;
+      bough.quaternion.setFromUnitVectors(_tmpB.set(0, 1, 0), S.side[i]);
+      scene.add(bough);
+      for (let v2 = 0; v2 < 3; v2++) {
+        const lat = randRange(-0.7, 0.7) * S.w[i];
+        const len = randRange(1.6, 3.2);
+        const vine = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.028, len, 4), vineM);
+        vine.position.copy(S.pos[i]).addScaledVector(S.side[i], lat);
+        vine.position.y = waterHeightAt(i) + 6.2 - len / 2;
+        const tip = new THREE.Mesh(new THREE.IcosahedronGeometry(0.19, 0), vineM);
+        tip.position.copy(vine.position); tip.position.y -= len / 2;
+        scene.add(vine, tip);
+      }
+    }
+  } else canopyCr.count = 0;
   // grass tufts crowd the waterline — the bare-bank killer
   const nG2 = 440;
   const tufts = new THREE.InstancedMesh(new THREE.ConeGeometry(0.15, 0.55, 4),
@@ -2216,7 +2276,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     bIM.frustumCulled = false; bIM.renderOrder = 1;
     scene.add(bIM);
   }
-  window.SCATTER = [trunks, crowns, tiers[1], tiers[2], mTrunks, mCrowns, cacti, slabs, spires, bushes, flowers, boulders, reedsIM, tufts];
+  window.SCATTER = [trunks, crowns, tiers[1], tiers[2], mTrunks, mCrowns, cacti, slabs, spires, bushes, flowers, boulders, reedsIM, tufts, stumps, canopyCr];
   SCATTER.forEach(im => { im._full = im.count; });
   scene.add(...SCATTER, mountains);
 }
@@ -2406,17 +2466,22 @@ if (LVL.id === 'millrace') {
       cap.scale.y = 0.7; cap.position.set(p.x, gy + 0.2, p.z);
       scene.add(cap);
     }
-    // the cave itself: a rock ceiling vaulting the channel, stalactites hanging FROM it
+    // the cave itself: a rock ceiling vaulting the channel — edges dive BELOW the
+    // terrain so the vault seals shut (no floating rim, no side gaps, no clipping)
     {
       const i0 = Math.round(d0 * NSAMP), i1 = Math.round(d1 * NSAMP);
       const pos2 = [], idx2 = [];
-      const COLS = [-1.4, -0.7, 0, 0.7, 1.4];   // arch cross-section (× channel width)
+      const COLS = [-1.6, -1.15, -0.7, -0.35, 0, 0.35, 0.7, 1.15, 1.6];
+      const archAt = (cx2) => 10.2 - Math.pow(Math.abs(cx2) / 1.6, 1.7) * 13.5;   // +10.2 centre → -3.3 buried edge
       let row = 0;
       for (let i = i0; i <= i1; i += 4) {
         const wSpan2 = S.w[i] + 8;
+        // mouths flare slightly upward so the entrance reads as an open arch
+        const dEnd = Math.min(i - i0, i1 - i) / 30;
+        const flare = (1 - Math.min(1, dEnd)) * 1.6;
         for (const cx2 of COLS) {
-          const p = S.pos[i].clone().addScaledVector(S.side[i], cx2 * wSpan2 * 0.7);
-          const arch = 9.5 - Math.abs(cx2) * 5.5;   // vault: high centre, meets terrain at edges
+          const p = S.pos[i].clone().addScaledVector(S.side[i], cx2 * wSpan2 * 0.62);
+          const arch = archAt(cx2) + flare;
           pos2.push(p.x, waterHeightAt(i) + arch, p.z);
         }
         if (i + 4 <= i1) {
@@ -2429,20 +2494,61 @@ if (LVL.id === 'millrace') {
       const cg = new THREE.BufferGeometry();
       cg.setAttribute('position', new THREE.Float32BufferAttribute(pos2, 3));
       cg.setIndex(idx2); cg.computeVertexNormals();
-      const ceiling = new THREE.Mesh(cg, new THREE.MeshLambertMaterial({ color: 0x4a4e54, side: THREE.DoubleSide, flatShading: true }));
-      scene.add(ceiling);
-      // stalactites hang from the vault
-      for (let s2 = 0; s2 < 12; s2++) {
-        const i = Math.round((d0 + rand() * (d1 - d0)) * NSAMP);
-        const lat = randRange(-0.8, 0.8) * S.w[i];
+      // two-faced vault: dark rock INSIDE, mossy hillside OUTSIDE — from beyond the
+      // cave it reads as terrain swallowing the river, not a floating grey slab
+      const ceilIn = new THREE.Mesh(cg, new THREE.MeshLambertMaterial({ color: 0x43474d, map: ROCKTEX, side: THREE.FrontSide, flatShading: true }));
+      const ceilOut = new THREE.Mesh(cg, new THREE.MeshLambertMaterial({ color: 0x59634c, map: ROCKTEX, side: THREE.BackSide, flatShading: true }));
+      scene.add(ceilIn, ceilOut);
+      // stalactites: centre-channel only, tips clamped well above the camera line
+      for (let s2 = 0; s2 < 10; s2++) {
+        const i = Math.round((d0 + 0.02 + rand() * (d1 - d0 - 0.04)) * NSAMP);
+        const lat = randRange(-0.5, 0.5) * S.w[i];
         const p = S.pos[i].clone().addScaledVector(S.side[i], lat);
-        const arch = 9.5 - Math.abs(lat / (S.w[i] + 8) / 0.7) * 5.5;
-        const len = randRange(1.5, 3);
-        const tooth = new THREE.Mesh(new THREE.ConeGeometry(randRange(0.35, 0.7), len, 5), lam(0x5c6066));
+        const cx2 = lat / ((S.w[i] + 8) * 0.62);
+        const arch = 10.2 - Math.pow(Math.abs(cx2) / 1.6, 1.7) * 13.5;
+        const len = Math.min(randRange(1.2, 2.6), arch - 6.4);   // tip never dips below +6.4
+        if (len < 0.7) continue;
+        const tooth = new THREE.Mesh(new THREE.ConeGeometry(randRange(0.3, 0.6), len, 5), lam(0x53575d));
         tooth.rotation.x = Math.PI;
-        tooth.position.set(p.x, waterHeightAt(i) + arch - len / 2 + 0.2, p.z);
+        tooth.position.set(p.x, waterHeightAt(i) + arch - len / 2 + 0.15, p.z);
         scene.add(tooth);
       }
+      // glowworm constellations cling to the vault — the cave's own starfield
+      const nGw = 60;
+      const gwIM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.07, 5, 4),
+        new THREE.MeshBasicMaterial({ color: 0xffffff }), nGw);
+      const gwM = new THREE.Matrix4(), gwQ = new THREE.Quaternion(), gwS = new THREE.Vector3(1, 1, 1), gwC = new THREE.Color();
+      for (let gw = 0; gw < nGw; gw++) {
+        const i = Math.round((d0 + 0.015 + rand() * (d1 - d0 - 0.03)) * NSAMP);
+        const cx2 = randRange(-0.85, 0.85);
+        const p = S.pos[i].clone().addScaledVector(S.side[i], cx2 * (S.w[i] + 8) * 0.62);
+        const arch = 10.2 - Math.pow(Math.abs(cx2) / 1.6, 1.7) * 13.5;
+        gwM.compose(_tmpA.set(p.x, waterHeightAt(i) + arch - 0.18, p.z), gwQ, gwS);
+        gwIM.setMatrixAt(gw, gwM);
+        gwIM.setColorAt(gw, gwC.setHSL(rand() < 0.7 ? 0.35 : 0.5, 0.9, 0.62));
+      }
+      gwIM.frustumCulled = false;
+      scene.add(gwIM);
+    }
+  }
+  // giant glowshroom groves light the open twilight stretches between the caves
+  {
+    const inDark = (t2) => LVL.dark.some(([a2, b2]) => t2 > a2 - 0.025 && t2 < b2 + 0.025);
+    for (let ms = 0; ms < 22; ms++) {
+      let t2 = rand(), guard = 0;
+      while (inDark(t2) && guard++ < 24) t2 = rand();
+      const i = Math.round(t2 * (NSAMP - 1));
+      const sgn = ms % 2 ? 1 : -1, ob = randRange(1.5, 9);
+      const gy = waterHeightAt(i) + bankH(i, ob, sgn);
+      const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
+      const h2 = randRange(1.4, 3.2), cr = randRange(0.7, 1.6);
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.28, h2, 6), lam(0xc9d2c5));
+      stem.position.set(p.x, gy + h2 / 2, p.z);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(cr, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), lam(ms % 3 ? 0x7a4a8a : 0x3a7a8a));
+      cap.position.set(p.x, gy + h2, p.z); cap.scale.y = 0.72;
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(cr * 0.5, 7, 5), emis(ms % 3 ? 0xc084fc : 0x6ee7f2));
+      glow.scale.y = 0.4; glow.position.set(p.x, gy + h2 - 0.08, p.z);
+      scene.add(stem, cap, glow);
     }
   }
 } else if (LVL.id === 'canopy') {
@@ -2692,7 +2798,7 @@ const MOTES = { n: 240 };
   MOTES.vel = [];
   for (let i = 0; i < MOTES.n; i++) {
     mp[i * 3] = randRange(-30, 30); mp[i * 3 + 1] = randRange(-4, 14); mp[i * 3 + 2] = randRange(-30, 30);
-    MOTES.vel.push([randRange(-0.3, 0.3), randRange(-0.25, 0.15), randRange(-0.3, 0.3), rand() * 6]);
+    MOTES.vel.push([randRange(-0.3, 0.3), LVL.id === 'canopy' ? randRange(-0.8, -0.25) : randRange(-0.25, 0.15), randRange(-0.3, 0.3), rand() * 6]);
   }
   const mg = new THREE.BufferGeometry();
   mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
@@ -3325,6 +3431,49 @@ function updateWaves(dt) {
     w.mesh.material.opacity = 0.55 * (1 - w.life / 0.5);
   }
 }
+// ---------- confetti: the podium ceremony's colour burst
+const CONF = { n: 320, i: 0 };
+{
+  CONF.p = new Float32Array(CONF.n * 3); CONF.v = new Float32Array(CONF.n * 3);
+  CONF.life = new Float32Array(CONF.n); CONF.ph = new Float32Array(CONF.n);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(CONF.p, 3));
+  const colA = new Float32Array(CONF.n * 3);
+  g.setAttribute('color', new THREE.BufferAttribute(colA, 3));
+  CONF.colA = colA;
+  const cc2 = document.createElement('canvas'); cc2.width = cc2.height = 16;
+  const ccx = cc2.getContext('2d');
+  ccx.fillStyle = '#fff'; ccx.fillRect(3, 3, 10, 10);
+  CONF.mesh = new THREE.Points(g, new THREE.PointsMaterial({ vertexColors: true, size: 0.22, transparent: true, opacity: 0.95,
+    map: new THREE.CanvasTexture(cc2), depthWrite: false }));
+  CONF.mesh.frustumCulled = false;
+  for (let i = 0; i < CONF.n; i++) CONF.p[i * 3 + 1] = -999;
+  scene.add(CONF.mesh);
+}
+function confettiBurst(p, n) {
+  const PAL = [[1, 0.82, 0.18], [0.85, 0.31, 0.19], [0.33, 0.84, 0.41], [0.33, 0.65, 1], [1, 0.62, 0.95], [0.65, 0.55, 0.98]];
+  for (let k = 0; k < n; k++) {
+    const i = CONF.i = (CONF.i + 1) % CONF.n;
+    CONF.p[i * 3] = p.x + randRange(-0.4, 0.4); CONF.p[i * 3 + 1] = p.y + randRange(0, 0.6); CONF.p[i * 3 + 2] = p.z + randRange(-0.4, 0.4);
+    CONF.v[i * 3] = randRange(-3.5, 3.5); CONF.v[i * 3 + 1] = randRange(4.5, 9.5); CONF.v[i * 3 + 2] = randRange(-3.5, 3.5);
+    CONF.life[i] = randRange(1.6, 3.0); CONF.ph[i] = rand() * 6;
+    const c2 = PAL[Math.floor(rand() * PAL.length)];
+    CONF.colA[i * 3] = c2[0]; CONF.colA[i * 3 + 1] = c2[1]; CONF.colA[i * 3 + 2] = c2[2];
+  }
+  CONF.mesh.geometry.attributes.color.needsUpdate = true;
+}
+function updateConfetti(dt) {
+  for (let i = 0; i < CONF.n; i++) {
+    if (CONF.life[i] <= 0) { CONF.p[i * 3 + 1] = -999; continue; }
+    CONF.life[i] -= dt;
+    CONF.v[i * 3 + 1] -= 6.5 * dt;                                   // flutter-slow gravity
+    CONF.v[i * 3 + 1] *= 1 - Math.min(1, 1.4 * dt);                  // air drag
+    CONF.p[i * 3] += (CONF.v[i * 3] + Math.sin(G.time * 7 + CONF.ph[i]) * 0.7) * dt;
+    CONF.p[i * 3 + 1] += CONF.v[i * 3 + 1] * dt;
+    CONF.p[i * 3 + 2] += CONF.v[i * 3 + 2] * dt;
+  }
+  CONF.mesh.geometry.attributes.position.needsUpdate = true;
+}
 function updateSplashes(dt) {
   for (let i = 0; i < SPLASH_N; i++) {
     if (splashPts.life[i] <= 0) { splashPts.p[i*3+1] = -999; continue; }
@@ -3342,17 +3491,37 @@ const camState = { pos: new THREE.Vector3(0, 70, 20), look: new THREE.Vector3() 
 const CAMS = { near: [7, 4.2], std: [9, 5.2], far: [12, 6.6] };
 function updateCamera(dt) {
   const d = ducks[0];
-  const [camBack, camH] = CAMS[SETTINGS.camDist] || CAMS.std;
+  // podium ceremony: once you cross the line, the camera circles your duck
+  if (G.mode === 'race' && d.finished) {
+    G.podT = (G.podT || 0) + dt;
+    const a = G.podT * 0.5 + 1.2;
+    camState.pos.lerp(_tmpA.set(d.p.x + Math.sin(a) * 6.2, d.y + 2.6 + Math.sin(G.podT * 0.7) * 0.4, d.p.z + Math.cos(a) * 6.2), 1 - Math.pow(0.001, dt));
+    camState.look.lerp(_tmpB.set(d.p.x, d.y + 0.7, d.p.z), 1 - Math.pow(0.0005, dt));
+    camera.position.copy(camState.pos);
+    camera.lookAt(camState.look);
+    camera.fov += (SETTINGS.fov - 5 - camera.fov) * Math.min(1, 3 * dt);
+    camera.updateProjectionMatrix();
+    return;
+  }
+  let [camBack, camH] = CAMS[SETTINGS.camDist] || CAMS.std;
   const front = SETTINGS.camView === 'front';
   // on a circuit there's no runout — the camera always follows the duck
   const si = d.si;
   const anchor = d.p;
+  // inside a cave, the camera tucks low and close so the vault never swallows it
+  let caveF = 0;
+  if (LVL.dark) {
+    const pt = si / NSAMP;
+    for (const [c0, c1] of LVL.dark) caveF = Math.max(caveF, sstep(c0 - 0.02, c0 + 0.02, pt) * (1 - sstep(c1 - 0.02, c1 + 0.02, pt)));
+  }
+  camH = camH * (1 - caveF * 0.42);
+  camBack = camBack * (1 - caveF * 0.22);
   const back = S.tan[si].clone().multiplyScalar(front ? camBack * 0.95 : -camBack);
   const target = _tmpA.set(anchor.x, 0, anchor.z).add(back);
   target.y = d.y + camH * (front ? 0.85 : 1);
-  // over the falls, pull the camera up and back so you see the drop
+  // over the falls, pull the camera up and back so you see the drop (not under a cave roof)
   const t01 = si / NSAMP;
-  if (t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4; target.add(S.tan[si].clone().multiplyScalar(-4)); }
+  if (t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4 * (1 - caveF); target.add(S.tan[si].clone().multiplyScalar(-4 * (1 - caveF * 0.6))); }
   const k = 1 - Math.pow(0.0004, dt);
   camState.pos.lerp(target, k);
   const lookT = front
@@ -3566,6 +3735,10 @@ function onPlayerFinish() {
   const d = ducks[0];
   toast(`P${d.place}!`, 1600);
   SFX.fanfare();
+  G.podT = 0;
+  confettiBurst(d.p, d.place <= 3 ? 200 : 110);
+  setTimeout(() => { if (ducks[0].finished) confettiBurst(ducks[0].p, d.place <= 3 ? 140 : 70); }, 700);
+  if (d.place <= 3) setTimeout(() => { if (ducks[0].finished) { confettiBurst(ducks[0].p, 140); SFX.fanfare(); } }, 1500);
   // settle the grudge: who was your nemesis this race?
   if (d.place > 1) { const ahead = G.results[d.place - 2]; if (ahead && ahead.idx !== 0) ahead.nemPts = (ahead.nemPts || 0) + 2; }
   let worst = null;
@@ -3574,7 +3747,7 @@ function onPlayerFinish() {
     localStorage.setItem('spillway-nemesis', JSON.stringify({ name: worst.name }));
     G.nemesisNote = `your nemesis: ${worst.name}`;
   } else G.nemesisNote = '';
-  setTimeout(showResults, 1800);
+  setTimeout(showResults, 3600);   // let the podium ceremony breathe
 }
 function showResults() {
   const me = ducks[0];
@@ -3626,7 +3799,7 @@ function prepRace(skipFly) {
   seed = (Math.floor(performance.now()) % 100000) + 7;
   G.raceT = 0; G.finishedCount = 0; G.results = []; G.tutStep = 0;
   G.laps = SETTINGS.laps;
-  G.raceLap = 0; G.surge = -1; G.surgeLap = -1; G.surgeLapT = 0; G.slowmo = 0; G.statsCounted = false;
+  G.raceLap = 0; G.surge = -1; G.surgeLap = -1; G.surgeLapT = 0; G.slowmo = 0; G.statsCounted = false; G.podT = 0;
   const wPool = LVL.weathers || ['clear', 'golden', 'mist', 'storm'];
   G.weather = wPool[Math.floor(rand() * wPool.length)];
   setTimeout(() => eventToast(`${WEATHERS[G.weather].label}${G.laps > 1 ? ` — ${G.laps} LAPS` : ''}`), 600);
@@ -3842,6 +4015,53 @@ document.querySelectorAll('#lvlRow button').forEach(b => {
     location.reload();
   });
 });
+// mini course maps on the level cards — drawn from each course's own spline data
+function drawCourseThumbs() {
+  document.querySelectorAll('.lvlCard[data-lvl]').forEach(card => {
+    const lv = LEVELS[card.dataset.lvl];
+    const cv = card.querySelector('.thumb');
+    if (!lv || !cv) return;
+    const x2 = cv.getContext('2d');
+    const W2 = cv.width, H2 = cv.height;
+    // ground + sky mood
+    const gr = lv.pal ? lv.pal.ground : [0.26, 0.45, 0.38];
+    x2.fillStyle = `hsl(${gr[0] * 360}, ${gr[1] * 100}%, ${Math.min(62, gr[2] * 100 + 14)}%)`;
+    x2.fillRect(0, 0, W2, H2);
+    const crv = new THREE.CatmullRomCurve3(lv.ctrl.map(p => new THREE.Vector3(p.x, 0, p.z)), true, 'centripetal', 0.35);
+    const pts = crv.getSpacedPoints(140);
+    let mnX = 1e9, mxX = -1e9, mnZ = 1e9, mxZ = -1e9;
+    for (const p of pts) { mnX = Math.min(mnX, p.x); mxX = Math.max(mxX, p.x); mnZ = Math.min(mnZ, p.z); mxZ = Math.max(mxZ, p.z); }
+    const sc2 = Math.min((W2 - 16) / (mxX - mnX), (H2 - 14) / (mxZ - mnZ));
+    const ox2 = (W2 - (mxX - mnX) * sc2) / 2, oy2 = (H2 - (mxZ - mnZ) * sc2) / 2;
+    const px = (p) => [ox2 + (p.x - mnX) * sc2, H2 - (oy2 + (p.z - mnZ) * sc2)];
+    const ring = (wd, col) => {
+      x2.strokeStyle = col; x2.lineWidth = wd; x2.lineJoin = x2.lineCap = 'round';
+      x2.beginPath();
+      pts.forEach((p, k2) => { const [a2, b2] = px(p); k2 ? x2.lineTo(a2, b2) : x2.moveTo(a2, b2); });
+      x2.closePath(); x2.stroke();
+    };
+    ring(6, 'rgba(14,42,51,.85)');
+    const dp = lv.pal ? lv.pal.deep : [0.06, 0.29, 0.40];
+    ring(3.4, `rgb(${Math.round(dp[0] * 255 + 60)},${Math.round(dp[1] * 255 + 90)},${Math.round(dp[2] * 255 + 90)})`);
+    // the surge stretch glows
+    if (lv.surge) {
+      const sg = lv.surgeCol || [0.2, 0.9, 0.85];
+      x2.strokeStyle = `rgb(${Math.round(sg[0] * 255)},${Math.round(sg[1] * 255)},${Math.round(sg[2] * 255)})`;
+      x2.lineWidth = 3.4;
+      for (const [a2, b2] of lv.surge) {
+        x2.beginPath();
+        const k0 = Math.floor(a2 * 140), k1 = Math.ceil(b2 * 140);
+        for (let k2 = k0; k2 <= k1; k2++) { const [c2, d2] = px(pts[Math.min(140, k2)]); k2 === k0 ? x2.moveTo(c2, d2) : x2.lineTo(c2, d2); }
+        x2.stroke();
+      }
+    }
+    // start/finish dot
+    const [sx2, sy2] = px(pts[0]);
+    x2.fillStyle = '#d94f30'; x2.strokeStyle = '#fff8e7'; x2.lineWidth = 1.5;
+    x2.beginPath(); x2.arc(sx2, sy2, 3.2, 0, 7); x2.fill(); x2.stroke();
+  });
+}
+drawCourseThumbs();
 function refreshLevelCards() {
   document.querySelectorAll('.lvlCard[data-lvl]').forEach(card => {
     card.classList.toggle('sel', card.dataset.lvl === LVL.id);
@@ -4008,6 +4228,7 @@ function frame(now) {
   }
   updateSplashes(dt);
   updateWaves(dt);
+  updateConfetti(dt);
   if (!el('screen').classList.contains('hidden') && !el('duckPanel').classList.contains('hidden')) {
     prevDuck.rotation.y += dt * 0.9;
     prevDuck.position.y = Math.sin(now / 500) * 0.03;
@@ -4126,7 +4347,7 @@ function frame(now) {
     }
     // motes: biome-flavoured drift, fireflies as dusk falls
     {
-      const fire = td > 0.55;
+      const fire = td > 0.55 || LVL.id === 'undergrove';   // UNDERGROVE: fireflies always
       const zw2 = zw;
       MOTES.mat.color.setRGB(
         fire ? 0.85 : 1.0 * zw2[0] + 0.82 * zw2[1] + 0.85 * zw2[2] + 1.0 * zw2[3],
@@ -4134,6 +4355,10 @@ function frame(now) {
         fire ? 0.45 : 0.69 * zw2[0] + 0.88 * zw2[1] + 0.38 * zw2[2] + 0.88 * zw2[3]);
       MOTES.mat.size = fire ? 0.2 : 0.13;
       MOTES.mat.opacity = (fire ? 0.75 : 0.5) * (G.weather === 'storm' ? 0.3 : 1);
+      if (LVL.id === 'canopy' && !fire) {   // CANOPY: a slow rain of falling leaves
+        MOTES.mat.color.setHSL(0.19 + Math.sin(now / 5000) * 0.03, 0.6, 0.48);
+        MOTES.mat.size = 0.17; MOTES.mat.opacity = 0.7;
+      }
       const mpos = MOTES.mesh.geometry.attributes.position;
       const cx2 = camera.position.x, cy2 = camera.position.y, cz2 = camera.position.z;
       for (let i2 = 0; i2 < MOTES.n; i2++) {
