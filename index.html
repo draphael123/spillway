@@ -307,6 +307,10 @@
   #rivalCallout { left:50%; bottom:27%; transform:translateX(-50%) rotate(-2deg); padding:9px 18px; color:var(--raceNavy); background:#fff; border:3px solid var(--raceNavy); border-radius:12px 12px 12px 2px; box-shadow:5px 5px 0 var(--buoy); font-size:20px; font-weight:900; opacity:0; transition:.16s; }
   #rivalCallout.on { opacity:1; transform:translateX(-50%) rotate(-2deg) scale(1.04); }
   #rivalCallout b { color:var(--signal); margin-right:8px; }
+  #transformBanner { top:28%; left:0; width:100%; text-align:center; opacity:0; transform:scaleX(.65); transition:.25s ease; color:#fff; text-shadow:0 4px 0 var(--raceNavy); }
+  #transformBanner.on { opacity:1; transform:scaleX(1); }
+  #transformBanner small { display:block; color:var(--buoy); font-size:14px; font-weight:900; letter-spacing:5px; }
+  #transformBanner strong { display:inline-block; margin-top:4px; padding:7px 70px; font-size:46px; letter-spacing:2px; background:linear-gradient(90deg,transparent,rgba(7,27,43,.94) 15% 85%,transparent); }
   .dtag { font-family:'Barlow Condensed',sans-serif; font-size:13px; border:2px solid var(--raceNavy); border-radius:6px; box-shadow:0 2px 0 rgba(7,27,43,.35); }
   @media (max-width:860px) {
     #hubTabs { max-width:96vw; overflow-x:auto; justify-content:flex-start; }
@@ -342,6 +346,7 @@
 <div class="hud" id="impactWord">THWACK!</div>
 <div class="hud" id="finishFlash"><small>OFFICIAL RESULT</small><strong id="finishPlace">P1</strong><span id="finishLine">PHOTO FINISH</span></div>
 <div class="hud" id="rivalCallout"><b id="rivalName">RIVAL</b><span id="rivalLine">QUACK.</span></div>
+<div class="hud" id="transformBanner"><small>COURSE STATE CHANGED</small><strong id="transformName">HIGH WATER</strong></div>
 
 <div id="screen">
  <div id="hub">
@@ -975,7 +980,8 @@ if (LVL.id === 'millrace') {
 function updateMDYN() {
   const t = G.time;
   for (const g2 of MDYN.gates) {
-    g2.open = 0.5 + 0.5 * Math.sin((t / g2.period) * Math.PI * 2 + g2.phase);
+    const shift=G.transformed ? .62 : 1;
+    g2.open = 0.5 + 0.5 * Math.sin((t / (g2.period*shift)) * Math.PI * 2 + g2.phase+(G.transformed?1.4:0));
     const closed = g2.open < 0.45;
     const i = g2.i, w = S.w[i];
     if (closed) {
@@ -989,7 +995,7 @@ function updateMDYN() {
   }
   for (const bm of MDYN.booms) {
     const i = bm.i;
-    const ang = Math.sin(t * bm.speed + bm.phase) * 0.55;
+    const ang = Math.sin(t * bm.speed*(G.transformed?1.65:1) + bm.phase) * (G.transformed ? .78 : .55);
     const pivot = S.pos[i].clone().addScaledVector(S.side[i], bm.sgn * S.w[i]);
     const dir = S.tan[i].clone().multiplyScalar(Math.sin(ang)).addScaledVector(S.side[i], -bm.sgn * Math.cos(ang));
     bm.L.a.copy(pivot); bm.L.b.copy(pivot).addScaledVector(dir, bm.len);
@@ -1048,7 +1054,7 @@ function waterVelAt(p, si, out) {
     out.x += side.x * cross; out.z += side.z * cross;
   }
   const HZ = (DIFF[G.difficulty] || DIFF.medium).haz;
-  _zone.chute = false; _zone.mud = false;
+  _zone.chute = false; _zone.mud = false; _zone.cutQuality=0;
   // lap 2+: high water — everything runs faster
   if (G.raceLap >= 1) { out.x *= 1.12; out.z *= 1.12; }
   // eddies (whirlpool suction "breathes" so drifters eventually escape; grabbier at higher tiers)
@@ -1067,12 +1073,14 @@ function waterVelAt(p, si, out) {
   for (const c of CHUTES) {
     if (c.lapMin && G.raceLap < c.lapMin) continue;
     if (si >= c.i0 && si <= c.i1 && Math.abs(lat - c.latC) < c.halfW) {
-      const cutBoost = c.shortcut ? 1.72 : 1.55;
+      const q=1-Math.abs(lat-c.latC)/c.halfW;
+      const cutBoost = c.shortcut ? 1.42+q*.58 : 1.55;
       out.x *= cutBoost; out.z *= cutBoost; _zone.chute = true;
+      _zone.cutQuality=q;
     }
   }
   // shoals: shallow sand (slow) or mud (sticky slow) — drowned by lap-2 high water
-  if (G.raceLap < 1) for (const sh of SHOALS) {
+  if (G.raceLap < 1 && !(G.transformed && LVL.id==='spillway')) for (const sh of SHOALS) {
     if (si >= sh.i0 && si <= sh.i1 && Math.abs(lat - sh.latC) < sh.halfW) {
       const m = Math.max(0.12, sh.mul / HZ);
       out.x *= m; out.z *= m;
@@ -1148,11 +1156,11 @@ const PERSONAS = [
 ];
 ROGUES.forEach((r,i) => { [r.trait,r.role,r.quote] = PERSONAS[i]; });
 const COURSE_EVENTS = {
-  spillway: { name:'GATES OPEN', detail:'A wall of release water is charging downstream', duration:8 },
-  millrace: { name:'LOG DRIVE', detail:'The mill current surges and the outside line opens', duration:8 },
-  undergrove:{ name:'GLOWTIDE', detail:'Follow the luminous left-hand current', duration:9 },
-  canopy:   { name:'CROSSWIND', detail:'A hard canopy gust is sweeping across the course', duration:8 },
-  porcelain:{ name:'DRAIN PULL', detail:'The basin is pulling everything toward its centre', duration:8 },
+  spillway: { name:'FLOOD STAGE', detail:'Banks vanish and the whole river accelerates', duration:8, state:'THE SPILLWAY FLOODS' },
+  millrace: { name:'MILL SHIFT', detail:'Machinery redirects the outside race line', duration:8, state:'THE MILL CHANGES GEAR' },
+  undergrove:{ name:'BLACKOUT', detail:'The cave darkens; follow the luminous current', duration:9, state:'THE LIGHTS GO OUT' },
+  canopy:   { name:'CANOPY BREAK', detail:'Falling limbs reshape the safe racing line', duration:8, state:'THE CANOPY BREAKS' },
+  porcelain:{ name:'OVERFLOW', detail:'The basin fills and pulls toward the drain', duration:8, state:'THE BATH OVERFLOWS' },
 };
 
 const ducks = [];
@@ -1402,6 +1410,7 @@ function hashKey(x, z) { return ((x + 512) << 11) | (z + 512); }
 // ---- splash shove: rear up, slam down, radial knockback
 function doShove(d) {
   d.shoveT = d.idx === 0 ? 4 : randRange(5, 7.5);
+  d._slamT=.48;
   d._sq = 0.55;
   splash({ x: d.p.x, y: d.y, z: d.p.z }, 16);
   spawnWave(d.p.x, d.y, d.p.z);
@@ -1497,9 +1506,11 @@ function step(dt) {
       G.surge += (22 / COURSE_LEN) * dt;
       if (G.surge > 1.05) { G.surge = -1; G.surgeLapT = G.raceT; }
     }
-    if (G.courseEventLap !== G.raceLap && G.raceT - (G.courseEventBase || 0) > 18) {
+    if (!G.transformed && G.raceT - (G.courseEventBase || 0) > 18) {
       const ev = COURSE_EVENTS[LVL.id]; G.courseEventLap = G.raceLap; G.courseEventT = ev.duration;
+      G.transformed=true;
       eventToast(`${ev.name} · ${ev.detail}`); SFX.whistle(); setTimeout(() => SFX.thud(3.5), 380);
+      el('transformName').textContent=ev.state;el('transformBanner').classList.add('on');setTimeout(()=>el('transformBanner').classList.remove('on'),2800);
     }
     G.courseEventT = Math.max(0, (G.courseEventT || 0) - dt);
     // guided tutorial: the river explains itself, station by station
@@ -1613,9 +1624,11 @@ function step(dt) {
       const latFlow = (d.p.x - S.pos[si].x) * side.x + (d.p.z - S.pos[si].z) * side.z;
       const centreFlow = 1 - Math.min(1, Math.abs(latFlow) / Math.max(1, w));
       const speedFlow = Math.min(1, Math.hypot(d.v.x, d.v.z) / 10);
-      const gainFlow = (_zone.chute ? 0.20 : 0.075) * centreFlow * speedFlow;
+      const gainFlow = (_zone.chute ? 0.16+(_zone.cutQuality||0)*.13 : 0.075) * centreFlow * speedFlow;
       d.flow = Math.max(0, Math.min(1, (d.flow || 0) + gainFlow * dt - (centreFlow < 0.18 ? 0.06 * dt : 0)));
       d.burstT = Math.max(0, (d.burstT || 0) - dt);
+      if(_zone.chute&&(_zone.cutQuality||0)>.62&&!d._cutHop&&Math.hypot(d.v.x,d.v.z)>9){d._cutHop=true;d.air=true;d.airT=0;d.vy=3.1;splash(d.p,5);}
+      if(!_zone.chute)d._cutHop=false;
       if (d.burstT > 0) {
         const burst = d.burstT / 1.35;
         d.v.x += fwd.x * (8 + 5 * burst) * dt; d.v.z += fwd.z * (8 + 5 * burst) * dt;
@@ -1704,12 +1717,12 @@ function step(dt) {
     }
 
     // Each course gets a readable mid-race set piece with its own physical signature.
-    if (racing && G.courseEventT > 0 && !d.air) {
+    if (racing && G.transformed && !d.air) {
       const sideE=S.side[si], fwdE=S.tan[si];
       if (LVL.id === 'spillway') { d.v.x += fwdE.x*2.7*dt; d.v.z += fwdE.z*2.7*dt; }
       else if (LVL.id === 'millrace') { d.v.x += fwdE.x*2.1*dt; d.v.z += fwdE.z*2.1*dt; d.v.x += sideE.x*.45*dt; d.v.z += sideE.z*.45*dt; }
       else if (LVL.id === 'undergrove') { const latE=(d.p.x-S.pos[si].x)*sideE.x+(d.p.z-S.pos[si].z)*sideE.z; if (latE<0){d.v.x+=fwdE.x*2.5*dt;d.v.z+=fwdE.z*2.5*dt;} }
-      else if (LVL.id === 'canopy') { const gust=Math.sin((COURSE_EVENTS.canopy.duration-G.courseEventT)*2.3)>-.2?1:-.25; d.v.x+=sideE.x*gust*3.6*dt; d.v.z+=sideE.z*gust*3.6*dt; }
+      else if (LVL.id === 'canopy') { const gust=Math.sin(G.raceT*2.3)>-.2?1:-.25; d.v.x+=sideE.x*gust*3.6*dt; d.v.z+=sideE.z*gust*3.6*dt; }
       else if (LVL.id === 'porcelain') { const latE=(d.p.x-S.pos[si].x)*sideE.x+(d.p.z-S.pos[si].z)*sideE.z; d.v.x-=sideE.x*latE*.32*dt; d.v.z-=sideE.z*latE*.32*dt; }
     }
     if (d.launchT < 0) { d.launchT = Math.min(0,d.launchT+dt); d.v.multiplyScalar(1-.75*dt); }
@@ -1894,6 +1907,7 @@ function step(dt) {
     d._sq = Math.max(0, (d._sq || 0) - 2.2 * dt);
     d.hitT = Math.max(0,(d.hitT||0)-dt);
     d._gateHitT=Math.max(0,(d._gateHitT||0)-dt);
+    d._slamT=Math.max(0,(d._slamT||0)-dt);
 
     // ---- time trial ghost: record your line ten times a second
     if (G.tt && d.idx === 0 && racing && !d.finished && G.raceT - G._recT >= 0.1) {
@@ -4573,17 +4587,19 @@ function syncDucks(t) {
       _s.set(1, 1, 1);
       continue;
     }
-    const chop = S.sMul[d.si];
-    const bob = d.air ? 0 : Math.sin(t * (3.2 + chop * 2) + d.bobPh) * (0.04 + 0.05 * chop);
+    const chop = S.sMul[d.si],stroke=d._stroking?Math.sin(t*19+d.bobPh):0,celebrate=d.finished?Math.abs(Math.sin(t*6+d.bobPh)):0;
+    const bob = d.air ? 0 : Math.sin(t * (3.2 + chop * 2) + d.bobPh) * (0.04 + 0.05 * chop)+Math.abs(stroke)*.045+celebrate*.16;
     const dizzy=(d.hitT||0)>0?Math.sin(t*24+d.idx)*.22:0;
     const rockX = d.air ? -0.35 : Math.sin(t * 3.1 + d.bobPh) * (0.05 + 0.05 * chop)+dizzy;
     // lean into lateral motion — carving reads in the body
     const latV = d.v.x * Math.cos(d.heading) - d.v.z * Math.sin(d.heading);
     const lean = Math.max(-0.3, Math.min(0.3, latV * 0.05));
-    const rockZ = d.air ? 0 : Math.sin(t * 3.7 + d.bobPh * 2) * (0.06 + 0.06 * chop) - lean;
-    _e.set(rockX, d.heading, rockZ);
+    const paddleLean=d._stroking?stroke*.085:0,slam=(d._slamT||0)>0?Math.sin((.48-d._slamT)*Math.PI/.48)*.34:0;
+    const rockZ = d.air ? Math.sin(t*16+d.bobPh)*.12 : Math.sin(t * 3.7 + d.bobPh * 2) * (0.06 + 0.06 * chop) - lean+paddleLean;
+    const yawAnim=d.finished?Math.sin(t*5+d.bobPh)*.16:d.air?Math.sin(t*19+d.bobPh)*.07:0;
+    _e.set(rockX-slam, d.heading+yawAnim, rockZ);
     _q.setFromEuler(_e);
-    const q2 = d._sq || 0;
+    const q2 = Math.max(d._sq || 0,slam*.55);
     const wsc = d.idx === 0 ? playerW().scale : (d.rogue ? d.rogue.scale : 1);
     _s.set((1 + q2 * 0.35) * wsc, (1 - q2 * 0.55) * wsc, (1 + q2 * 0.35) * wsc);
     _m4.compose(_tmpA.set(d.p.x, d.y + bob - q2 * 0.15, d.p.z), _q, _s);
@@ -4654,7 +4670,8 @@ function updateRaceRead() {
   for (const c of CHUTES) {
     if (c.lapMin && d.lap < c.lapMin) continue;
     const side = c.latC < -0.4 ? 'LEFT' : c.latC > 0.4 ? 'RIGHT' : 'CENTRE';
-    offer(c.i0, `${side} FAST CHUTE · CHARGES FLOW`, 'fast');
+    const gate=SHORTCUT_GATES.find(g=>g.c===c),state=gate&&gate.open<.45?'GATE CLOSED · TIME IT':'GATE OPEN · COMMIT';
+    offer(c.i0, `${side} ${c.name.toUpperCase()} · ${state}`, gate&&gate.open<.45?'hazard':'fast');
   }
   for (const s of SHOALS) offer(s.i0, `${s.latC < 0 ? 'RIGHT' : 'LEFT'} LINE · ${s.mud ? 'MUD' : 'SHALLOWS'} AHEAD`, 'hazard');
   for (const e of EDDIES) offer(e.i, `${e.lat < 0 ? 'KEEP RIGHT' : 'KEEP LEFT'} · ${e.whirl ? 'WHIRLPOOL' : 'EDDY'}`, 'hazard');
@@ -4876,7 +4893,7 @@ function prepRace(skipFly) {
   G.raceT = 0; G.finishedCount = 0; G.results = []; G.tutStep = 0;
   G.laps = SETTINGS.laps;
   G.raceLap = 0; G.surge = -1; G.surgeLap = -1; G.surgeLapT = 0; G.slowmo = 0; G.statsCounted = false; G.podT = 0;
-  G.startCharge=0; G.startEarly=false; G.courseEventT=0; G.courseEventLap=-1; G.courseEventBase=0;
+  G.startCharge=0; G.startEarly=false; G.courseEventT=0; G.courseEventLap=-1; G.courseEventBase=0; G.transformed=false;
   G.shortcutHits=new Set();
   G.tt = ttMode; G._recT = 0; G.ghostRec = [];
   G.guided = !!G.guidedNext; G.guidedNext = false;
@@ -4911,6 +4928,7 @@ function prepRace(skipFly) {
   el('raceIntro').classList.add('on'); setTimeout(()=>el('raceIntro').classList.remove('on'),4200);
   el('startMeter').style.display='block'; el('startFill').style.width='0%'; el('startLabel').textContent='HOLD PADDLE ON 2 · HIT GOLD AT GO';
   el('finishFlash').classList.remove('on');
+  el('transformBanner').classList.remove('on');
 }
 // flavour: rotating taglines + duck wisdom from the rogues' gallery
 const TAGLINES = [
@@ -5542,7 +5560,7 @@ function frame(now) {
   sun.target.position.set(ducks[0].p.x, ducks[0].y, ducks[0].p.z);
   waterMat.uniforms.uT.value = now / 1000;
   waterMat.uniforms.uRain.value = G.weather === 'storm' ? 1 : G.weather === 'mist' ? .22 : 0;
-  waterMat.uniforms.uEvent.value = G.courseEventT > 0 ? Math.min(1,G.courseEventT*2) : 0;
+  waterMat.uniforms.uEvent.value = G.courseEventT > 0 ? 1 : G.transformed ? .42 : 0;
   fallsMat.uniforms.uT.value = now / 1000;
   if (whirlMesh) whirlMesh.rotation.y = -now / 1000 * 1.6;
   if (G.mode === 'race' || G.mode === 'countdown') {
@@ -5609,6 +5627,7 @@ function frame(now) {
       const pt = ducks[0].si / NSAMP;
       for (const [c0, c1] of LVL.dark) cave = Math.max(cave, sstep(c0 - 0.02, c0 + 0.02, pt) * (1 - sstep(c1 - 0.02, c1 + 0.02, pt)));
     }
+    if(LVL.id==='undergrove'&&G.transformed)cave=Math.max(cave,.58);
     const cf = 1 - cave * 0.85;
     G._cave = cave;
     scene.fog.color.setRGB(fr * cf, fg * cf, fb * cf);
@@ -5806,12 +5825,13 @@ function frame(now) {
       : 0.35 + 0.3 * Math.sin(t * 4 + a.position.z);
     for(const sg of SHORTCUT_GATES){
       const available=!sg.c.lapMin||G.raceLap>=sg.c.lapMin,ahead=wrapDS(sg.i,ducks[0].si);
-      const want=available&&(ahead>0&&ahead<85||G.courseEventT>0)?1:0;sg.open+=(want-sg.open)*Math.min(1,dt*4.5);
+      const cycleOpen=Math.sin(t*1.35+sg.i*.071)>-.3;
+      const want=available&&((ahead>0&&ahead<95&&cycleOpen)||G.courseEventT>0)?1:0;sg.open+=(want-sg.open)*Math.min(1,dt*4.5);
       sg.bar.rotation.z=-sg.open*Math.PI*.52;
       if(sg.g.userData.veil)sg.g.userData.veil.material.opacity=.2*(1-sg.open);
     }
     for(const cr of COURSE_CREW){cr.flag.rotation.y=Math.sin(t*2+cr.ph)*.12;cr.cloth.rotation.y=Math.sin(t*7+cr.ph)*.35;cr.flag.position.y+=Math.sin(t*5+cr.ph)*.002;}
-    for(const eb of EVENT_BEACONS){const on=G.courseEventT>0;eb.mesh.visible=on;if(on){const pulse=(t*1.8+eb.ph)%1;eb.mesh.scale.setScalar(.7+pulse*2.8);eb.mesh.material.opacity=.55*(1-pulse);}}
+    for(const eb of EVENT_BEACONS){const on=G.transformed;eb.mesh.visible=on;if(on){const pulse=(t*(G.courseEventT>0?1.8:.72)+eb.ph)%1;eb.mesh.scale.setScalar(.7+pulse*2.8);eb.mesh.material.opacity=(G.courseEventT>0?.55:.2)*(1-pulse);}}
     // fish
     for (const f of FISH) {
       f.t += dt;
@@ -5863,7 +5883,7 @@ function frame(now) {
       b.mesh.rotation.y = Math.sin(b.ph * 14) * 0.9;
     }
     for(const f of TRACK_FANS){
-      const frenzy=G.courseEventT>0?2.2:G.mode==='race'?1.35:1;
+      const frenzy=G.courseEventT>0?2.2:G.transformed?1.65:G.mode==='race'?1.35:1;
       f.grp.position.y=f.baseY+Math.abs(Math.sin(t*3.4*frenzy+f.ph))*(.13+.08*(frenzy-1));
       f.grp.rotation.z=Math.sin(t*4.2*frenzy+f.ph)*(.08+.05*(frenzy-1));
     }
