@@ -536,7 +536,6 @@
       <button data-v="off">OFF</button><button data-v="on">ON</button></div></div>
     <div class="setRow"><span>Duck noises</span><div class="segRow" id="setDuckNoise">
       <button data-v="on">ON</button><button data-v="off">OFF</button></div></div>
-    <div class="setRow"><span>Race announcer</span><div class="segRow" id="setAnnouncer"><button data-v="on">ON</button><button data-v="off">OFF</button></div></div>
     <div class="setRow"><span>Camera shake</span><div class="segRow" id="setShake"><button data-v="on">ON</button><button data-v="off">OFF</button></div></div>
     <div class="setRow"><span>Impact flashes</span><div class="segRow" id="setFlashes"><button data-v="on">ON</button><button data-v="off">OFF</button></div></div>
     <div class="setRow"><span>Large-field clarity</span><div class="segRow" id="setClarity"><button data-v="full">FULL</button><button data-v="clear">CLEAR</button></div></div>
@@ -1463,7 +1462,7 @@ const DUSK = { top: [.28,.30,.55], hor: [.95,.55,.40], low: [1,.75,.5], sun: 0xf
 // ---- persisted settings
 const SETTINGS = Object.assign(
   { music: 0.5, sfx: 0.7, quality: 'high', camDist: 'std', camView: 'behind', fov: 58, assist: false, duckNoises: true,
-    difficulty: 'medium', laps: 1, shake:true, flashes:true, clarity:'full', announcer:true,
+    difficulty: 'medium', laps: 1, shake:true, flashes:true, clarity:'full',
     keys: { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' },
     duck: { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium', eyes: 'classic', pattern: 'none', patternColor: '#fff8e7', face: 'none', body: 'none' } },
   safeStored('spillway-settings',{}));
@@ -1647,7 +1646,6 @@ const SFX = {
 };
 
 const hash = new Map();
-function announce(msg){if(SETTINGS.announcer===false||!('speechSynthesis'in window))return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(msg);u.rate=1.18;u.pitch=.82;u.volume=Math.min(.8,SETTINGS.sfx);speechSynthesis.speak(u);}catch(e){}}
 function hashKey(x, z) { return ((x + 512) << 11) | (z + 512); }
 
 // ---- splash shove: rear up, slam down, radial knockback
@@ -1776,7 +1774,6 @@ function step(dt) {
       if(LVL.id==='millrace')setTimeout(()=>SFX.lock(),620);
       if(LVL.id==='undergrove'||LVL.id==='canopy')setTimeout(()=>SFX.thunder(),520);
       if(LVL.id==='porcelain')setTimeout(()=>{SFX.splash();SFX.splash();},520);
-      announce(ev.state);
       el('transformName').textContent=ev.state;el('transformBanner').classList.add('on');setTimeout(()=>el('transformBanner').classList.remove('on'),2800);
     }
     G.courseEventT = Math.max(0, (G.courseEventT || 0) - dt);
@@ -2200,7 +2197,7 @@ function step(dt) {
           if (d.idx === 0) onPlayerFinish();
           else if (G.finishedCount <= 3 && !ducks[0].finished) eventToast(`${d.name} takes P${d.place}!`);
         } else if (d.idx === 0) {
-          if (d.lap === G.laps - 1) { lapBanner('⚑ FINAL LAP ⚑'); SFX.fanfare(); announce('Final lap'); }
+          if (d.lap === G.laps - 1) { lapBanner('⚑ FINAL LAP ⚑'); SFX.fanfare(); }
           else { lapBanner(`LAP ${d.lap + 1} / ${G.laps}`); SFX.beep(true); }
           SFX.splash();
         }
@@ -5200,7 +5197,7 @@ function updateRaceRead() {
     if(HARBOR_DYN.boat)offer(HARBOR_DYN.boat.i,'WORKBOAT CROSSING · TAKE THE WAKE','hazard');
   }
   const inFast = CHUTES.some(c => (!c.lapMin || d.lap >= c.lapMin) && d.si >= c.i0 && d.si <= c.i1);
-  if(S.surge[d.si]&&!G._inClimb){G._inClimb=true;eventToast(`${SURGE_STYLE.name} · ${SURGE_STYLE.cue}`);announce(SURGE_STYLE.name);}
+  if(S.surge[d.si]&&!G._inClimb){G._inClimb=true;eventToast(`${SURGE_STYLE.name} · ${SURGE_STYLE.cue}`);}
   if(!S.surge[d.si])G._inClimb=false;
   if (S.surge[d.si]) best = { ahead:0, msg:`${SURGE_STYLE.name} · ${SURGE_STYLE.cue}`, cls:'fast' };
   else if (inFast) best = { ahead:0, msg:'FAST WATER · HOLD THIS LINE', cls:'fast' };
@@ -5315,7 +5312,6 @@ function drawMap() {
 
 function onPlayerFinish() {
   const d = ducks[0];
-  announce(d.place===1?'Victory!':`Finished position ${d.place}`);
   toast(`P${d.place}!`, 1600);
   el('finishPlace').textContent = d.place === 1 ? 'VICTORY!' : `P${d.place}`;
   el('finishLine').textContent = d.place <= 3 ? 'PODIUM SECURED · OFFICIAL TIME PENDING' : 'CLASSIFIED FINISHER';
@@ -5943,7 +5939,7 @@ segWire('setQuality', 'quality', () => applyQuality());
 segWire('setCam', 'camDist');
 segWire('setView', 'camView');
 segWire('setClarity','clarity');
-for(const [id,key] of [['setShake','shake'],['setFlashes','flashes'],['setAnnouncer','announcer']])document.querySelectorAll('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{SETTINGS[key]=b.dataset.v==='on';saveSettings();refreshSettingsUI();}));
+for(const [id,key] of [['setShake','shake'],['setFlashes','flashes']])document.querySelectorAll('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{SETTINGS[key]=b.dataset.v==='on';saveSettings();refreshSettingsUI();}));
 function refreshKeyBtns() {
   document.querySelectorAll('#keyBtns button').forEach(b => {
     const kv = SETTINGS.keys[b.dataset.a];
@@ -5995,7 +5991,6 @@ function refreshSettingsUI() {
   document.querySelectorAll('#setDuckNoise button').forEach(b => b.classList.toggle('sel', (b.dataset.v === 'on') === (SETTINGS.duckNoises !== false)));
   document.querySelectorAll('#setShake button').forEach(b=>b.classList.toggle('sel',(b.dataset.v==='on')===(SETTINGS.shake!==false)));
   document.querySelectorAll('#setFlashes button').forEach(b=>b.classList.toggle('sel',(b.dataset.v==='on')===(SETTINGS.flashes!==false)));
-  document.querySelectorAll('#setAnnouncer button').forEach(b=>b.classList.toggle('sel',(b.dataset.v==='on')===(SETTINGS.announcer!==false)));
   document.querySelectorAll('#setClarity button').forEach(b=>b.classList.toggle('sel',b.dataset.v===(SETTINGS.clarity||'full')));
   refreshKeyBtns();
   el('padStatus').textContent = PAD.on || PAD.name ? `controller: ${(PAD.name || 'connected').slice(0, 40)}` : 'controller: none detected — plug in & press a button';
