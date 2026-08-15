@@ -1387,13 +1387,14 @@ function auInit() {
     porcelain: 'audio/theme-porcelain.mp3',    // "8bit Bossa" — Cleyton Kauffman (CC0)
   };
   const mkLoop = (src) => { const a = new Audio(src); a.loop = true; a.volume = 0; return a; };
-  AU.track = mkLoop(THEME_FILES[LVL.id] || THEME_FILES.spillway);
+  AU.track = LVL.id === 'harbor' ? null : mkLoop(THEME_FILES[LVL.id] || THEME_FILES.spillway);
   AU.menu = mkLoop('audio/menu-theme.mp3');    // "Happy Clappy Loop" — Owlish Media (CC0)
   AU.crowd = mkLoop('audio/crowd-loop.mp3');   // Gregor Quendel (CC-BY)
-  if (LVL.id === 'millrace') AU.machinery = mkLoop('audio/machinery.mp3');   // ycbcr (CC0)
+  if (LVL.id === 'millrace' || LVL.id === 'harbor') AU.machinery = mkLoop('audio/machinery.mp3');   // ycbcr (CC0)
   if (LVL.dark) AU.drips = mkLoop('audio/cave-drips.mp3');                   // qubodup (CC0)
   [AU.track, AU.menu, AU.crowd, AU.machinery, AU.drips].forEach(a => a && a.play().catch(() => {}));
-  AU.track.addEventListener('error', () => { AU.track = null; setInterval(musicTick, 380); });
+  if (AU.track) AU.track.addEventListener('error', () => { AU.track = null; setInterval(musicTick, 380); });
+  if (LVL.id === 'harbor') AU.harborBeat = setInterval(harborThemeTick, 240);
   // sampled SFX (real recordings, CC0 — see README): decoded once into buffers,
   // played through the sfx bus with pitch jitter so they never sound repeated
   AU.smp = {};
@@ -1485,6 +1486,12 @@ const SFX = {
     if (playSmp('winner', 0.75)) return;
     [392, 523, 659, 784].forEach((f, ix) => setTimeout(() => pluck(f, 0.3, AU.sfx, 0.9), ix * 120));
   },
+  foghorn() {
+    if(!AU.ctx)return;const t=AU.ctx.currentTime,o=AU.ctx.createOscillator(),g=AU.ctx.createGain(),f=AU.ctx.createBiquadFilter();o.type='sawtooth';o.frequency.setValueAtTime(73,t);o.frequency.linearRampToValueAtTime(69,t+1.7);f.type='lowpass';f.frequency.value=240;g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.16,t+.18);g.gain.exponentialRampToValueAtTime(.001,t+2.2);o.connect(f);f.connect(g);g.connect(AU.sfx);o.start(t);o.stop(t+2.25);
+  },
+  gull() { if(!AU.ctx)return;pluck(randRange(1150,1450),.055,AU.sfx,.18);setTimeout(()=>pluck(randRange(850,1050),.045,AU.sfx,.16),95); },
+  thunder() { if(!AU.ctx)return;noiseBurst(1.5,85,.45,.34);setTimeout(()=>noiseBurst(.7,150,.7,.17),180); },
+  lock() { if(!AU.ctx)return;noiseBurst(.32,420,2,.16);setTimeout(()=>SFX.thud(2.5),260); },
 };
 
 const hash = new Map();
@@ -1516,6 +1523,18 @@ function doShove(d) {
     }
   }
   d.v.x *= 0.8; d.v.z *= 0.8;   // the slam costs you a beat
+}
+let harborStep = 0;
+function harborThemeTick() {
+  if (!AU.ctx || SETTINGS.music <= 0 || !(G.mode === 'race' || G.mode === 'countdown' || G.mode === 'flyover')) return;
+  const bass=[82.4,82.4,98,110,82.4,123.5,110,98],lead=[329.6,392,440,392,493.9,440,392,329.6],k=harborStep++%16;
+  if(k%2===0) pluck(bass[(k/2)%8],.13*SETTINGS.music,AU.music,.34);
+  if(k%4===2) pluck(lead[(k/2)%8],.07*SETTINGS.music,AU.music,.24);
+  if(k%4===0) noiseTone(.045,2200,.035*SETTINGS.music,AU.music);
+}
+function noiseTone(dur,freq,vol,dest){
+  const ctx=AU.ctx;if(!ctx)return;const n=Math.ceil(ctx.sampleRate*dur),b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
+  const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();s.buffer=b;f.type='highpass';f.frequency.value=freq;g.gain.value=vol;s.connect(f);f.connect(g);g.connect(dest||AU.sfx);s.start();
 }
 
 // FLOW BURST: clean racing charges the meter; the player chooses when to cash it in.
@@ -1598,6 +1617,7 @@ function step(dt) {
       const ev = COURSE_EVENTS[LVL.id]; G.courseEventLap = G.raceLap; G.courseEventT = ev.duration;
       G.transformed=true;
       eventToast(`${ev.name} · ${ev.detail}`); SFX.whistle(); setTimeout(() => SFX.thud(3.5), 380);
+      if(LVL.id==='harbor')setTimeout(()=>SFX.foghorn(),650);
       announce(ev.state);
       el('transformName').textContent=ev.state;el('transformBanner').classList.add('on');setTimeout(()=>el('transformBanner').classList.remove('on'),2800);
     }
@@ -3432,6 +3452,12 @@ if (LVL.id === 'millrace') {
   for(let n=0;n<9;n++){
     const i=Math.round((.59+n*.026)*NSAMP),sgn=-1,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+2.2));
     const buoy=new THREE.Mesh(new THREE.CylinderGeometry(.3,.48,1.15,9),lam(n%2?0xff6b21:0xf3e7c9));buoy.position.set(p.x,waterHeightAt(i)+.5,p.z);scene.add(buoy);
+  }
+  window._harborGulls=[];
+  const wingG=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.65,0,0),new THREE.Vector3(0,.12,0),new THREE.Vector3(.65,0,0)]);
+  for(let n=0;n<11;n++){
+    const bird=new THREE.Line(wingG,new THREE.LineBasicMaterial({color:0xf4f1df})),i=Math.round((.43+n*.025)*NSAMP),p=S.pos[i].clone();
+    bird.position.set(p.x+randRange(-18,18),waterHeightAt(i)+randRange(9,18),p.z+randRange(-14,14));bird.scale.setScalar(randRange(.7,1.3));scene.add(bird);_harborGulls.push({bird,home:bird.position.clone(),ph:rand()*6,r:randRange(5,13),spd:randRange(.18,.36)});
   }
 } else {
   const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
@@ -5861,9 +5887,12 @@ function frame(now) {
         if (ducks[0].finished) crowdT = 0.55;   // the stands stay loud for your ceremony
       }
       lerpV(AU.crowd, SETTINGS.sfx * crowdT);
-      if (AU.machinery && MDYN.saw) {
-        const dm = Math.min(Math.abs(wrapDS(Math.round(0.30 * NSAMP), ducks[0].si)), Math.abs(wrapDS(MDYN.saw.i, ducks[0].si)));
-        lerpV(AU.machinery, SETTINGS.sfx * Math.max(0, 1 - dm / 160) * 0.55 * (inRace ? 1 : 0.25));
+      if (AU.machinery) {
+        const dm = LVL.id==='harbor'
+          ? Math.min(Math.abs(wrapDS(Math.round(.39*NSAMP),ducks[0].si)),Math.abs(wrapDS(Math.round(.91*NSAMP),ducks[0].si)))
+          : MDYN.saw ? Math.min(Math.abs(wrapDS(Math.round(0.30 * NSAMP), ducks[0].si)), Math.abs(wrapDS(MDYN.saw.i, ducks[0].si))) : NSAMP;
+        if(LVL.id==='harbor')AU.machinery.playbackRate=.72;
+        lerpV(AU.machinery, SETTINGS.sfx * Math.max(0, 1 - dm / 170) * (LVL.id==='harbor'?.42:.55) * (inRace ? 1 : 0.25));
       }
       if (AU.drips) lerpV(AU.drips, SETTINGS.sfx * (G._cave || 0) * 0.85);
     }
@@ -5871,6 +5900,18 @@ function frame(now) {
   // moving scenery & wildlife
   {
     const t = now / 1000;
+    if(LVL.id==='harbor'){
+      for(const g of (window._harborGulls||[])){const a=t*g.spd+g.ph;g.bird.position.x=g.home.x+Math.cos(a)*g.r;g.bird.position.z=g.home.z+Math.sin(a)*g.r;g.bird.position.y=g.home.y+Math.sin(a*2.4)*.8;g.bird.rotation.y=-a;g.bird.scale.y=.65+Math.sin(a*5)*.3;}
+      const racing=G.mode==='race'||G.mode==='countdown',pt=ducks[0].si/NSAMP;
+      if(racing&&AU.ctx){
+        if(!AU.nextHorn)AU.nextHorn=t+5;if(!AU.nextGull)AU.nextGull=t+2;if(!AU.nextThunder)AU.nextThunder=t+8;
+        if(t>AU.nextHorn&&pt>.42&&pt<.82){SFX.foghorn();AU.nextHorn=t+randRange(15,24);}
+        if(t>AU.nextGull&&pt>.38&&pt<.78){SFX.gull();AU.nextGull=t+randRange(4,8);}
+        const inLock=(pt>.35&&pt<.45)||(pt>.86&&pt<.96);if(inLock&&!AU.wasInLock){SFX.lock();}AU.wasInLock=inLock;
+        if(G.weather==='storm'&&t>AU.nextThunder){SFX.thunder();G.lightning=.22;AU.nextThunder=t+randRange(12,21);}
+      }
+      if(G.lightning>0){G.lightning=Math.max(0,G.lightning-dt);if(SETTINGS.flashes!==false){const flash=Math.sin(G.lightning*95)>.15?2.6:1;sun.intensity*=flash;hemi.intensity*=1+(flash-1)*.45;}}
+    }
     if (millWheel) millWheel.rotation.z = -t * 0.9;
     // millrace machinery
     if (LVL.id === 'millrace') {
