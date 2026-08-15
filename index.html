@@ -1700,7 +1700,9 @@ function impactBeat(word, mag) {
   G.hitStop = Math.max(G.hitStop || 0, Math.min(.11, .035 + mag * .012));
 }
 function rivalSay(d, line) {
-  if (!d || !d.rogue || G.tt) return;
+  // Let race control and the launch meter own the opening beat. Dense fields collide
+  // immediately, and an eager speech bubble used to cover the timing meter on phones.
+  if (!d || !d.rogue || G.tt || (G.mode==='race'&&G.raceT<3.2)) return;
   const box=el('rivalCallout'); el('rivalName').textContent=d.name.toUpperCase(); el('rivalLine').textContent=line || d.rogue.quote;
   box.classList.add('on'); clearTimeout(G._rivalTalk); G._rivalTalk=setTimeout(()=>box.classList.remove('on'),1900);
 }
