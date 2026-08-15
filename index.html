@@ -4424,8 +4424,8 @@ let rainMesh, rainVel = [];
   }
 }
 
-// ---------- ducks (3 instanced meshes: body+head colored, beak, eyes)
-let bodyIM, beakIM, eyeIM;
+// ---------- ducks (instanced body, sculpted wing/tail highlights, beak, eyes)
+let bodyIM, detailIM, beakIM, eyeIM;
 var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
 {
   const bodyG = new THREE.SphereGeometry(DUCK_R, 12, 10);
@@ -4435,6 +4435,13 @@ var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
   const merged = duckBodyG = mergeGeoms([bodyG, headG]);
   bodyIM = new THREE.InstancedMesh(merged,
     new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 55, specular: 0x666666 }), N_DUCKS);   // rubber sheen
+
+  // Slightly raised wings and a tail nub catch their own highlights. From the chase
+  // camera this small second shell is what turns a field of coloured blobs into ducks.
+  const wingL=new THREE.SphereGeometry(DUCK_R*.38,8,6);wingL.scale(.34,.2,1.15);wingL.rotateZ(-.22);wingL.translate(-DUCK_R*.43,DUCK_R*.02,-DUCK_R*.02);
+  const wingR=new THREE.SphereGeometry(DUCK_R*.38,8,6);wingR.scale(.34,.2,1.15);wingR.rotateZ(.22);wingR.translate(DUCK_R*.43,DUCK_R*.02,-DUCK_R*.02);
+  const tail=new THREE.SphereGeometry(DUCK_R*.23,7,5);tail.scale(1,.7,.8);tail.translate(0,DUCK_R*.18,-DUCK_R*1.04);
+  detailIM=new THREE.InstancedMesh(mergeGeoms([wingL,wingR,tail]),new THREE.MeshPhongMaterial({color:0xffffff,shininess:72,specular:0x777777}),N_DUCKS);
 
   const beakG = duckBeakG = new THREE.ConeGeometry(DUCK_R * 0.22, DUCK_R * 0.55, 6);
   beakG.rotateX(Math.PI / 2);
@@ -4457,10 +4464,10 @@ var duckBodyG, duckBeakG, duckEyeG;   // shared with the customizer preview
   for (let i = 0; i < N_DUCKS; i++) {
     if (i === 0) c.set(0xffd23f);                                  // the classic yellow — that's you
     else c.set(palette[1 + Math.floor(rand() * (palette.length - 1))]).offsetHSL(randRange(-0.02, 0.02), 0, randRange(-0.06, 0.06));
-    bodyIM.setColorAt(i, c);
+    bodyIM.setColorAt(i, c);detailIM.setColorAt(i,c);
   }
-  bodyIM.frustumCulled = beakIM.frustumCulled = eyeIM.frustumCulled = eyeShineIM.frustumCulled = false;
-  scene.add(bodyIM, beakIM, eyeIM, eyeShineIM);
+  bodyIM.frustumCulled = detailIM.frustumCulled = beakIM.frustumCulled = eyeIM.frustumCulled = eyeShineIM.frustumCulled = false;
+  scene.add(bodyIM,detailIM, beakIM, eyeIM, eyeShineIM);
 }
 // naive geometry merge (positions/normals/uv discarded ok for lambert flat colors)
 function mergeGeoms(geoms) {
@@ -4731,7 +4738,7 @@ const rogueRigs = {};
   const rc2 = new THREE.Color();
   for (let ri = 0; ri < ROGUES.length; ri++) {
     const rg = ROGUES[ri], idx = ri + 1;
-    bodyIM.setColorAt(idx, rc2.set(rg.color));
+    bodyIM.setColorAt(idx, rc2.set(rg.color));detailIM.setColorAt(idx,rc2);
     beakIM.setColorAt(idx, new THREE.Color(rg.beak));
     const dk = { hat: rg.gear.hat || 'none', eyes: rg.gear.eyes || 'classic',
       face: rg.gear.face || 'none', body: rg.gear.cape ? 'cape' : (rg.gear.body || 'none'), pattern: 'none' };
@@ -4739,13 +4746,13 @@ const rogueRigs = {};
     rogueRigs[idx] = rig;
     scene.add(rig);
   }
-  bodyIM.instanceColor.needsUpdate = true;
+  bodyIM.instanceColor.needsUpdate = detailIM.instanceColor.needsUpdate = true;
 }
 let playerGearKey = null;
 function applyDuck() {
   const dk = SETTINGS.duck;
   const c = new THREE.Color(dk.color);
-  bodyIM.setColorAt(0, c); bodyIM.instanceColor.needsUpdate = true;
+  bodyIM.setColorAt(0, c);detailIM.setColorAt(0,c);bodyIM.instanceColor.needsUpdate = detailIM.instanceColor.needsUpdate = true;
   beakIM.setColorAt(0, new THREE.Color(dk.beak)); beakIM.instanceColor.needsUpdate = true;
   const key = JSON.stringify(dk);
   if (playerGearKey !== key) {
@@ -5061,7 +5068,7 @@ function syncDucks(t) {
     if (G.tt && d.idx !== 0) {   // time trial: the field stays in the shed
       _s.setScalar(0.0001);
       _m4.compose(_tmpA.set(0, -500, 0), _q.identity(), _s);
-      bodyIM.setMatrixAt(d.idx, _m4); beakIM.setMatrixAt(d.idx, _m4);
+      bodyIM.setMatrixAt(d.idx, _m4);detailIM.setMatrixAt(d.idx,_m4);beakIM.setMatrixAt(d.idx, _m4);
       eyeIM.setMatrixAt(d.idx, _m4); eyeShineIM.setMatrixAt(d.idx, _m4);
       _s.set(1, 1, 1);
       continue;
@@ -5102,7 +5109,7 @@ function syncDucks(t) {
       rr.quaternion.copy(_q);
       rr.scale.setScalar(wsc);
     }
-    bodyIM.setMatrixAt(d.idx, _m4); beakIM.setMatrixAt(d.idx, _m4);
+    bodyIM.setMatrixAt(d.idx, _m4);detailIM.setMatrixAt(d.idx,_m4);beakIM.setMatrixAt(d.idx, _m4);
     const customEyes = (d.idx === 0 && SETTINGS.duck.eyes && SETTINGS.duck.eyes !== 'classic')
                     || (d.rogue && d.rogue.gear.eyes);
     if (customEyes) {
@@ -5115,6 +5122,7 @@ function syncDucks(t) {
   }
   _s.set(1, 1, 1);
   bodyIM.instanceMatrix.needsUpdate = true;
+  detailIM.instanceMatrix.needsUpdate = true;
   beakIM.instanceMatrix.needsUpdate = true;
   eyeIM.instanceMatrix.needsUpdate = true;
   eyeShineIM.instanceMatrix.needsUpdate = true;
