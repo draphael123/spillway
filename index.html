@@ -3195,7 +3195,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     // there produced screen-filling olive wedges; the top face is all racers
     // should ever see, while the other courses retain two-sided gorge walls.
     roughness:IS_BATHWORLD ? 0.62 : 0.94, metalness:0,
-    side:(LVL.id === 'spillway' || LVL.id === 'canopy' || LVL.id === 'harbor') ? THREE.FrontSide : THREE.DoubleSide, flatShading:true,
+    side:(LVL.id === 'spillway' || LVL.id === 'millrace' || LVL.id === 'canopy' || LVL.id === 'harbor') ? THREE.FrontSide : THREE.DoubleSide, flatShading:true,
   }));
   banksMesh.receiveShadow = true;
   scene.add(banksMesh);
@@ -3295,9 +3295,10 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     // Keep tall scenery outside both the racing line and the chase-camera corridor.
     // The old 3.5-unit minimum let large crowns fill the view on narrow bends.
     const ob = randRange(9.5, 20);
+    const caveTree=!!LVL.dark?.some(([a,b])=>i/NSAMP>a-.025&&i/NSAMP<b+.025);
     // course identity: Millrace has logged a third of its pines; Canopy has NO ground
     // pines at all (you're AT treetop height — its own crown billows fill the banks)
-    if ((LVL.id === 'millrace' && k % 3 === 0) || LVL.id === 'canopy' || IS_BATHWORLD || !sceneryClear(i,ob,sgn,3.8)) {
+    if ((LVL.id === 'millrace' && k % 3 === 0) || LVL.id === 'canopy' || IS_BATHWORLD || caveTree || !sceneryClear(i,ob,sgn,3.8)) {
       q.identity(); m.compose(_tmpA.set(0, -300, 0), q, sc.set(0.001, 0.001, 0.001));
       trunks.setMatrixAt(k, m);
       for (let tr = 0; tr < 3; tr++) tiers[tr].setMatrixAt(k, m);
@@ -4020,10 +4021,12 @@ if (LVL.id === 'millrace') {
         const i=Math.round(i0+(i1-i0)*gr/9),lat=Math.sin(gr*1.7)*S.w[i]*.42,p=S.pos[i].clone().addScaledVector(S.side[i],lat),rootGlow=new THREE.Mesh(new THREE.CylinderGeometry(.075,.13,5.8,7),new THREE.MeshBasicMaterial({color:gr%3?0x63e6d5:0xb685ee}));
         rootGlow.position.set(p.x,waterHeightAt(i)+8.25,p.z);rootGlow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),S.tan[i]);rootGlow.rotation.y+=Math.sin(gr)*.28;scene.add(rootGlow);
       }
-      // stalactites: centre-channel only, tips clamped well above the camera line
+      // Stalactites frame the tunnel shoulders instead of hanging in the
+      // chase-camera corridor. Central teeth repeatedly filled the screen on
+      // curved cave sections even though their tips cleared the duck itself.
       for (let s2 = 0; s2 < 10; s2++) {
         const i = Math.round((d0 + 0.02 + rand() * (d1 - d0 - 0.04)) * NSAMP);
-        const lat = randRange(-0.5, 0.5) * S.w[i];
+        const lat = (s2%2?1:-1)*randRange(0.62,0.9)*S.w[i];
         const p = S.pos[i].clone().addScaledVector(S.side[i], lat);
         const cx2 = lat / ((S.w[i] + 8) * 0.62);
         const arch = 10.2 - Math.pow(Math.abs(cx2) / 1.6, 1.7) * 13.5;
@@ -5844,6 +5847,15 @@ function updateCamera(dt) {
   // over the falls, pull the camera up and back so you see the drop (not under a cave roof)
   const t01 = si / NSAMP;
   let authoredLookout=false;
+  // Keep the chase rig on the tunnel centreline. At curved cave mouths the
+  // generic smoothed offset could drift toward the buried edge of the vault,
+  // making the roof fill the entire frame even though the duck was clear.
+  if(caveF>.12&&!birdActive&&!front){
+    target.x=anchor.x-S.tan[si].x*4.6;
+    target.z=anchor.z-S.tan[si].z*4.6;
+    target.y=d.y+2.9;
+    authoredLookout=true;
+  }
   // Tight self-near sectors on the two original forest layouts can place a
   // normal chase arm inside a neighboring hillside. Brief lookout shots keep
   // the channel visible while preserving the course's intended geometry.
@@ -5922,6 +5934,24 @@ function updateCamera(dt) {
     }
     const minY = waterHeightAt(ci) + 1.1;
     if (camState.pos.y < minY) camState.pos.y = minY;
+  }
+  // The desired camera target can be clear while the smoothed camera is still
+  // travelling through a bank from the previous bend. Test the position that
+  // will actually be rendered and pull it in front of the first obstruction.
+  // This closes the intermittent screen-filling terrain wedges seen at tight
+  // switchbacks, crossovers and Harbor's lock walls.
+  if(!birdActive&&CAM_BLOCKERS.length){
+    camRayOrigin.set(anchor.x,d.y+1.15,anchor.z);
+    camRayDir.copy(camState.pos).sub(camRayOrigin);
+    const actualLen=camRayDir.length();
+    if(actualLen>1.8){
+      camRayDir.normalize();camRay.set(camRayOrigin,camRayDir);camRay.near=1.35;camRay.far=actualLen;
+      const actualHit=camRay.intersectObjects(CAM_BLOCKERS,false)[0];
+      if(actualHit&&actualHit.distance<actualLen-.18){
+        camState.pos.copy(camRayOrigin).addScaledVector(camRayDir,Math.max(1.45,actualHit.distance-.38));
+        G._camOccPos=camState.pos.clone();G._camOccT=.12;
+      }
+    }
   }
   const lookT = birdActive
     ? _tmpB.set(anchor.x,d.y+.2,anchor.z).addScaledVector(S.tan[si],5)
@@ -7840,8 +7870,10 @@ async function upgradeVisuals() {
   swap([SCATTER[9]], lib.bush, 1.5, () => 0.35);
   swap([SCATTER[13]], lib.grass, 0.72, s => 0.18 * s);
   swap([SCATTER[14]], lib.stump, 0.95, s => 0.26 * s);
-  // rock OUTCROPS: chunky boulders half-buried in the steepest faces the ridge noise carved
-  {
+  // Rock outcrops belong to the natural worlds only. The model upgrade used
+  // to regenerate them after bath-world scatter was suppressed, leaving
+  // floating boulders above Porcelain and Harbor.
+  if(!IS_BATHWORLD){
     const V = prepVariant(lib.rocks[1], 1.9);
     const spots = [];
     let guard = 0;
