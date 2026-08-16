@@ -939,28 +939,28 @@ const LEVELS = {
            ground: [0.55, 0.06, 0.74], tree: [0.5, 0.05, 0.6], skyMul: [1.02, 1.04, 1.08] },
     ctrl: [
       { x:   0, z:    0, y: 58.0, w: 8,   s: 0.7  },  // START/FINISH — the tub rim
-      { x:   8, z:  -36, y: 56.8, w: 6.5, s: 1.3  },  // Q1 TUB RAPIDS
-      { x:  -6, z:  -70, y: 55.2, w: 5.5, s: 1.8  },
-      { x:   6, z: -104, y: 53.6, w: 5,   s: 2.1  },  // the soap garden
-      { x:  -4, z: -138, y: 52.4, w: 6,   s: 1.5  },
-      { x:   2, z: -172, y: 51.6, w: 6.5, s: 1.3  },
-      { x:  18, z: -202, y: 50.4, w: 5,   s: 1.8  },  // Q2 TILE GORGE
-      { x:  44, z: -220, y: 49.6, w: 4.5, s: 2.0  },  // shampoo shelf narrows
-      { x:  66, z: -228, y: 49.0, w: 5,   s: 1.9  },
-      { x:  80, z: -226, y: 48.5, w: 5,   s: 2.0  },  // faucet lip
-      { x:  88, z: -219, y: 41.0, w: 5.5, s: 1.8  },  // FAUCET FALLS (7.5u)
-      { x: 100, z: -202, y: 39.8, w: 8,   s: 0.7  },  // the basin
-      { x: 110, z: -178, y: 39.0, w: 7,   s: 1.0  },
-      { x: 122, z: -148, y: 38.0, w: 6,   s: 1.5  },  // Q3 TILE CANYON
-      { x: 134, z: -116, y: 36.8, w: 5,   s: 2.0  },
-      { x: 127, z:  -84, y: 35.8, w: 6.5, s: 1.3  },
-      { x: 138, z:  -54, y: 34.8, w: 5,   s: 1.9  },  // the shampoo slick
-      { x: 128, z:  -26, y: 34.2, w: 9,   s: 0.6  },  // THE DRAIN
-      { x: 108, z:   -6, y: 34.6, w: 6,   s: 1.6  },  // Q4 approach
-      { x:  84, z:    4, y: 37.0, w: 5.5, s: 2.2  },  // OVERFLOW PIPE — pumped surge
-      { x:  58, z:   10, y: 44.5, w: 5,   s: 2.4  },
-      { x:  34, z:   10, y: 52.5, w: 5,   s: 2.4  },
-      { x:  16, z:    6, y: 56.5, w: 5.5, s: 2.2  },  // crest — back to the rim
+      { x: -12, z:  -28, y: 56.8, w: 7,   s: 1.2  },  // tub-rim sweep
+      { x:  10, z:  -58, y: 55.2, w: 5.5, s: 1.8  },
+      { x: -14, z:  -86, y: 53.6, w: 5,   s: 2.1  },  // soap slalom
+      { x:  16, z: -112, y: 52.4, w: 6,   s: 1.5  },
+      { x:   4, z: -148, y: 51.6, w: 7.5, s: 1.2  },  // bath-toy pool
+      { x:  22, z: -182, y: 50.4, w: 6,   s: 1.7  },
+      { x:  52, z: -204, y: 49.6, w: 5,   s: 2.0  },  // shampoo-shelf chute
+      { x:  86, z: -210, y: 49.0, w: 8,   s: 1.1  },
+      { x: 116, z: -198, y: 48.5, w: 6,   s: 1.8  },  // faucet lip
+      { x: 132, z: -178, y: 41.0, w: 6,   s: 1.8  },  // FAUCET FALLS
+      { x: 144, z: -148, y: 39.8, w: 11,  s: 0.65 },  // giant basin
+      { x: 145, z: -112, y: 39.0, w: 9,   s: 0.9  },
+      { x: 132, z:  -82, y: 38.0, w: 7,   s: 1.4  },  // soap-dish fork
+      { x: 110, z:  -58, y: 36.8, w: 6,   s: 1.7  },
+      { x:  84, z:  -62, y: 35.8, w: 7,   s: 1.2  },  // drain orbit begins
+      { x:  70, z:  -82, y: 34.8, w: 5,   s: 2.0  },
+      { x:  78, z: -105, y: 34.2, w: 9,   s: 0.55 },  // THE DRAIN
+      { x: 104, z: -110, y: 34.6, w: 6,   s: 1.6  },  // plug-chain split
+      { x: 126, z:  -86, y: 37.0, w: 6,   s: 2.1  },  // overflow pipe climb
+      { x: 116, z:  -38, y: 44.5, w: 5.5, s: 2.4  },
+      { x:  78, z:   -4, y: 52.5, w: 5.5, s: 2.4  },
+      { x:  34, z:    8, y: 56.5, w: 6,   s: 2.1  },  // crest — back to the rim
     ],
   },
   harbor: {
@@ -1156,6 +1156,17 @@ const REEDS = [];
 });
 
 // fast chutes (glassy arrowed tongues) and shoals (sandbars / one sticky mud flat)
+// Long fork-and-merge sectors. These are gameplay routes, not decorative gates:
+// each side has its own name, current character, risk and AI preference.
+const COURSE_SPLITS=({
+  spillway:[{t0:.425,t1:.505,name:'FALLS FORK',island:'ROCK SPINE',lanes:[{side:-1,name:'CASCADE CUT',speed:1.22,risk:1.2},{side:1,name:'MOSS BYPASS',speed:.98,risk:.55}]}],
+  millrace:[{t0:.475,t1:.575,name:'MILLPOND DIVIDE',island:'TURBINE HOUSE',lanes:[{side:-1,name:'GEAR RACE',speed:1.20,risk:1.3},{side:1,name:'TIMBER CANAL',speed:1.02,risk:.65}]}],
+  undergrove:[{t0:.205,t1:.305,name:'ROOT-CAVE FORK',island:'ANCIENT ROOT',lanes:[{side:-1,name:'GLOWROOT TUNNEL',speed:1.18,risk:.9},{side:1,name:'MOONLIT GLEN',speed:1.01,risk:.45}]}],
+  canopy:[{t0:.525,t1:.665,name:'TREETOP DOUBLE-DECK',island:'GREAT BOUGH',lanes:[{side:-1,name:'UPPER BOUGH',speed:1.23,risk:1.35},{side:1,name:'LOWER GUTTER',speed:1.04,risk:.75}]}],
+  porcelain:[{t0:.415,t1:.555,name:'BATH-TOY BYPASS',island:'SOAP DISH',lanes:[{side:-1,name:'FAUCET SHOOT',speed:1.24,risk:1.15},{side:1,name:'TOY-BOAT CHANNEL',speed:1.03,risk:.45}]},{t0:.685,t1:.775,name:'DRAIN DECISION',island:'PLUG CHAIN',lanes:[{side:-1,name:'DRAIN THREAD',speed:1.28,risk:1.5},{side:1,name:'BUBBLE RIM',speed:.99,risk:.4}]}],
+  harbor:[{t0:.205,t1:.325,name:'PILOT FORK',island:'LOCK WALL',lanes:[{side:-1,name:'STORM DRAIN',speed:1.20,risk:1.25},{side:1,name:'PILOT CHANNEL',speed:1.04,risk:.55}]},{t0:.495,t1:.585,name:'QUAYSIDE SPLIT',island:'BREAKWATER',lanes:[{side:-1,name:'CRANE ALLEY',speed:1.18,risk:1.1},{side:1,name:'OUTER HARBOR',speed:1.01,risk:.5}]}],
+})[LVL.id]||[];
+for(const split of COURSE_SPLITS){const mid=Math.round((split.t0+split.t1)*.5*NSAMP),laneOffset=Math.max(2.5,S.w[mid]*.48);split.i0=Math.round(split.t0*NSAMP);split.i1=Math.round(split.t1*NSAMP);split.offset=laneOffset;for(const lane of split.lanes){lane.latC=lane.side*laneOffset;lane.halfW=Math.max(1.7,S.w[mid]*.24);}}
 const CHUTES = ({
   spillway: [
     { t0: 0.095, t1: 0.135, latC: -1.5, halfW: 1.6, name:'Sluice Knife', shortcut:true },
@@ -1185,6 +1196,7 @@ const CHUTES = ({
     { t0: 0.610, t1: 0.675, latC:  3.2, halfW: 2.2, name:'Quayside Cut', shortcut:true },
   ],
 })[LVL.id];
+for(const split of COURSE_SPLITS)for(const lane of split.lanes)CHUTES.push({t0:split.t0,t1:split.t1,latC:lane.latC,halfW:lane.halfW,name:lane.name,shortcut:lane.speed>1.1,split,lane,speed:lane.speed,risk:lane.risk});
 for(const f of CUSTOM_FEATURES.filter(f=>f.kind==='shortcut')){const t=f.point/CTRL.length;CHUTES.push({t0:Math.max(0,t-.028),t1:Math.min(.995,t+.04),latC:0,halfW:Math.max(1.5,S.w[Math.round(t*NSAMP)]*.28),name:'Creator Cut',shortcut:true});}
 for(const f of CUSTOM_FEATURES.filter(f=>f.kind==='split')){const t=f.point/CTRL.length,t1=Math.min(.985,t+.075),w=S.w[Math.round(t*NSAMP)];CHUTES.push({t0:t,t1,latC:-w*.48,halfW:Math.max(1.5,w*.23),name:'Fork Left',shortcut:true},{t0:t,t1,latC:w*.48,halfW:Math.max(1.5,w*.23),name:'Fork Right',shortcut:true});}
 // flood-gate shortcut: opens on the final lap of a 3-lap race
@@ -1322,6 +1334,7 @@ if (LVL.id === 'undergrove') addIsland(0.225, 0.255, 1.0, 1.8);  // glen island 
 if (LVL.id === 'canopy') addIsland(0.545, 0.630, 0, 1.45); // long over-under bough split
 if (LVL.id === 'porcelain') { addIsland(0.445, 0.480, -1.2, 2.1); addIsland(0.525, 0.555, 0.4, 1.6); }   // sponge islands
 if (LVL.id === 'harbor') {addIsland(0.225,0.300,0,2.0);addIsland(0.500, 0.545, 0.5, 2.4);} // pilot channels + central breakwater
+for(const split of COURSE_SPLITS)addIsland(split.t0+.012,split.t1-.012,0,Math.max(1.8,split.offset-split.lanes[0].halfW-.35));
 for(const f of CUSTOM_FEATURES.filter(f=>f.kind==='split')){const t=f.point/CTRL.length;addIsland(t,Math.min(.985,t+.075),0,Math.max(1.8,S.w[Math.round(t*NSAMP)]*.24));}
 
 // critters: a lunging pike, a snapping turtle, cosmetic frogs
@@ -1468,7 +1481,7 @@ function waterVelAt(p, si, out) {
     const tide=Math.sin(waterPulse*.82+si*.014)*1.12;out.x+=side.x*tide;out.z+=side.z*tide;
   }
   const HZ = (DIFF[G.difficulty] || DIFF.medium).haz;
-  _zone.chute = false; _zone.mud = false; _zone.cutQuality=0;
+  _zone.chute = false; _zone.mud = false; _zone.cutQuality=0;_zone.split=null;_zone.splitLane=null;
   // lap 2+: high water — everything runs faster
   if (G.raceLap >= 1) { out.x *= 1.12; out.z *= 1.12; }
   // eddies (whirlpool suction "breathes" so drifters eventually escape; grabbier at higher tiers)
@@ -1488,9 +1501,10 @@ function waterVelAt(p, si, out) {
     if (c.lapMin && G.raceLap < c.lapMin) continue;
     if (si >= c.i0 && si <= c.i1 && Math.abs(lat - c.latC) < c.halfW) {
       const q=1-Math.abs(lat-c.latC)/c.halfW;
-      const cutBoost = c.shortcut ? 1.42+q*.58 : 1.55;
+      const cutBoost = c.speed ? c.speed+q*.12 : c.shortcut ? 1.42+q*.58 : 1.55;
       out.x *= cutBoost; out.z *= cutBoost; _zone.chute = true;
       _zone.cutQuality=q;
+      if(c.split){const guide=(c.latC-lat)*(.10+.08*q);out.x+=side.x*guide;out.z+=side.z*guide;_zone.split=c.split;_zone.splitLane=c.lane;}
     }
   }
   // shoals: shallow sand (slow) or mud (sticky slow) — drowned by lap-2 high water
@@ -2152,6 +2166,9 @@ function step(dt) {
       // seek the fast middle lane
       let steer = (-lat / Math.max(1, w)) * D.steer * d.skill;
       const trait = d.rogue && d.rogue.trait;
+      // Forks are deliberate decisions. Aggressive/shortcut racers take the risky fast
+      // channel; cautious racers and part of the pack choose the safer branch.
+      for(const split of COURSE_SPLITS){const ahead=wrapDS(split.i0,si);if(ahead>0&&ahead<115){if(!d._splitChoice||d._splitChoice.key!==`${d.lap}:${split.name}`){const fast=trait==='shortcut'||trait==='sprinter'||(d.skill>1.02&&((d.idx+d.lap)%3!==0));d._splitChoice={key:`${d.lap}:${split.name}`,lane:fast?split.lanes.reduce((a,b)=>a.speed>b.speed?a:b):split.lanes.reduce((a,b)=>a.risk<b.risk?a:b)};}const target=d._splitChoice.lane.latC;steer+=Math.sign(target-lat)*D.steer*1.28*(1-ahead/115);}}
       // Signature racers reveal themselves through decisions, not just costumes.
       if (trait === 'shortcut') for (const c of CHUTES) {
         if (c.lapMin && d.lap < c.lapMin) continue;
@@ -2452,6 +2469,7 @@ window.SPILLWAY = {
     player: { place: placeOf(ducks[0]), si: ducks[0].si, t01: ducks[0].si / NSAMP, lap: ducks[0].lap, inFlume: ducks[0].inFlume, finished: ducks[0].finished, time: ducks[0].finishTime, flow: +(ducks[0].flow || 0).toFixed(2), bursting: (ducks[0].burstT || 0) > 0 },
     top: G.results.slice(0, 5).map(d => ({ name: d.name, time: +d.finishTime.toFixed(2) })) }),
   ducks, G,
+  courseIdentity:()=>({id:LVL.id,route:ROUTE_STYLE.label,splits:COURSE_SPLITS.map(s=>({name:s.name,lanes:s.lanes.map(l=>l.name)})),splitChutes:CHUTES.filter(c=>c.split).length,islands:ISLANDS.length,bathFloaters:LVL.id==='porcelain'?BATH_FLOATERS.length:0}),
   dbg: () => ({ cam: camera.position.toArray().map(v => +v.toFixed(1)), fov: +camera.fov.toFixed(1),
     quat: camera.quaternion.toArray().map(v => +v.toFixed(3)), up: camera.up.toArray() }),
   three: () => ({ renderer, scene, camera, sun, skyMesh, waterMat }),
@@ -3490,6 +3508,17 @@ if(LVL.id==='porcelain'){
   [[.16,6.8],[.43,-7],[.69,7.2],[.9,-6.7]].forEach(([t2,lat],q)=>bathPlace(t2,lat,toyBoat(boatCols[q%boatCols.length]),'boat',.72));
   const bubbleMat=new THREE.MeshPhysicalMaterial({color:0xe8ffff,transparent:true,opacity:.28,roughness:.04,metalness:0,transmission:.25,depthWrite:false});
   for(let q=0;q<22;q++){const t2=.03+q/23*.94,i=Math.round(t2*NSAMP),lat=(q%2?1:-1)*(S.w[i]+1.2+(q%4)*.75),bubble=new THREE.Mesh(new THREE.SphereGeometry(.22+(q%3)*.1,10,7),bubbleMat);bathPlace(t2,lat,bubble,'bubble',1);}
+  // Composed bath-toy scenes: recognizable silhouettes grouped around decisions,
+  // rather than an even procedural scatter.
+  const spongeMat=new THREE.MeshStandardMaterial({color:0xffe45c,roughness:.94,bumpScale:.2}),bottleCols=[0x59a7ef,0xf27ba9,0x65cba4];
+  function bathRing(col){const g=new THREE.Group(),ring=new THREE.Mesh(new THREE.TorusGeometry(1.15,.3,10,24),new THREE.MeshStandardMaterial({color:col,roughness:.38}));ring.rotation.x=Math.PI/2;ring.position.y=.2;g.add(ring);return g;}
+  function bathBottle(col){const g=new THREE.Group(),body=new THREE.Mesh(rbox(1.25,3.2,.9,.32,3),new THREE.MeshStandardMaterial({color:col,roughness:.38}));body.position.y=1.55;const cap=new THREE.Mesh(new THREE.CylinderGeometry(.34,.38,.42,10),new THREE.MeshStandardMaterial({color:0xf7f3e8,roughness:.5}));cap.position.y=3.35;g.add(body,cap);return g;}
+  function bathSponge(){const g=new THREE.Group(),body=new THREE.Mesh(rbox(2.5,.72,3.5,.48,4),spongeMat);body.position.y=.2;for(let q=0;q<7;q++){const pore=new THREE.Mesh(new THREE.SphereGeometry(.09+(q%2)*.04,7,5),new THREE.MeshBasicMaterial({color:0xd4b92f}));pore.position.set((q%3-1)*.55,.58,(Math.floor(q/3)-.7)*.75);g.add(pore);}g.add(body);return g;}
+  function bathLetters(word){const g=new THREE.Group(),cols=[0xef5d60,0x5d9ee8,0x69c76d,0xf3c54d];[...word].forEach((ch,q)=>{const tile=new THREE.Mesh(rbox(.72,.22,.82,.16,2),new THREE.MeshStandardMaterial({color:cols[q%cols.length],roughness:.58}));tile.position.set((q-(word.length-1)/2)*.82,.12,0);tile.userData.letter=ch;g.add(tile);});return g;}
+  bathPlace(.235,-7.4,bathRing(0xf06c83),'ring',.72);bathPlace(.595,7.5,bathRing(0x60c8e8),'ring',.82);
+  bathPlace(.38,-9.2,bathBottle(bottleCols[0]),'bottle',.7);bathPlace(.39,-11,bathBottle(bottleCols[1]),'bottle',.58);bathPlace(.80,9.4,bathBottle(bottleCols[2]),'bottle',.66);
+  bathPlace(.47,0,bathSponge(),'sponge',1.05);bathPlace(.72,0,bathLetters('DUCK'),'letters',1.0);
+  for(let q=0;q<8;q++){const t2=.405+q*.019,i=Math.round(t2*NSAMP),lat=(q%2?1:-1)*(S.w[i]*.62),bomb=new THREE.Mesh(new THREE.SphereGeometry(.3+(q%3)*.07,10,7),new THREE.MeshStandardMaterial({color:[0xc78be8,0x70cbe9,0xf28bad][q%3],roughness:.48}));bathPlace(t2,lat,bomb,'bathbomb',1);}
 }
 
 // ---------- chute arrows: pulsing chevrons riding the fast tongues
@@ -6187,7 +6216,7 @@ function editorDraw(){
   x.strokeStyle='rgba(255,255,255,.12)';x.lineWidth=1;for(let gx=0;gx<w;gx+=52){x.beginPath();x.moveTo(gx,0);x.lineTo(gx,h);x.stroke();}for(let gy=0;gy<h;gy+=52){x.beginPath();x.moveTo(0,gy);x.lineTo(w,gy);x.stroke();}
   EDITOR.terrain.forEach(t=>{const [px,py]=editorWorldToCanvas(t),r=t.r/185*w,up=t.h>0;x.save();for(let ring=3;ring>0;ring--){x.beginPath();x.arc(px,py,r*ring/3,0,Math.PI*2);x.fillStyle=up?`rgba(119,154,70,${.08+ring*.035})`:`rgba(24,73,83,${.1+ring*.04})`;x.fill();x.strokeStyle=up?'rgba(195,222,125,.38)':'rgba(91,190,205,.38)';x.lineWidth=1.5;x.stroke();}x.fillStyle=up?'#d8ef9a':'#8fe0e8';x.font='900 14px sans-serif';x.textAlign='center';x.fillText(up?'▲':'▼',px,py+5);x.restore();});
   if(EDITOR.points.length>1){const path=()=>{x.beginPath();EDITOR.points.forEach((p,i)=>{const [px,py]=editorWorldToCanvas(p);i?x.lineTo(px,py):x.moveTo(px,py);});if(EDITOR.closed)x.closePath();};path();x.strokeStyle='rgba(25,58,34,.62)';x.lineWidth=46;x.lineJoin='round';x.lineCap='round';x.stroke();path();x.strokeStyle='rgba(244,255,255,.88)';x.lineWidth=37;x.stroke();path();x.strokeStyle='#45c8df';x.lineWidth=30;x.stroke();path();x.strokeStyle='rgba(255,255,255,.48)';x.lineWidth=2;x.setLineDash([11,12]);x.stroke();x.setLineDash([]);x.lineCap='butt';}
-  EDITOR.features.filter(f=>f.kind==='split').forEach(f=>{const a=EDITOR.points[f.point],b=EDITOR.points[(f.point+1)%EDITOR.points.length];if(!a||!b)return;const [ax,ay]=editorWorldToCanvas(a),[bx,by]=editorWorldToCanvas(b);x.beginPath();x.moveTo(ax,ay);x.lineTo(bx,by);x.strokeStyle='#48664e';x.lineWidth=10;x.lineCap='round';x.stroke();x.lineCap='butt';});
+  EDITOR.features.filter(f=>f.kind==='split').forEach(f=>{const a=EDITOR.points[f.point],b=EDITOR.points[(f.point+Math.min(3,EDITOR.points.length-1))%EDITOR.points.length];if(!a||!b)return;const [ax,ay]=editorWorldToCanvas(a),[bx,by]=editorWorldToCanvas(b),dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len,off=28;for(const side of [-1,1]){x.beginPath();x.moveTo(ax,ay);x.quadraticCurveTo((ax+bx)/2+nx*off*side,(ay+by)/2+ny*off*side,bx,by);x.strokeStyle='rgba(244,255,255,.92)';x.lineWidth=18;x.lineCap='round';x.stroke();x.strokeStyle=side<0?'#3dbed9':'#62d4e8';x.lineWidth=13;x.stroke();}x.beginPath();x.moveTo((ax+bx)/2-nx*10,(ay+by)/2-ny*10);x.lineTo((ax+bx)/2+nx*10,(ay+by)/2+ny*10);x.strokeStyle='#48664e';x.lineWidth=11;x.stroke();x.lineCap='butt';});
   EDITOR.points.forEach((p,i)=>{const [px,py]=editorWorldToCanvas(p),sel=i===EDITOR.selected;x.beginPath();x.arc(px,py,sel?10:7,0,7);x.fillStyle=sel?accent:'#fff8e7';x.fill();x.lineWidth=3;x.strokeStyle='#071b2b';x.stroke();x.fillStyle='#071b2b';x.font='900 10px sans-serif';x.textAlign='center';x.fillText(i+1,px,py+3.5);});
   const propIcon={tree:'♣',rock:'◆',crate:'■'};EDITOR.props.forEach(p=>{const [px,py]=editorWorldToCanvas(p);x.beginPath();x.arc(px,py,11,0,Math.PI*2);x.fillStyle=p.kind==='tree'?'#7fc342':p.kind==='rock'?'#b8b19d':'#d99a45';x.fill();x.strokeStyle='#071b2b';x.lineWidth=2;x.stroke();x.fillStyle='#071b2b';x.font='900 13px sans-serif';x.textAlign='center';x.fillText(propIcon[p.kind]||'■',px,py+4);});
   const icons={hazard:'◆',shortcut:'»',climb:'▲',event:'!',split:'Y'};EDITOR.features.forEach(f=>{const p=EDITOR.points[Math.max(0,Math.min(EDITOR.points.length-1,f.point))];if(!p)return;const [px,py]=editorWorldToCanvas(p);x.beginPath();x.arc(px,py,13,0,7);x.fillStyle={hazard:'#ff654a',shortcut:'#ffd23f',climb:'#7dff9a',event:'#ff55d7',split:'#78b7ff'}[f.kind];x.fill();x.strokeStyle='#071b2b';x.lineWidth=3;x.stroke();x.fillStyle='#071b2b';x.font='900 14px sans-serif';x.fillText(icons[f.kind]||'!',px,py+5);});
