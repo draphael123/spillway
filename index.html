@@ -493,9 +493,15 @@
     #flowPill { bottom:calc(164px + env(safe-area-inset-bottom)); width:min(230px,58vw); min-width:170px; }
     #joy { left:calc(18px + env(safe-area-inset-left)); bottom:calc(22px + env(safe-area-inset-bottom)); }
     #shoveTouch { right:calc(20px + env(safe-area-inset-right)); bottom:calc(34px + env(safe-area-inset-bottom)); }
-    #cameraControls { top:calc(90px + env(safe-area-inset-top)); right:calc(8px + env(safe-area-inset-right)); bottom:auto; display:none; flex-direction:column; padding:4px; gap:3px; }
-    #cameraControls button { min-width:58px; padding:5px 6px; font-size:10px; }
-    body.hudQuiet #raceGoal,body.hudQuiet #cameraControls,body.hudQuiet #flowPill { opacity:0;pointer-events:none;transform:translateY(-8px); }
+    #cameraControls { top:auto; right:calc(8px + env(safe-area-inset-right)); bottom:calc(8px + env(safe-area-inset-bottom)); display:none; flex-direction:row; padding:3px; gap:2px; }
+    #cameraControls .camKey { display:none; }
+    #cameraControls button { min-width:40px; padding:5px 4px; font-size:9px; }
+    #lapBanner { top:28%; max-width:88vw; font-size:22px; }
+    #eventToast { top:36%; width:min(340px,82vw); }
+    body.elimMode #raceGoal { top:calc(104px + env(safe-area-inset-top)); width:min(250px,64vw); }
+    body.elimMode #elimHud { top:calc(174px + env(safe-area-inset-top)); }
+    body.elimMode #raceCue { top:calc(238px + env(safe-area-inset-top)); }
+    body.hudQuiet #raceGoal,body.hudQuiet #flowPill { opacity:0;pointer-events:none;transform:translateY(-8px); }
     #pauseRaceBtn { top:calc(8px + env(safe-area-inset-top)); right:calc(100px + env(safe-area-inset-right)); width:38px; height:38px; }
     #startMeter { top:50%; bottom:auto; transform:translate(-50%,-50%); width:min(330px,82vw); }
     .hubPane { transform:none; }
@@ -535,7 +541,7 @@
     body.editorMode .editorTitlebar { min-height:44px; padding:2px 4px 6px; }
     body.editorMode .editorTitlebar h2 { font-size:22px; }
     body.editorMode .editorTitlebar .paneEyebrow { display:none; }
-    body.editorMode .editorShell { height:calc(100dvh - 52px); grid-template-columns:minmax(0,1fr) min(38vw,250px); }
+    body.editorMode .editorShell { height:calc(100dvh - 52px); grid-template-columns:minmax(0,1fr) min(30vw,190px); }
     body.editorMode .editorRail { display:flex; }
     body.editorMode .editorCard { padding:8px; }
     body.editorMode .pieceTray,body.editorMode .editorTools { grid-template-columns:repeat(2,1fr); }
@@ -554,7 +560,7 @@
     #joy { width:98px; height:98px; bottom:calc(12px + env(safe-area-inset-bottom)); }
     #joyNub { left:34px; top:34px; width:30px; height:30px; }
     #shoveTouch { width:76px; height:76px; bottom:calc(18px + env(safe-area-inset-bottom)); }
-    #cameraControls { top:calc(72px + env(safe-area-inset-top)); }
+    #cameraControls { top:auto; bottom:calc(8px + env(safe-area-inset-bottom)); }
     #flowPill { bottom:calc(12px + env(safe-area-inset-bottom)); width:220px; }
     #startMeter { top:52%; width:300px; }
     #raceIntro { top:22%; width:min(430px,58vw); }
@@ -578,7 +584,7 @@
   #hubTabs button:hover { transform:translateY(-2px); }
   #hubTabs button.sel { transform:translateY(-2px); box-shadow:0 3px 0 var(--raceNavy),0 0 0 2px var(--sun); }
   .draftHead { align-items:center; min-height:34px; }
-  @media(max-width:700px){#raceGoal,#raceCue{max-width:150px;padding:5px 7px}#raceGoal span,#raceCue span{font-size:9px}#hudTop .pill{min-width:43px;padding:3px 4px}#eventToast{top:24%;width:min(340px,72vw);font-size:11px}#lapBanner{font-size:20px}#tutToast{bottom:4%;max-width:60vw;font-size:10px}}
+  @media(max-width:700px){#raceGoal,#raceCue{max-width:150px;padding:5px 7px}#raceGoal span,#raceCue span{font-size:9px}#hudTop .pill{min-width:43px;padding:3px 4px}#eventToast{top:24%;width:min(340px,72vw);font-size:11px}#lapBanner{font-size:20px}#toast{top:28%;width:90vw;font-size:clamp(34px,11vw,46px);line-height:.92}#tutToast{bottom:4%;max-width:60vw;font-size:10px}#cameraControls{left:50%;right:auto;bottom:calc(126px + env(safe-area-inset-bottom));transform:translateX(-50%)}#cameraControls button{min-width:34px;padding:5px 3px;font-size:8px}}
 </style>
 </head>
 <body class="introActive">
@@ -1387,11 +1393,10 @@ if (LVL.id === 'spillway') {
   addIsland(0.445, 0.480, -1.2, 2.1);   // splits the plunge pool outflow
   addIsland(0.525, 0.555, 0.4, 1.6);    // canyon braid — rocks guard the fast cut
 }
-if (LVL.id === 'millrace') addIsland(0.505, 0.545, -2.0, 2.0);   // millpond bar
-if (LVL.id === 'undergrove') addIsland(0.225, 0.255, 1.0, 1.8);  // glen island under the moon-gap
-if (LVL.id === 'canopy') addIsland(0.545, 0.630, 0, 1.45); // long over-under bough split
-if (LVL.id === 'porcelain') { addIsland(0.445, 0.480, -1.2, 2.1); addIsland(0.525, 0.555, 0.4, 1.6); }   // sponge islands
-if (LVL.id === 'harbor') {addIsland(0.225,0.300,0,2.0);addIsland(0.500, 0.545, 0.5, 2.4);} // pilot channels + central breakwater
+// Millrace's named split supplies the millpond divider.
+// Undergrove and Canopy use the single named split divider generated below.
+// Porcelain's two named splits supply the sponge dividers.
+// Harbor's named splits create their own lock wall and breakwater below.
 for(const split of COURSE_SPLITS)addIsland(split.t0+.012,split.t1-.012,0,Math.max(1.8,split.offset-split.lanes[0].halfW-.35));
 for(const f of CUSTOM_FEATURES.filter(f=>f.kind==='split')){const t=f.point/CTRL.length;addIsland(t,Math.min(.985,t+.075),0,Math.max(1.8,S.w[Math.round(t*NSAMP)]*.24));}
 
@@ -1736,7 +1741,7 @@ const WEATHERS = {
 const WORLD_LIGHT = ({
   spillway:{sun:1.00,hemi:.88,amb:.82,fog:1.08,glint:.82}, millrace:{sun:1.08,hemi:.78,amb:.72,fog:1.04,glint:.70},
   undergrove:{sun:.86,hemi:.68,amb:.62,fog:.92,glint:.52}, canopy:{sun:1.12,hemi:.76,amb:.68,fog:1.06,glint:.74},
-  porcelain:{sun:.72,hemi:.62,amb:.58,fog:1.18,glint:.48}, harbor:{sun:.88,hemi:.70,amb:.66,fog:1.04,glint:.58}
+  porcelain:{sun:.68,hemi:.58,amb:.54,fog:1.06,glint:.27}, harbor:{sun:.88,hemi:.70,amb:.66,fog:1.04,glint:.58}
 })[LVL.id];
 const DUSK = { top: [.28,.30,.55], hor: [.95,.55,.40], low: [1,.75,.5], sun: 0xff9a55 };
 
@@ -2031,7 +2036,9 @@ function step(dt) {
   if (G.mode === 'countdown') {
     const paddle = input.up || PAD.up || TOUCH.up;
     if (paddle && G.countdown > 2.28) G.startEarly = true;
-    if (paddle && G.countdown <= 2.15) G.startCharge = Math.min(1.2, (G.startCharge || 0) + dt * .62);
+    // Charging from the moment "2" appears should land in the gold band at GO.
+    // The old .62 rate overcharged before zero despite telling players to hold.
+    if (paddle && G.countdown <= 2.15) G.startCharge = Math.min(1.2, (G.startCharge || 0) + dt * .46);
     G.countdown -= dt;
     if (G.countdown <= 0) {
       G.mode = 'race'; G.raceT = 0; resolveStart();
@@ -2160,6 +2167,17 @@ function step(dt) {
         d.v.x += S.tan[si].x * 9 * f * dt * 6; d.v.z += S.tan[si].z * 9 * f * dt * 6;
         if (f > 0.6 && rand() < dt * 4) { splash({ x: d.p.x, y: d.y, z: d.p.z }, 3); d._sq = Math.max(d._sq || 0, 0.12); }
       }
+    }
+
+    // A very large pack can pin the player beyond the outer shoulder while the
+    // current keeps reporting speed. If they remain genuinely off-course for
+    // several seconds, return them to the same progress point rather than
+    // leaving an invisible bank trap. Brief shortcuts and collision knockback
+    // never last long enough to trigger this.
+    if (racing && d.idx===0 && !d.finished) {
+      const offLat=(d.p.x-S.pos[si].x)*S.side[si].x+(d.p.z-S.pos[si].z)*S.side[si].z;
+      d._offCourseT=Math.abs(offLat)>w+2.5?(d._offCourseT||0)+dt:0;
+      if(d._offCourseT>3.2){d.p.copy(S.pos[si]);d.y=waterHeightAt(si);d.v.copy(S.tan[si]).multiplyScalar(BASE_FLOW);d.air=false;d.vy=0;d._offCourseT=0;eventToast('RACE CONTROL · RETURNED TO THE CHANNEL');}
     }
 
     // ---- paddle (player) / wander (AI)
@@ -2492,6 +2510,21 @@ function step(dt) {
     // ---- progress + laps + finish: the circuit way — a lap IS crossing the line
     d.progress = d.tot * SAMPLE_LEN
                + (d.p.x - S.pos[d.si].x) * S.tan[d.si].x + (d.p.z - S.pos[d.si].z) * S.tan[d.si].z;
+    // AI recovery is based on forward progress, not raw speed. A racer can
+    // keep sliding quickly against a divider and never trigger the low-speed
+    // anti-wedge check above. After a sustained no-progress window, move only
+    // CPU ducks a short distance downstream onto the centreline.
+    if (racing && d.idx !== 0 && !d.finished) {
+      if (d._stallMark == null || d.progress > d._stallMark + 1.2) {
+        d._stallMark = d.progress; d._progressStallT = 0;
+      } else d._progressStallT = (d._progressStallT || 0) + dt;
+      if (d._progressStallT > 9) {
+        const rescue = wrapI(d.si + 14);
+        d.tot += 14; d.si = rescue; d.p.copy(S.pos[rescue]); d.y = waterHeightAt(rescue);
+        d.v.copy(S.tan[rescue]).multiplyScalar(BASE_FLOW * 1.15);
+        d._stallMark = d.tot * SAMPLE_LEN; d._progressStallT = 0; d.air = false; d.vy = 0;
+      }
+    }
     if (racing && !d.finished) {
       const lapNow = Math.floor(d.tot / NSAMP);
       if (lapNow > d.lap) {
@@ -2525,7 +2558,7 @@ function advance(dtReal) {
 window.SPILLWAY = {
   step: (dt) => step(dt || FIXED),
   sim: (seconds) => { const n = Math.round(seconds / FIXED); for (let i = 0; i < n; i++) step(FIXED); return window.SPILLWAY.state(); },
-  start: () => { startRace(); G.countdown = 0; G.mode = 'race'; G.raceT = 0; },
+  start: () => { startRace(); G.countdown = 0; G.mode = 'race'; G.raceT = 0; resolveStart(); },
   state: () => ({ mode: G.mode, t: G.raceT, finished: G.finishedCount, laps: G.laps, weather: G.weather,
     player: { place: placeOf(ducks[0]), si: ducks[0].si, t01: ducks[0].si / NSAMP, lap: ducks[0].lap, inFlume: ducks[0].inFlume, air:ducks[0].air, y:+ducks[0].y.toFixed(2), vy:+(ducks[0].vy||0).toFixed(2), lat:+((ducks[0].p.x-S.pos[ducks[0].si].x)*S.side[ducks[0].si].x+(ducks[0].p.z-S.pos[ducks[0].si].z)*S.side[ducks[0].si].z).toFixed(2), finished: ducks[0].finished, time: ducks[0].finishTime, flow: +(ducks[0].flow || 0).toFixed(2), bursting: (ducks[0].burstT || 0) > 0 },
     top: G.results.slice(0, 5).map(d => ({ name: d.name, time: +d.finishTime.toFixed(2) })) }),
@@ -2550,7 +2583,9 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE_GPU ? 1.35 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = IS_BATHWORLD ? .88 : 1.0;
+// White tile plus pale fog was clipping Porcelain's toys and channel edges.
+// Harbor keeps a little more punch for its darker industrial palette.
+renderer.toneMappingExposure = LVL.id === 'porcelain' ? .76 : LVL.id === 'harbor' ? .88 : LVL.id === 'canopy' ? .90 : 1.0;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
@@ -2956,7 +2991,13 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   return base + n * Math.min(1, t * 2.5) + ridge - 0.35;
 }
 {
-  const OFFS = LVL.id === 'spillway' ? [0.15, 1.1, 3.5, 8, 16, 26] : [0.15, 1.1, 3.5, 7, 12, 17];
+  // Canopy's narrow, stacked treetop channels need a compact shoulder. The
+  // generic 17-unit valley skirt folded across nearby bends and appeared as
+  // giant walls in the chase camera.
+  const OFFS = LVL.id === 'spillway' ? [0.15, 1.1, 3.5, 7, 12]
+    : LVL.id === 'canopy' ? [0.15, 0.9, 1.8]
+    : LVL.id === 'harbor' ? [0.15, 1.0, 2.6, 5.2, 9]
+    : [0.15, 1.1, 3.5, 7, 12, 17];
   const pos = [], col = [], uvArr = [], idx = [];
   const cTmp = new THREE.Color();
   const _slopeRockC = new THREE.Color(LVL.id === 'undergrove' ? 0x4d5558 : 0x8b8478);
@@ -3033,7 +3074,11 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   bankTex.colorSpace = THREE.SRGBColorSpace;
   var banksMesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
     vertexColors:true, map:bankTex, bumpMap:bankTex, bumpScale:IS_BATHWORLD ? 0.12 : 0.38,
-    roughness:IS_BATHWORLD ? 0.62 : 0.94, metalness:0, side:THREE.DoubleSide, flatShading:true,
+    // Canopy crosses beneath its own elevated banks. Rendering the underside
+    // there produced screen-filling olive wedges; the top face is all racers
+    // should ever see, while the other courses retain two-sided gorge walls.
+    roughness:IS_BATHWORLD ? 0.62 : 0.94, metalness:0,
+    side:(LVL.id === 'spillway' || LVL.id === 'canopy' || LVL.id === 'harbor') ? THREE.FrontSide : THREE.DoubleSide, flatShading:true,
   }));
   banksMesh.receiveShadow = true;
   scene.add(banksMesh);
@@ -3270,13 +3315,15 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     }
   } else stumps.count = 0;
   // CANOPY: giant crown billows at bank level — the flooded forest's treetops themselves
-  const nCC = 120;
+  const nCC = MOBILE_GPU ? 38 : 68;
   const canopyCr = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.0, 0),
     new THREE.MeshLambertMaterial({ color: 0xffffff }), nCC);
   if (LVL.id === 'canopy') {
     for (let k = 0; k < nCC; k++) {
-      const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(1.5, 15);
-      const s = randRange(0.8, 2.3);
+      // Keep crown masses outside the racing sightline. The old near-bank,
+      // 4.6-unit billows could cover nearly the entire chase camera.
+      const i = Math.floor(rand() * NSAMP), sgn = (k % 2) * 2 - 1, ob = randRange(4.5, 16);
+      const s = randRange(0.75, 1.65);
       place(canopyCr, k, i, ob, sgn, groundAt(i, ob, sgn) + randRange(0.4, 1.7), s, rand() * 6);
       const blossom = rand() < 0.12;
       canopyCr.setColorAt(k, blossom ? cCol.setHSL(0.93, 0.5, 0.74)
@@ -3405,7 +3452,7 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   }
   // Spillway's close chase camera turns these broad low-poly cones into giant
   // screen-filling wedges. Its layered horizon meshes already provide the skyline.
-  if (LVL.id === 'spillway' || IS_BATHWORLD) { mountains.count = 0; caps.count = 0; }
+  if (LVL.id === 'spillway' || LVL.id === 'millrace' || LVL.id === 'canopy' || IS_BATHWORLD) { mountains.count = 0; caps.count = 0; }
   scene.add(caps);
   if (LVL.id !== 'spillway') { cacti.count = 0; slabs.count = 0; spires.count = 0; mTrunks.count = 0; mCrowns.count = 0; }
   if (IS_BATHWORLD) { trunks.count = 0; tiers.forEach(t => t.count = 0); bushes.count = 0; flowers.count = 0; boulders.count = 0; tufts.count = 0; }
@@ -3637,7 +3684,10 @@ if (LVL.id === 'porcelain') {
     const i = Math.round((n / 20) * NSAMP), sgn = n % 2 ? 1 : -1, ob = 17;
     const gy = waterHeightAt(i) + bankH(i, ob, sgn);
     const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
-    const panel = new THREE.Mesh(rbox(24,10,.75,.22,4), tileMat);
+    // The wall repeats twenty times around the tub; a beveled solid here cost
+    // thousands of invisible back-face triangles. A plain tiled slab reads the
+    // same at racing distance and leaves the GPU budget for water and toys.
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(24,10,.75), tileMat);
     panel.position.set(p.x, gy + 4.35, p.z); panel.rotation.y = Math.atan2(S.tan[i].x, S.tan[i].z) - Math.PI / 2;
     panel.receiveShadow = true; scene.add(panel);
     const trim = new THREE.Mesh(new THREE.BoxGeometry(24.2, 0.3, 0.95), chromeMat);
@@ -4317,7 +4367,10 @@ if (LVL.id === 'millrace') {
 // Layered world-shaped horizons keep the outdoor courses from ending in isolated
 // placeholder peaks. Their lower skirts sink into the bank mesh, so the silhouette
 // remains continuous even across steep climbs and wide bends.
-if(!IS_BATHWORLD&&LVL.id!=='spillway'){
+// Canopy's vertical route folds close to itself; generic continuous horizon
+// ribbons intersected those stacked views. Its colossal trees already supply
+// the skyline, so keep the synthetic ridges for Millrace and Undergrove only.
+if(!IS_BATHWORLD&&LVL.id!=='spillway'&&LVL.id!=='canopy'){
   const hc={millrace:[0x4d6665,0x718586],undergrove:[0x1d2b29,0x384844],canopy:[0x527d58,0x82a071]}[LVL.id]||[0x557476,0x789395];
   for(let layer=0;layer<2;layer++)for(const sgn of [-1,1]){
     const obR=42+layer*18,ps=[],ix=[];let row=0;
@@ -5511,6 +5564,9 @@ function updateCamera(dt) {
     return;
   }
   let [camBack, camH] = CAMS[SETTINGS.camDist] || CAMS.std;
+  // Portrait screens need a taller composition: pull back and lift enough to
+  // show the approaching racing line, not just the duck and a wall of water.
+  if (MOBILE_GPU) { camBack *= 1.18; camH *= 1.16; }
   const front = SETTINGS.raceCam==='reverse'||SETTINGS.camView === 'front';
   const bird = SETTINGS.raceCam==='bird';
   // on a circuit there's no runout — the camera always follows the duck
@@ -5532,6 +5588,15 @@ function updateCamera(dt) {
   if(reveal>0&&!front&&!birdActive){target.addScaledVector(S.tan[si],-3.5*reveal);target.y+=3.2*reveal;}
   // over the falls, pull the camera up and back so you see the drop (not under a cave roof)
   const t01 = si / NSAMP;
+  // Tight self-near sectors on the two original forest layouts can place a
+  // normal chase arm inside a neighboring hillside. Brief lookout shots keep
+  // the channel visible while preserving the course's intended geometry.
+  if (LVL.id==='spillway'&&!birdActive&&!front&&t01>.275&&t01<.37) {
+    target.x=anchor.x;target.z=anchor.z;target.y=d.y+16;
+  }
+  if (LVL.id==='millrace'&&!birdActive&&!front&&t01>.165&&t01<.375) {
+    target.x=anchor.x;target.z=anchor.z;target.y=d.y+15;
+  }
   // Harbor's tight quayside turn immediately precedes a steep pump lift. A
   // normal long chase arm crosses the raised outside bank here, so tuck the
   // camera into the channel until the duck reaches the climb's open sightline.
@@ -5540,11 +5605,22 @@ function updateCamera(dt) {
     target.z = anchor.z;
     target.y = d.y + 12;
   }
+  // Two earlier Harbor crossovers bring the porcelain embankments close to
+  // the long chase arm. Use a compact crane-camera angle through those bends.
+  if (LVL.id === 'harbor' && !birdActive && !front && ((t01>.075&&t01<.155)||(t01>.47&&t01<.59))) {
+    target.x=anchor.x-S.tan[si].x*2.8;target.z=anchor.z-S.tan[si].z*2.8;target.y=d.y+9;
+  }
   // Canopy's upper and lower boughs pass close in plan view at two crossover
   // sectors. Lift into a lookout angle so the chase arm never cuts through the
   // neighboring elevated bank and the vertical route remains understandable.
   if (LVL.id === 'canopy' && !birdActive && !front && ((t01>.08&&t01<.27)||(t01>.68&&t01<.77))) {
-    target.x=anchor.x-S.tan[si].x*1.8;target.z=anchor.z-S.tan[si].z*1.8;target.y=d.y+11;
+    // A side-on cable-cam keeps the duck and the next drop in view. Looking
+    // straight down from above put the descending channel's own shoulder
+    // between the camera and the racing line.
+    const cableSide=t01<.3?-1:1;
+    target.x=anchor.x-S.tan[si].x*3+S.side[si].x*7*cableSide;
+    target.z=anchor.z-S.tan[si].z*3+S.side[si].z*7*cableSide;
+    target.y=d.y+6.5;
   }
   if (!birdActive&&t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4 * (1 - caveF); target.add(S.tan[si].clone().multiplyScalar(-4 * (1 - caveF * 0.6))); }
   // Pull in front of substantial scenery instead of letting an authored landmark fill the screen.
@@ -5572,7 +5648,7 @@ function updateCamera(dt) {
     ? _tmpB.set(anchor.x,d.y+.2,anchor.z).addScaledVector(S.tan[si],5)
     : front
     ? _tmpB.set(d.p.x, d.y + 0.8, d.p.z).addScaledVector(S.tan[si], -2.5)   // broadcast view: watch your duck & the chasing pack
-    : _tmpB.set(anchor.x, d.y + 1.2+reveal*.8, anchor.z).addScaledVector(S.tan[si], 6+reveal*4);
+    : _tmpB.set(anchor.x, d.y + 1.2+reveal*.8, anchor.z).addScaledVector(S.tan[si], (MOBILE_GPU?9:6)+reveal*4);
   camState.look.lerp(lookT, 1 - Math.pow(0.0002, dt));
   camera.position.copy(camState.pos);
   camera.lookAt(camState.look);
@@ -5595,7 +5671,7 @@ function updateCamera(dt) {
   G._bank = prevBank + (bankT - prevBank) * Math.min(1, 5 * dt);
   camera.rotateZ(G._bank);
   const spd = Math.hypot(d.v.x, d.v.z);
-  const fovT = SETTINGS.fov+(birdActive?8:0) + Math.min(12, Math.max(0, spd - 6) * 0.55)+reveal*5;
+  const fovT = SETTINGS.fov+(birdActive?8:0)+(MOBILE_GPU&&!birdActive?5:0) + Math.min(12, Math.max(0, spd - 6) * 0.55)+reveal*5;
   camera.fov += (fovT - camera.fov) * Math.min(1, 3 * dt);
   camera.updateProjectionMatrix();
 }
@@ -5963,7 +6039,7 @@ function prepRace(skipFly) {
   G.startCharge=0; G.startEarly=false; G.courseEventT=0; G.courseEventLap=-1; G.courseEventBase=0; G.transformed=false;G.heroRevealT=0;G._inClimb=false;
   G.overtakes=0;G.playerHitCount=0;G.playerImpactCd=0;G.biggestHit=null;G.usedFlow=false;G.falseStarted=false;G.shoves=0;
   G.shortcutHits=new Set();
-  G.creatorEvents=new Set();G.elim=localStorage.getItem('spillway-mode')==='elimination';G.elimNextT=18;G.elimRound=0;G.elimDone=false;
+  G.creatorEvents=new Set();G.elim=localStorage.getItem('spillway-mode')==='elimination';document.body.classList.toggle('elimMode',G.elim);G.elimNextT=18;G.elimRound=0;G.elimDone=false;
   G.tt = ttMode; G._recT = 0; G.ghostRec = [];
   if(G.elim){G.laps=999;G.tt=false;G.tutOn=false;}
   G.guided = !!G.guidedNext; G.guidedNext = false;
@@ -7286,7 +7362,9 @@ function frame(now) {
   }
   // A local cubemap follows the race and catches banks, bridges, trees, ducks and sky.
   // Updating intermittently keeps the reflection alive without doubling every frame's cost.
-  const reflectEvery = MOBILE_GPU ? 0 : SETTINGS.quality === 'high' ? 18 : SETTINGS.quality === 'medium' ? 34 : 0;
+  // A cubemap costs six scene renders. Water motion comes from the shader, so
+  // the environment can update at a calmer cadence without looking frozen.
+  const reflectEvery = MOBILE_GPU ? 0 : SETTINGS.quality === 'high' ? 45 : SETTINGS.quality === 'medium' ? 75 : 0;
   if (reflectEvery && waterMesh && (++reflectFrame % reflectEvery === 0)) {
     waterReflectCam.position.set(ducks[0].p.x, waterHeightAt(ducks[0].si) + 1.4, ducks[0].p.z);
     waterMesh.visible = false;
