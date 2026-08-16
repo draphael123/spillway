@@ -500,7 +500,9 @@
     #eventToast { top:36%; width:min(340px,82vw); }
     body.elimMode #raceGoal { top:calc(104px + env(safe-area-inset-top)); width:min(250px,64vw); }
     body.elimMode #elimHud { top:calc(174px + env(safe-area-inset-top)); }
-    body.elimMode #raceCue { top:calc(238px + env(safe-area-inset-top)); }
+    body.elimMode #raceCue { top:calc(284px + env(safe-area-inset-top)); }
+    body.elimMode #eventToast { top:calc(334px + env(safe-area-inset-top)); }
+    body.elimMode #transformBanner { top:46%; }
     body.hudQuiet #raceGoal,body.hudQuiet #flowPill { opacity:0;pointer-events:none;transform:translateY(-8px); }
     #pauseRaceBtn { top:calc(8px + env(safe-area-inset-top)); right:calc(100px + env(safe-area-inset-right)); width:38px; height:38px; }
     #startMeter { top:50%; bottom:auto; transform:translate(-50%,-50%); width:min(330px,82vw); }
@@ -2028,7 +2030,7 @@ function updateElimination(){
   if(G.elimDone)return;const alive=ducks.filter(d=>!d.eliminated);const left=Math.max(0,G.elimNextT-G.raceT);el('elimCount').textContent=`${alive.length} REMAIN`;el('elimNext').textContent=`NEXT GATE IN ${Math.ceil(left)}`;el('elimFill').style.width=`${Math.max(0,Math.min(1,left/18))*100}%`;
   if(alive.length<=1){finishElimination();return;}if(G.raceT<G.elimNextT)return;G.elimNextT+=18;const ranked=[...alive].sort((a,b)=>a.progress-b.progress),drop=Math.min(alive.length-1,Math.max(1,Math.ceil(alive.length*.16))),cut=ranked.slice(0,drop);for(const d of cut){d.eliminated=true;d.finished=true;d.v.set(0,0,0);if(d.idx===0){playerHat.visible=false;}else if(rogueRigs[d.idx])rogueRigs[d.idx].position.y=-500;}
   G.elimRound++;const remain=alive.length-drop,remainLabel=`${remain} DUCK${remain===1?'':'S'} REMAIN`;
-  el('elimCount').textContent=remainLabel;eventToast(`FLOOD GATE ${G.elimRound} · ${drop} DUCK${drop>1?'S':''} ELIMINATED · ${remainLabel}`);impactBeat(`CUT ${drop}!`,5);setTimeout(()=>{if(G.elim&&!G.elimDone)toast(remainLabel,1500);},520);document.body.classList.remove('gatePulse');void document.body.offsetWidth;document.body.classList.add('gatePulse');setTimeout(()=>document.body.classList.remove('gatePulse'),760);SFX.thud(5);setTimeout(()=>SFX.whistle(),180);G.camShake=.58;if(cut.includes(ducks[0])||remain<=1)finishElimination();
+  el('elimCount').textContent=remainLabel;eventToast(`FLOOD GATE ${G.elimRound} · ${drop} DUCK${drop>1?'S':''} ELIMINATED · ${remainLabel}`);impactBeat(`CUT ${drop}!`,5);document.body.classList.remove('gatePulse');void document.body.offsetWidth;document.body.classList.add('gatePulse');setTimeout(()=>document.body.classList.remove('gatePulse'),760);SFX.thud(5);setTimeout(()=>SFX.whistle(),180);G.camShake=.58;if(cut.includes(ducks[0])||remain<=1)finishElimination();
 }
 function step(dt) {
   G.time += dt;
