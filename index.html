@@ -803,27 +803,27 @@ const LEVELS = {
     surge: [[0.795, 0.985]], surgeCol: [0.18, 0.95, 0.85],
     ctrl: [
       { x:   0, z:    0, y: 60.0, w: 9,   s: 0.6  },  // START/FINISH gantry
-      { x:  -6, z:  -35, y: 58.5, w: 7,   s: 1.2  },  // Q1 RAPIDS
-      { x:   8, z:  -70, y: 56.5, w: 5.5, s: 1.9  },
-      { x:  -8, z: -105, y: 54.5, w: 5,   s: 2.2  },  // rock garden
-      { x:   4, z: -140, y: 53.0, w: 6,   s: 1.6  },
-      { x:  -2, z: -175, y: 52.0, w: 6.5, s: 1.4  },
-      { x:  14, z: -205, y: 50.5, w: 5,   s: 1.8  },  // Q2 THE GORGE
-      { x:  38, z: -222, y: 49.5, w: 4.5, s: 2.0  },  // narrows under the arch
-      { x:  62, z: -230, y: 48.8, w: 5,   s: 1.9  },
-      { x:  78, z: -228, y: 48.2, w: 5,   s: 2.0  },  // falls lip
-      { x:  86, z: -222, y: 40.5, w: 5.5, s: 1.8  },  // THE FALLS (7.7u)
-      { x:  98, z: -205, y: 39.2, w: 8,   s: 0.7  },  // plunge pool
-      { x: 108, z: -180, y: 38.4, w: 7,   s: 1.0  },
-      { x: 120, z: -150, y: 37.4, w: 6,   s: 1.5  },  // Q3 CANYON
-      { x: 132, z: -118, y: 36.2, w: 5,   s: 2.0  },
-      { x: 126, z:  -86, y: 35.2, w: 6.5, s: 1.3  },
-      { x: 138, z:  -56, y: 34.2, w: 5,   s: 1.9  },  // canyon narrows
-      { x: 128, z:  -28, y: 33.4, w: 9,   s: 0.6  },  // eddy pool
-      { x: 108, z:   -8, y: 33.8, w: 6,   s: 1.6  },  // Q4 MEADOW → THE CLIMB
-      { x:  84, z:    4, y: 36.5, w: 5.5, s: 2.2  },  // surge channel mouth
-      { x:  58, z:   10, y: 44.0, w: 5,   s: 2.4  },  // the magic climb
-      { x:  34, z:   10, y: 52.0, w: 5,   s: 2.4  },
+      { x: -18, z:  -24, y: 58.5, w: 7,   s: 1.2  },  // opening river sweep
+      { x: -34, z:  -55, y: 56.5, w: 5.5, s: 1.9  },
+      { x: -18, z:  -86, y: 54.5, w: 5,   s: 2.2  },  // rock-garden switchback
+      { x:  12, z: -110, y: 53.0, w: 6,   s: 1.6  },
+      { x:  38, z: -126, y: 52.0, w: 7,   s: 1.3  },  // broad cedar bend
+      { x:  52, z: -154, y: 50.5, w: 5,   s: 1.8  },  // gorge entrance
+      { x:  38, z: -184, y: 49.5, w: 4.5, s: 2.0  },  // gorge hairpin
+      { x:  10, z: -202, y: 48.8, w: 5,   s: 1.9  },
+      { x: -12, z: -218, y: 48.2, w: 5,   s: 2.0  },  // falls lip
+      { x:  -4, z: -232, y: 40.5, w: 5.5, s: 1.8  },  // THE FALLS
+      { x:  28, z: -244, y: 39.2, w: 9,   s: 0.65 },  // plunge pool
+      { x:  64, z: -232, y: 38.4, w: 7,   s: 1.0  },
+      { x:  96, z: -210, y: 37.4, w: 6,   s: 1.5  },  // canyon traverse
+      { x: 120, z: -180, y: 36.2, w: 5,   s: 2.0  },
+      { x: 132, z: -142, y: 35.2, w: 7,   s: 1.2  },  // oxbow pool
+      { x: 116, z: -110, y: 34.2, w: 5,   s: 1.9  },  // canyon narrows
+      { x:  92, z:  -92, y: 33.4, w: 9,   s: 0.6  },  // eddy bowl
+      { x: 118, z:  -62, y: 33.8, w: 6,   s: 1.6  },  // meadow crossover
+      { x: 106, z:  -28, y: 36.5, w: 5.5, s: 2.2  },  // surge mouth
+      { x:  76, z:  -10, y: 44.0, w: 5,   s: 2.4  },  // diagonal magic climb
+      { x:  44, z:    8, y: 52.0, w: 5,   s: 2.4  },
       { x:  16, z:    6, y: 58.0, w: 5.5, s: 2.2  },  // crest — back to the line
     ],
   },
@@ -2469,7 +2469,7 @@ window.SPILLWAY = {
     player: { place: placeOf(ducks[0]), si: ducks[0].si, t01: ducks[0].si / NSAMP, lap: ducks[0].lap, inFlume: ducks[0].inFlume, finished: ducks[0].finished, time: ducks[0].finishTime, flow: +(ducks[0].flow || 0).toFixed(2), bursting: (ducks[0].burstT || 0) > 0 },
     top: G.results.slice(0, 5).map(d => ({ name: d.name, time: +d.finishTime.toFixed(2) })) }),
   ducks, G,
-  courseIdentity:()=>({id:LVL.id,route:ROUTE_STYLE.label,splits:COURSE_SPLITS.map(s=>({name:s.name,lanes:s.lanes.map(l=>l.name)})),splitChutes:CHUTES.filter(c=>c.split).length,islands:ISLANDS.length,bathFloaters:LVL.id==='porcelain'?BATH_FLOATERS.length:0}),
+  courseIdentity:()=>({id:LVL.id,route:ROUTE_STYLE.label,splits:COURSE_SPLITS.map(s=>({name:s.name,lanes:s.lanes.map(l=>l.name)})),splitChutes:CHUTES.filter(c=>c.split).length,islands:ISLANDS.length,bathFloaters:LVL.id==='porcelain'?BATH_FLOATERS.length:0,harborLandmarks:LVL.id==='harbor'?(window._harborLandmarks?.length||0):0}),
   dbg: () => ({ cam: camera.position.toArray().map(v => +v.toFixed(1)), fov: +camera.fov.toFixed(1),
     quat: camera.quaternion.toArray().map(v => +v.toFixed(3)), up: camera.up.toArray() }),
   three: () => ({ renderer, scene, camera, sun, skyMesh, waterMat }),
@@ -3981,8 +3981,8 @@ if (LVL.id === 'millrace') {
   const metal = c => new THREE.MeshStandardMaterial({color:c,roughness:.48,metalness:.55});
   // Flood-control walls and sodium lamps frame the municipal channel.
   for(let n=0;n<18;n++){
-    const i=Math.round((.02+n*.046)*NSAMP),sgn=n%2?1:-1,ob=3.8,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,ob,sgn);
-    const wall=new THREE.Mesh(rbox(8,2.6,.7,.18,3),lam(n%3?0x66aeb3:0xe98261));wall.position.set(p.x,gy+1.2,p.z);wall.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z)-Math.PI/2;scene.add(wall);
+    const i=Math.round((.02+n*.046)*NSAMP),sgn=n%2?1:-1,ob=6.5,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,ob,sgn);
+    const wall=new THREE.Mesh(rbox(6,1.8,.55,.16,3),lam(n%3?0x66aeb3:0xe98261));wall.position.set(p.x,gy+.85,p.z);wall.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z)-Math.PI/2;scene.add(wall);
     if(n%3===0){const post=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,4.2,6),metal(0x27343a));post.position.set(p.x,gy+2.1,p.z);const lamp=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),new THREE.MeshBasicMaterial({color:0xffb23e}));lamp.position.set(p.x,gy+4.25,p.z);scene.add(post,lamp);}
   }
   // Working container quay: stacked color blocks, crane silhouettes, and lock towers.
@@ -4017,6 +4017,17 @@ if (LVL.id === 'millrace') {
     const i=Math.round((.59+n*.026)*NSAMP),sgn=-1,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+2.2));
     const buoy=new THREE.Mesh(new THREE.CylinderGeometry(.3,.48,1.15,9),lam(n%2?0xff6b21:0xf3e7c9));buoy.position.set(p.x,waterHeightAt(i)+.5,p.z);scene.add(buoy);
   }
+  // Hero landmarks sit close enough to the racing line to survive chase-camera fog.
+  window._harborLandmarks=[];
+  function harborBank(t2,sgn,ob=3){const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,ob,sgn);return{i,p,gy,yaw:Math.atan2(S.tan[i].x,S.tan[i].z)};}
+  {
+    const a=harborBank(.065,1,2.6),g=new THREE.Group(),base=new THREE.Mesh(new THREE.CylinderGeometry(2.25,2.7,2.2,10),lam(0x263f48)),tower=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.45,12,12),lam(0xf3eee1)),stripe=new THREE.Mesh(new THREE.CylinderGeometry(1.08,1.18,2.2,12),lam(0xe85f3d)),room=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,1.5,12),metal(0x355d68)),lamp=new THREE.Mesh(new THREE.SphereGeometry(.48,12,8),new THREE.MeshBasicMaterial({color:0xffd66b}));base.position.y=1.1;tower.position.y=8.1;stripe.position.y=7.1;room.position.y=14.25;lamp.position.y=15.15;const roof=new THREE.Mesh(new THREE.ConeGeometry(1.8,1.4,12),lam(0xe85f3d));roof.position.y=16;g.add(base,tower,stripe,room,lamp,roof);g.position.set(a.p.x,a.gy,a.p.z);scene.add(g);_harborLandmarks.push({kind:'lighthouse',g});
+  }
+  {
+    const a=harborBank(.55,1,3.4),g=new THREE.Group(),shed=new THREE.Mesh(rbox(12,5.5,7,.35,4),lam(0x355d68)),roof=new THREE.Mesh(new THREE.CylinderGeometry(4.2,4.2,12,12,1,false,0,Math.PI),metal(0xe85f3d));shed.position.y=2.75;roof.rotation.z=Math.PI/2;roof.rotation.y=Math.PI/2;roof.position.y=5.4;g.add(shed,roof);for(let q=-2;q<=2;q++){const door=new THREE.Mesh(rbox(1.7,2.5,.12,.1,2),lam(q%2?0xf0b33b:0xe7eeee));door.position.set(q*2.05,2.25,3.55);g.add(door);}g.position.set(a.p.x,a.gy,a.p.z);g.rotation.y=a.yaw;scene.add(g);_harborLandmarks.push({kind:'warehouse',g});
+  }
+  for(const [t2,sgn,col] of [[.10,-1,0xe85f3d],[.64,1,0x2d8792],[.82,-1,0xf0b33b]]){const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]-.9)),g=new THREE.Group(),hull=new THREE.Mesh(rbox(3.8,.65,1.45,.25,3),lam(col)),cab=new THREE.Mesh(rbox(1.3,1.15,1.05,.16,3),lam(0xf3eee1)),ring=new THREE.Mesh(new THREE.TorusGeometry(.38,.1,7,12),lam(0xfff3cf));hull.position.y=.2;cab.position.set(.65,1,0);ring.position.set(-.8,.95,.74);ring.rotation.x=Math.PI/2;g.add(hull,cab,ring);g.position.set(p.x,waterHeightAt(i)+.28,p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(g);_harborLandmarks.push({kind:'fishingBoat',g});}
+  for(const [t2,sgn] of [[.18,1],[.31,-1],[.67,1]]){const a=harborBank(t2,sgn,2),rack=new THREE.Group();for(let q=-2;q<=2;q++){const float=new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),lam(q%2?0xfff3cf:0xe85f3d));float.position.set(q*.6,1.1+Math.abs(q)*.08,0);rack.add(float);}const net=new THREE.Mesh(new THREE.PlaneGeometry(3.3,1.7,5,3),new THREE.MeshBasicMaterial({color:0x7aa1a2,wireframe:true,transparent:true,opacity:.7,side:THREE.DoubleSide}));net.position.y=.55;rack.add(net);rack.position.set(a.p.x,a.gy+.2,a.p.z);rack.rotation.y=a.yaw;scene.add(rack);_harborLandmarks.push({kind:'netRack',g:rack});}
   window._harborGulls=[];
   const wingG=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.65,0,0),new THREE.Vector3(0,.12,0),new THREE.Vector3(.65,0,0)]);
   for(let n=0;n<11;n++){
