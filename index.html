@@ -157,6 +157,43 @@
   .duckGroup .setRow > span:first-child { display:block; margin-bottom:5px; font:800 12px 'Nunito Sans',sans-serif; }
   .duckGroup .swatches, .duckGroup .segRow { justify-content:flex-start; max-width:none; }
   .duckGroup .segRow button { padding:5px 9px; font-size:11px; border-radius:7px; }
+  /* ---- race-day menu: enamel signboard, registration card, mode tickets ---- */
+  #hub { width:min(1180px,100%); margin:auto; }
+  #hubHead { position:relative; width:min(980px,94vw); padding:8px 92px 6px; }
+  #hubHead:before,#hubHead:after { content:''; position:absolute; top:50%; width:70px; height:3px; background:var(--sun); box-shadow:0 7px 0 var(--rush); }
+  #hubHead:before { left:5px; } #hubHead:after { right:5px; }
+  #hubTabs { padding:7px; border:2px solid rgba(255,248,231,.7); border-radius:12px; background:rgba(7,27,43,.7); box-shadow:0 5px 0 rgba(7,27,43,.35); }
+  #hubTabs button { min-width:92px; border:0; box-shadow:none; background:transparent; color:var(--cream); }
+  #hubTabs button:hover { box-shadow:none; background:rgba(255,255,255,.11); }
+  #hubTabs button.sel { color:var(--ink); background:var(--sun); box-shadow:inset 0 -3px rgba(7,27,43,.2); }
+  #title.raceDesk { width:min(980px,94vw); padding:18px; text-align:left; }
+  .raceDeskGrid { display:grid; grid-template-columns:minmax(300px,.88fr) minmax(390px,1.12fr); gap:16px; }
+  .raceSetupCard,.raceModeCard { border:3px solid var(--ink); border-radius:14px; background:#fffdf5; overflow:hidden; box-shadow:0 5px 0 rgba(7,27,43,.24); }
+  .raceCardHead { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; color:var(--cream); background:var(--ink); font:900 14px 'Barlow Condensed',sans-serif; letter-spacing:1.8px; }
+  .raceCardHead small { color:var(--sun); font-size:10px; }
+  .raceSetupBody { padding:8px 13px 12px; }
+  .raceSetupBody .setRow { margin:7px 0; padding-bottom:7px; border-bottom:1px solid #d6e2df; }
+  .raceSetupBody .setRow:last-child { border-bottom:0; }
+  .raceModeGrid { display:grid; grid-template-columns:1fr 1fr; gap:9px; padding:12px; }
+  .raceModeGrid .go { position:relative; display:flex; min-height:78px; margin:0; padding:12px; align-items:flex-end; justify-content:flex-start; text-align:left; font-size:20px; line-height:.95; border-radius:10px; }
+  .raceModeGrid .go:before { content:attr(data-kicker); position:absolute; left:12px; top:9px; font:900 9px 'Nunito Sans',sans-serif; letter-spacing:1.5px; opacity:.66; }
+  .raceModeGrid #raceBtn { grid-column:1/-1; min-height:92px; font-size:30px; background:linear-gradient(145deg,#ffe86a,#ffc928 55%,#f09a26); }
+  .raceDesk .keys { margin:12px 4px 0; padding:9px 12px; border-radius:8px; background:#e7f2ee; text-align:center; }
+  .raceDesk .wisdom { margin-top:8px; text-align:center; }
+  .settingsGrid { display:grid; grid-template-columns:repeat(2,minmax(280px,1fr)); gap:12px; text-align:left; }
+  .settingsGroup { padding:12px; border:2px solid var(--ink); border-radius:12px; background:#fffdf5; box-shadow:0 3px 0 rgba(7,27,43,.2); }
+  .settingsGroup h3 { margin:0 0 7px; padding-bottom:6px; border-bottom:2px solid #d7e4e0; color:var(--signal); font:900 15px 'Barlow Condensed',sans-serif; letter-spacing:1.7px; }
+  .rangeReadout { min-width:45px; color:var(--signal); font:900 12px 'Barlow Condensed',sans-serif; text-align:right; }
+  .controlHint { margin:7px 0 0; color:#52656b; font:700 11px/1.4 'Nunito Sans',sans-serif; }
+  @media(max-width:760px){
+    #hubHead { padding-inline:10px; } #hubHead:before,#hubHead:after { display:none; }
+    #hubTabs { position:sticky; top:0; z-index:8; border-radius:9px; }
+    #hubTabs button { min-width:0; flex:1 1 27%; }
+    .raceDeskGrid,.settingsGrid { grid-template-columns:1fr; }
+    .raceModeGrid { grid-template-columns:1fr; }
+    .raceModeGrid #raceBtn { grid-column:auto; }
+    #title.raceDesk { width:calc(100vw - 10px); padding:10px; }
+  }
   #audioPanel { width:min(920px,94vw); min-width:0; text-align:left; }
   .audioGrid { display:grid; grid-template-columns:1.35fr .85fr; gap:16px; }
   .audioBay { border:2px solid var(--ink); border-radius:12px; background:#fffdf5; padding:14px; box-shadow:0 3px 0 rgba(14,42,51,.22); }
@@ -585,8 +622,23 @@
   #hubTabs button { border-radius:7px; transition:transform .12s ease,background .12s ease,color .12s ease; }
   #hubTabs button:hover { transform:translateY(-2px); }
   #hubTabs button.sel { transform:translateY(-2px); box-shadow:0 3px 0 var(--raceNavy),0 0 0 2px var(--sun); }
+  /* Final menu specificity: retain the dark race-control rail after legacy presentation rules. */
+  #hubTabs { background:rgba(7,27,43,.9); border-color:rgba(255,248,231,.78); box-shadow:0 5px 0 rgba(7,27,43,.45); }
+  #hubTabs button { color:var(--cream); background:transparent; }
+  #hubTabs button.sel { color:var(--ink); background:var(--sun); }
   .draftHead { align-items:center; min-height:34px; }
   @media(max-width:700px){#raceGoal,#raceCue{max-width:150px;padding:5px 7px}#raceGoal span,#raceCue span{font-size:9px}#hudTop .pill{min-width:43px;padding:3px 4px}#eventToast{top:24%;width:min(340px,72vw);font-size:11px}#lapBanner{font-size:20px}#toast{top:28%;width:90vw;font-size:clamp(34px,11vw,46px);line-height:.92}#tutToast{bottom:4%;max-width:60vw;font-size:10px}#cameraControls{left:50%;right:auto;bottom:calc(126px + env(safe-area-inset-bottom));transform:translateX(-50%)}#cameraControls button{min-width:34px;padding:5px 3px;font-size:8px}}
+  @media(max-width:700px){
+    #settingsPanel { overflow-x:hidden; }
+    .settingsGrid { width:100%; }
+    .settingsGroup { min-width:0; padding:11px; }
+    .settingsGroup .setRow { display:block; }
+    .settingsGroup .setRow>span:first-child { display:block; margin-bottom:7px; }
+    .settingsGroup .segRow { max-width:100%; justify-content:flex-start; flex-wrap:wrap; }
+    .settingsGroup input[type="range"] { width:calc(100% - 54px); }
+    .settingsGroup .rangeReadout { display:inline-block; width:48px; }
+    #keyBtns button { min-width:39px; }
+  }
 </style>
 </head>
 <body class="introActive">
@@ -714,7 +766,10 @@
     <div class="setRow"><span>View</span><div class="segRow" id="setView">
       <button data-v="behind">BEHIND</button><button data-v="front">FRONT</button></div></div>
     <div class="setRow"><span>Controls</span><div class="segRow" id="keyBtns">
-      <button data-a="up">W</button><button data-a="left">A</button><button data-a="down">S</button><button data-a="right">D</button><button data-a="shove">SHIFT</button></div></div>
+      <button data-a="up" title="Paddle forward">W</button><button data-a="left" title="Steer left">A</button><button data-a="down" title="Brake / paddle back">S</button><button data-a="right" title="Steer right">D</button><button data-a="shove" title="Splash shove">SHIFT</button><button data-a="flow" title="Flow burst">E</button><button data-a="camera" title="Change camera">C</button></div></div>
+    <div class="setRow"><span>Turn response</span><input type="range" id="setSteerResponse" min="65" max="165" step="5"><b class="rangeReadout" id="steerResponseVal">100%</b></div>
+    <div class="setRow"><span>Paddle cadence</span><input type="range" id="setPaddleCadence" min="70" max="135" step="5"><b class="rangeReadout" id="paddleCadenceVal">100%</b></div>
+    <div class="controlHint">Turn response changes lateral authority. Paddle cadence changes how frequently a held paddle produces a power stroke.</div>
     <div class="mini" id="padStatus" style="cursor:default; text-decoration:none;">controller: none detected</div>
     <div class="setRow"><span>Field of view</span><input type="range" id="setFov" min="48" max="72"></div>
     <div class="setRow"><span>Steering assist</span><div class="segRow" id="setAssist">
@@ -756,6 +811,8 @@
         <div class="setRow"><span>Weight</span><div class="segRow" id="swWeight">
           <button data-v="light">LIGHT</button><button data-v="medium">MEDIUM</button><button data-v="heavy">HEAVY</button></div></div>
         <div class="mini" id="weightBlurb" style="cursor:default; text-decoration:none;"></div>
+        <div class="setRow"><span>Handling tune</span><div class="segRow wrapRow" id="duckHandling"><button data-v="steady">STEADY</button><button data-v="balanced">BALANCED</button><button data-v="snappy">SNAPPY</button></div></div>
+        <div class="mini" id="handlingBlurb" style="cursor:default;text-decoration:none;"></div>
       </div>
       <canvas id="duckPrev" width="300" height="260"></canvas>
       <div class="dCol">
@@ -1777,13 +1834,16 @@ const DUSK = { top: [.28,.30,.55], hor: [.95,.55,.40], low: [1,.75,.5], sun: 0xf
 // ---- persisted settings
 const SETTINGS = Object.assign(
   { music: 0.5, sfx: 0.7, quality: 'high', menuPalette:'navy', camDist: 'std', camView: 'behind', fov: 58, assist: false, duckNoises: true,
-    difficulty: 'medium', laps: 1, shake:true, flashes:true, clarity:'full',
-    keys: { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' },
+    difficulty: 'medium', laps: 1, shake:true, flashes:true, clarity:'full', steerResponse:1, paddleCadence:1,
+    keys: { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift', flow:'e', camera:'c' },
     duck: { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium', eyes: 'classic', pattern: 'none', patternColor: '#fff8e7', face: 'none', body: 'none' } },
   safeStored('spillway-settings',{}));
 if (!SETTINGS.duck) SETTINGS.duck = { color: '#ffd23f', beak: '#ff8c1a', hat: 'none', weight: 'medium' };
 SETTINGS.duck = Object.assign({ eyes: 'classic', pattern: 'none', patternColor: '#fff8e7', face: 'none', body: 'none' }, SETTINGS.duck);
-if (!SETTINGS.keys) SETTINGS.keys = { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift' };
+if (!SETTINGS.keys) SETTINGS.keys = { up: 'w', down: 's', left: 'a', right: 'd', shove: 'shift', flow:'e', camera:'c' };
+SETTINGS.keys=Object.assign({up:'w',down:'s',left:'a',right:'d',shove:'shift',flow:'e',camera:'c'},SETTINGS.keys);
+SETTINGS.steerResponse=Math.max(.65,Math.min(1.65,+SETTINGS.steerResponse||1));
+SETTINGS.paddleCadence=Math.max(.7,Math.min(1.35,+SETTINGS.paddleCadence||1));
 if (!SETTINGS.camView) SETTINGS.camView = 'behind';
 if (!SETTINGS.raceCam) SETTINGS.raceCam = SETTINGS.camView==='front'?'reverse':SETTINGS.camDist==='near'?'close':SETTINGS.camDist==='far'?'wide':'chase';
 const PAD = { up: false, down: false, left: false, right: false, on: false, name: '' };
@@ -2216,17 +2276,19 @@ function step(dt) {
       let ax = 0, az = 0;
       if (input.up || PAD.up || TOUCH.up)       { ax += fwd.x;  az += fwd.z; }
       if (input.down || PAD.down || TOUCH.down)   { ax -= fwd.x * 0.7; az -= fwd.z * 0.7; }
-      if (input.left || PAD.left || TOUCH.left)   { ax -= side.x * 1.15; az -= side.z * 1.15; }
-      if (input.right || PAD.right || TOUCH.right) { ax += side.x * 1.15; az += side.z * 1.15; }
+      if (input.left || PAD.left || TOUCH.left)   { ax -= side.x * 1.15*SETTINGS.steerResponse; az -= side.z * 1.15*SETTINGS.steerResponse; }
+      if (input.right || PAD.right || TOUCH.right) { ax += side.x * 1.15*SETTINGS.steerResponse; az += side.z * 1.15*SETTINGS.steerResponse; }
       const m = Math.hypot(ax, az);
       d._stroking = m > 0.01;
       if (m > 0.01) {
         const ux = ax / m, uz = az / m;
         const pw = playerW().paddle;
         d.v.x += ux * 4.0 * pw * dt; d.v.z += uz * 4.0 * pw * dt;   // steady lean
+        const steerHeld=(input.right||PAD.right||TOUCH.right?1:0)-(input.left||PAD.left||TOUCH.left?1:0);
+        if(steerHeld){const extra=4*pw*(SETTINGS.steerResponse-1)*steerHeld*dt;d.v.x+=side.x*extra;d.v.z+=side.z*extra;}
         d._strokeT = (d._strokeT || 0) - dt;
         if (d._strokeT <= 0) {                                // rhythmic stroke surge
-          d._strokeT = 0.32;
+          d._strokeT = 0.32/SETTINGS.paddleCadence;
           d._strokeSide=-(d._strokeSide||-1);
           d.v.x += ux * 1.6 * pw; d.v.z += uz * 1.6 * pw;
           d._sq = Math.max(d._sq || 0, 0.16);
@@ -6501,8 +6563,8 @@ addEventListener('keydown', e => {
   if (k === K.left || k === 'arrowleft') input.left = true;
   if (k === K.right || k === 'arrowright') input.right = true;
   if (k === K.shove && G.mode === 'race') G.playerShove = true;
-  if ((k === 'e' || k === 'control') && G.mode === 'race') doFlowBurst();
-  if(k==='c'&&!typing&&!e.repeat&&G.mode!=='title')cycleRaceCamera();
+  if ((k === K.flow || k === 'control') && G.mode === 'race') doFlowBurst();
+  if(k===K.camera&&!typing&&!e.repeat&&G.mode!=='title')cycleRaceCamera();
   if (k === ' ') {
     e.preventDefault();
     if (G.mode === 'title') prepRace();
@@ -6716,6 +6778,27 @@ if(LEVELS.custom){
   const oldSound=el('soundTest')?.closest('.setRow');if(oldSound)oldSound.remove();
   const settingsTitle=el('settingsPanel').querySelector('h2');if(settingsTitle){settingsTitle.textContent='OPTIONS';settingsTitle.insertAdjacentHTML('beforebegin','<div class="paneEyebrow">Race control</div>');settingsTitle.insertAdjacentHTML('afterend','<div class="paneIntro">Display, camera, controls, and accessibility.</div>');}
 
+  // Registration desk: setup stays compact while each mode reads as a large,
+  // distinct ticket rather than one button in an undifferentiated row.
+  const racePane=el('title');racePane.classList.add('raceDesk');
+  const deskGrid=document.createElement('div');deskGrid.className='raceDeskGrid';
+  const setupCard=document.createElement('section');setupCard.className='raceSetupCard';setupCard.innerHTML='<div class="raceCardHead"><span>RACE REGISTRATION</span><small>SET YOUR FIELD</small></div><div class="raceSetupBody"></div>';
+  const modeCard=document.createElement('section');modeCard.className='raceModeCard';modeCard.innerHTML='<div class="raceCardHead"><span>CHOOSE AN EVENT</span><small>START HERE</small></div><div class="raceModeGrid"></div>';
+  for(const id of ['diffRow','lapRow','duckRow','lvlRow','cupRow']){const row=el(id)?.closest('.setRow');if(row)setupCard.lastElementChild.appendChild(row);}
+  const modeGrid=modeCard.lastElementChild,modeRow=racePane.querySelector('.btnRow');if(modeRow){for(const b of [...modeRow.children])modeGrid.appendChild(b);modeRow.remove();}
+  const kickers={raceBtn:'QUICK EVENT',gpBtn:'MULTI-COURSE',ttBtn:'SOLO CLOCK',ldfBtn:'ELIMINATION',tutBtn:'LEARN THE RIVER'};for(const [id,kicker] of Object.entries(kickers))el(id)?.setAttribute('data-kicker',kicker);
+  deskGrid.append(setupCard,modeCard);racePane.insertBefore(deskGrid,racePane.querySelector('.keys'));
+
+  // Options are grouped by the decision a player is making, not by the order
+  // each control happened to be added during development.
+  const settingsGrid=document.createElement('div');settingsGrid.className='settingsGrid';el('settingsPanel').appendChild(settingsGrid);
+  const settingGroup=(title,ids)=>{const s=document.createElement('section');s.className='settingsGroup';s.innerHTML=`<h3>${title}</h3>`;for(const id of ids){const node=el(id),row=node?.closest('.setRow');if(row)s.appendChild(row);else if(node)s.appendChild(node);}settingsGrid.appendChild(s);return s;};
+  settingGroup('DISPLAY',['setQuality','setMenuPalette','setFov','setClarity']);
+  settingGroup('CAMERA & MOTION',['setCam','setView','setShake','setFlashes']);
+  const controlGroup=settingGroup('DUCK CONTROL',['keyBtns','setSteerResponse','setPaddleCadence','setAssist','padStatus']);
+  const controlHint=el('settingsPanel').querySelector('.controlHint');if(controlHint)controlGroup.appendChild(controlHint);
+  settingGroup('RACE CHARACTER',['setDuckNoise']);
+
   const panel=el('duckPanel'),cols=el('duckCols'),canvas=el('duckPrev');
   panel.insertAdjacentHTML('afterbegin','<div class="paneEyebrow">Paddock garage</div><h2>BUILD YOUR DUCK</h2><div class="paneIntro">Every choice appears on the inspection turntable. Mix finishes, expressions, headwear, and race gear.</div>');
   const stage=document.createElement('div');stage.className='duckStage';stage.innerHTML='<div class="duckStageHead"><span>LIVE INSPECTION</span><span>DRAG TO ROTATE</span></div><div id="duckLoadout">Factory yellow · classic eyes · no gear</div>';
@@ -6725,6 +6808,7 @@ if(LEVELS.custom){
   const group=(title,ids)=>{const s=document.createElement('section');s.className='duckGroup';s.innerHTML=`<h3>${title}</h3>`;for(const id of ids){const row=el(id)?.closest('.setRow');if(row)s.appendChild(row);}controls.appendChild(s);};
   group('LOADOUTS',['duckPresets']);group('BODY & FINISH',['swBody','swBeak','swPattern','swPatCol','swWeight']);
   const wb=el('weightBlurb');if(wb)el('swWeight')?.closest('.duckGroup')?.appendChild(wb);
+  group('HANDLING',['duckHandling']);const hb=el('handlingBlurb');if(hb)el('duckHandling')?.closest('.duckGroup')?.appendChild(hb);
   group('EXPRESSION',['swEyes','swFace']);group('HATS & HEADWEAR',['swHat']);group('RACE GEAR',['swBodyAcc']);
   cols.querySelectorAll('.dCol').forEach(c=>c.remove());
   let drag=false,lastX=0;
@@ -6983,10 +7067,14 @@ el('soundPlay').addEventListener('click',()=>playSoundSelection(el('soundSelect'
 el('setMusic').addEventListener('input', e2 => { SETTINGS.music = +e2.target.value / 100; saveSettings(); applyVolumes(); });
 el('setSfx').addEventListener('input', e2 => { SETTINGS.sfx = +e2.target.value / 100; saveSettings(); applyVolumes(); SFX.quack(); });
 el('setFov').addEventListener('input', e2 => { SETTINGS.fov = +e2.target.value; saveSettings(); applyQuality(); });
+el('setSteerResponse').addEventListener('input',e2=>{SETTINGS.steerResponse=+e2.target.value/100;saveSettings();el('steerResponseVal').textContent=`${e2.target.value}%`;});
+el('setPaddleCadence').addEventListener('input',e2=>{SETTINGS.paddleCadence=+e2.target.value/100;saveSettings();el('paddleCadenceVal').textContent=`${e2.target.value}%`;});
 function refreshSettingsUI() {
   el('setMusic').value = SETTINGS.music * 100;
   el('setSfx').value = SETTINGS.sfx * 100;
   el('setFov').value = SETTINGS.fov;
+  el('setSteerResponse').value=Math.round(SETTINGS.steerResponse*100);el('steerResponseVal').textContent=`${Math.round(SETTINGS.steerResponse*100)}%`;
+  el('setPaddleCadence').value=Math.round(SETTINGS.paddleCadence*100);el('paddleCadenceVal').textContent=`${Math.round(SETTINGS.paddleCadence*100)}%`;
   document.querySelectorAll('#setQuality button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.quality));
   document.querySelectorAll('#setMenuPalette button').forEach(b=>b.classList.toggle('sel',b.dataset.v===(SETTINGS.menuPalette||'navy')));
   document.querySelectorAll('#setCam button').forEach(b => b.classList.toggle('sel', b.dataset.v === SETTINGS.camDist));
@@ -7044,6 +7132,8 @@ function duckSeg(id, key) {
 }
 duckSeg('swEyes', 'eyes'); duckSeg('swPattern', 'pattern'); duckSeg('swFace', 'face'); duckSeg('swBodyAcc', 'body');
 buildSwatches(el('swPatCol'), ['#fff8e7','#14222a','#ff5a5a','#ff8c1a','#53a6ff','#ffd23f','#e14a76','#53d769','#a78bfa','#4dd6c1','#8a6544','#c7d4dc'], 'patternColor');
+const HANDLING_TUNES={steady:{steer:.82,cadence:.82,label:'CALM INPUTS · LONG, DELIBERATE STROKES'},balanced:{steer:1,cadence:1,label:'EVEN TURNING · STANDARD PADDLE RHYTHM'},snappy:{steer:1.38,cadence:1.25,label:'FAST TURNS · QUICK POWER STROKES'}};
+el('duckHandling').addEventListener('click',e=>{const b=e.target.closest('button[data-v]'),t=b&&HANDLING_TUNES[b.dataset.v];if(!t)return;SETTINGS.steerResponse=t.steer;SETTINGS.paddleCadence=t.cadence;saveSettings();refreshSettingsUI();refreshDuckUI();});
 function refreshDuckUI() {
   document.querySelectorAll('#swBody button').forEach(b => b.classList.toggle('sel', b.dataset.c === SETTINGS.duck.color));
   document.querySelectorAll('#swBeak button').forEach(b => b.classList.toggle('sel', b.dataset.c === SETTINGS.duck.beak));
@@ -7057,6 +7147,9 @@ function refreshDuckUI() {
       b.textContent = locked ? '🔒 ' + base : base;
     });
   el('weightBlurb').textContent = playerW().blurb;
+  let tune='custom';for(const [key,t] of Object.entries(HANDLING_TUNES))if(Math.abs(SETTINGS.steerResponse-t.steer)<.02&&Math.abs(SETTINGS.paddleCadence-t.cadence)<.02)tune=key;
+  document.querySelectorAll('#duckHandling button').forEach(b=>b.classList.toggle('sel',b.dataset.v===tune));
+  el('handlingBlurb').textContent=tune==='custom'?`CUSTOM · ${Math.round(SETTINGS.steerResponse*100)}% TURN · ${Math.round(SETTINGS.paddleCadence*100)}% CADENCE`:HANDLING_TUNES[tune].label;
   const loadout=el('duckLoadout');if(loadout){const d=SETTINGS.duck,parts=[`${d.pattern==='none'?'solid':d.pattern} body`,`${d.eyes||'classic'} eyes`];if(d.hat&&d.hat!=='none')parts.push(d.hat);if(d.face&&d.face!=='none')parts.push(d.face);if(d.body&&d.body!=='none')parts.push(d.body);loadout.textContent=parts.join(' · ').toUpperCase();}
   syncPreviewDuck();
 }
