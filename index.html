@@ -3824,9 +3824,15 @@ if (LVL.id === 'millrace') {
       cg.setIndex(idx2); cg.computeVertexNormals();
       // two-faced vault: dark rock INSIDE, mossy hillside OUTSIDE — from beyond the
       // cave it reads as terrain swallowing the river, not a floating grey slab
-      const ceilIn = new THREE.Mesh(cg, new THREE.MeshLambertMaterial({ color: 0x43474d, map: ROCKTEX, side: THREE.FrontSide, flatShading: true }));
+      const ceilIn = new THREE.Mesh(cg, new THREE.MeshStandardMaterial({ color: 0x596361, map: ROCKTEX, emissive:0x101d1b, emissiveIntensity:.72, roughness:.96, side: THREE.FrontSide, flatShading: true }));
       const ceilOut = new THREE.Mesh(cg, new THREE.MeshLambertMaterial({ color: 0x59634c, map: ROCKTEX, side: THREE.BackSide, flatShading: true }));
       scene.add(ceilIn, ceilOut);
+      // Low practical cave lights reveal the arch form without making the
+      // underground course read like daylight or a flat black ceiling.
+      for(let li=1;li<=3;li++){
+        const i=Math.round(i0+(i1-i0)*li/4),p=S.pos[i],light=new THREE.PointLight(li%2?0x68d9d5:0xb985ef,1.05,24,2);
+        light.position.set(p.x,waterHeightAt(i)+4.2,p.z);scene.add(light);
+      }
       // stalactites: centre-channel only, tips clamped well above the camera line
       for (let s2 = 0; s2 < 10; s2++) {
         const i = Math.round((d0 + 0.02 + rand() * (d1 - d0 - 0.04)) * NSAMP);
@@ -3900,15 +3906,15 @@ if (LVL.id === 'millrace') {
   // colossal trunks rising past the flood line, distance-checked off the course
   for (let tk = 0; tk < 15; tk++) {
     const i = Math.floor((tk / 15) * NSAMP);
-    const sgn = tk % 2 ? 1 : -1, ob = randRange(16, 34);
+    const sgn = tk % 2 ? 1 : -1, ob = randRange(28, 46);
     const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
     let clear = true;
     for (let ci = 0; ci <= NSAMP; ci += 25) {
       const dx2 = p.x - S.pos[ci].x, dz2 = p.z - S.pos[ci].z;
-      if (dx2 * dx2 + dz2 * dz2 < 20 * 20) { clear = false; break; }
+      if (dx2 * dx2 + dz2 * dz2 < 34 * 34) { clear = false; break; }
     }
     if (!clear) continue;
-    const r = randRange(4, 8);
+    const r = randRange(3.5, 6);
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.85, r, 70, 9), lam(0x6b4a2f));
     trunk.position.set(p.x, waterHeightAt(i) - 5, p.z);
     scene.add(trunk);
@@ -5533,6 +5539,12 @@ function updateCamera(dt) {
     target.x = anchor.x;
     target.z = anchor.z;
     target.y = d.y + 12;
+  }
+  // Canopy's upper and lower boughs pass close in plan view at two crossover
+  // sectors. Lift into a lookout angle so the chase arm never cuts through the
+  // neighboring elevated bank and the vertical route remains understandable.
+  if (LVL.id === 'canopy' && !birdActive && !front && ((t01>.08&&t01<.27)||(t01>.68&&t01<.77))) {
+    target.x=anchor.x-S.tan[si].x*1.8;target.z=anchor.z-S.tan[si].z*1.8;target.y=d.y+11;
   }
   if (!birdActive&&t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4 * (1 - caveF); target.add(S.tan[si].clone().multiplyScalar(-4 * (1 - caveF * 0.6))); }
   // Pull in front of substantial scenery instead of letting an authored landmark fill the screen.
