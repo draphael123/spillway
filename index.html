@@ -772,12 +772,12 @@
   </div>
   <div class="panel hubPane hidden" id="levelPanel">
     <h2>COURSES</h2>
-    <div class="lvlCard" data-lvl="spillway"><canvas class="thumb" width="84" height="64"></canvas><div><b>SPILLWAY RUN</b><br><span>rapids &middot; the falls &middot; canyon &middot; the magic climb</span></div><span class="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard" data-lvl="millrace"><canvas class="thumb" width="84" height="64"></canvas><div><b>MILLRACE</b><br><span>the working forest &mdash; mind the machines</span></div><span class="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard" data-lvl="undergrove"><canvas class="thumb" width="84" height="64"></canvas><div><b>UNDERGROVE</b><br><span>the drowned-dark forest &mdash; follow the lanterns</span></div><span class="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard" data-lvl="canopy"><canvas class="thumb" width="84" height="64"></canvas><div><b>CANOPY RUN</b><br><span>the flooded forest &mdash; race the treetops</span></div><span class="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard" data-lvl="porcelain"><canvas class="thumb" width="84" height="64"></canvas><div><b>PORCELAIN RUN</b><br><span>the bathworks &mdash; tub rapids &middot; faucet falls &middot; the drain</span></div><span class="bestLabel">best &mdash;</span></div>
-    <div class="lvlCard" data-lvl="harbor"><canvas class="thumb" width="84" height="64"></canvas><div><b>HARBOR RUSH</b><br><span>storm drains &middot; tide locks &middot; container quay &middot; king tide</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="spillway"><canvas class="thumb" width="84" height="64"></canvas><div><b>SPILLWAY RUN</b><br><span>ranger reach &middot; falls fork &middot; cedar gorge &middot; floodworks</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="millrace"><canvas class="thumb" width="84" height="64"></canvas><div><b>MILLRACE</b><br><span>log yard &middot; working mill &middot; turbine pond &middot; boiler run</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="undergrove"><canvas class="thumb" width="84" height="64"></canvas><div><b>UNDERGROVE</b><br><span>lantern hollow &middot; root caves &middot; blackout &middot; firefly deep</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="canopy"><canvas class="thumb" width="84" height="64"></canvas><div><b>CANOPY RUN</b><br><span>birdhouse heights &middot; ropebridge drop &middot; heron crown &middot; sap-rise</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="porcelain"><canvas class="thumb" width="84" height="64"></canvas><div><b>PORCELAIN RUN</b><br><span>towel-rack rapids &middot; whale-toy bend &middot; drain &middot; bubble lift</span></div><span class="bestLabel">best &mdash;</span></div>
+    <div class="lvlCard" data-lvl="harbor"><canvas class="thumb" width="84" height="64"></canvas><div><b>HARBOR RUSH</b><br><span>tugboat yard &middot; tide locks &middot; mooring basin &middot; signal quay</span></div><span class="bestLabel">best &mdash;</span></div>
   </div>
  </div>
 </div>
@@ -854,7 +854,7 @@ const THEME_LIBRARY={
 };
 const LEVELS = {
   spillway: {
-    id: 'spillway', name: 'SPILLWAY RUN', sub: 'rapids · the falls · canyon · the magic climb',
+    id: 'spillway', name: 'SPILLWAY RUN', sub: 'ranger reach · falls fork · cedar gorge · floodworks',
     weathers: ['clear', 'golden', 'mist', 'storm'],
     surge: [[0.795, 0.985]], surgeCol: [0.18, 0.95, 0.85],
     ctrl: [
@@ -884,7 +884,7 @@ const LEVELS = {
     ],
   },
   millrace: {
-    id: 'millrace', name: 'MILLRACE', sub: 'the working forest — mind the machines',
+    id: 'millrace', name: 'MILLRACE', sub: 'log yard · working mill · turbine pond · boiler run',
     weathers: ['mist', 'storm', 'mist', 'clear'],
     surge: [[0.815, 0.985]], surgeCol: [0.45, 0.75, 1.0],
     // industrial timber: tea-stained water, worn olive banks, grey-green air
@@ -917,7 +917,7 @@ const LEVELS = {
     ],
   },
   undergrove: {
-    id: 'undergrove', name: 'UNDERGROVE', sub: 'the drowned-dark forest — follow the lanterns',
+    id: 'undergrove', name: 'UNDERGROVE', sub: 'lantern hollow · root caves · blackout · firefly deep',
     weathers: ['mist', 'storm', 'golden', 'mist'],
     dark: [[0.115, 0.26], [0.36, 0.60]],
     surge: [[0.815, 0.98]], surgeCol: [0.55, 1.0, 0.45],
@@ -949,12 +949,12 @@ const LEVELS = {
     ],
   },
   canopy: {
-    id: 'canopy', name: 'CANOPY RUN', sub: 'the flooded forest — race the treetops',
+    id: 'canopy', name: 'CANOPY RUN', sub: 'birdhouse heights · ropebridge drop · heron crown · sap-rise',
     weathers: ['clear', 'golden', 'clear'],
     surge: [[0.83, 0.985]], surgeCol: [1.0, 0.75, 0.25],
     airGrav: 15, airPop: 2.4,   // floatier launches — CANOPY is the airtime course
     // bright altitude spring: vivid teal water, fresh green banks, washed bright air
-    pal: { deep: [0.08, 0.36, 0.35], shal: [0.44, 0.68, 0.53], fog: [0.80, 0.90, 0.86],
+    pal: { deep: [0.035, 0.30, 0.25], shal: [0.32, 0.64, 0.47], fog: [0.80, 0.90, 0.86],
            ground: [0.29, 0.52, 0.42], tree: [0.27, 0.55, 0.32], skyMul: [1.06, 1.05, 0.98] },
     ctrl: [
       { x:   0, z:    0, y: 76.0, w: 8,   s: 0.7  },  // START/FINISH — treetop pool
@@ -987,7 +987,7 @@ const LEVELS = {
     ],
   },
   porcelain: {
-    id: 'porcelain', name: 'PORCELAIN RUN', sub: 'the bathworks — tub rapids · faucet falls · the drain',
+    id: 'porcelain', name: 'PORCELAIN RUN', sub: 'towel-rack rapids · whale-toy bend · drain · bubble lift',
     weathers: ['mist', 'clear', 'mist'],
     surge: [[0.795, 0.985]], surgeCol: [0.5, 0.9, 1.0],
     // gleaming bathworks: pool-blue water, porcelain-white ground, steam-bright air
@@ -1020,11 +1020,11 @@ const LEVELS = {
     ],
   },
   harbor: {
-    id: 'harbor', name: 'HARBOR RUSH', sub: 'storm drains · tide locks · container quay · king tide',
+    id: 'harbor', name: 'HARBOR RUSH', sub: 'tugboat yard · tide locks · mooring basin · signal quay',
     weathers: ['storm', 'mist', 'golden', 'storm'],
     surge: [[0.855, 0.985]], surgeCol: [1.0, 0.38, 0.10],
-    pal: { deep: [0.025, 0.20, 0.28], shal: [0.12, 0.48, 0.53], fog: [0.82, 0.88, 0.89],
-           ground: [0.53, 0.08, 0.68], tree: [0.50, 0.05, 0.68], skyMul: [1.0, 1.02, 1.04] },
+    pal: { deep: [0.025, 0.20, 0.28], shal: [0.12, 0.48, 0.53], fog: [0.66, 0.76, 0.80],
+           ground: [0.53, 0.08, 0.68], tree: [0.50, 0.05, 0.68], skyMul: [0.92, 0.97, 1.03] },
     ctrl: [
       { x:   0, z:    0, y: 46.0, w: 10, s: 0.8 },  // flood-control start
       { x: -12, z:  -34, y: 45.4, w: 8,  s: 1.3 },  // concrete channel
@@ -1088,6 +1088,14 @@ const COURSE_IDENTITY = IS_PIRATE_TOYBOX?{hook:'CHOOSE A CHANNEL · OUTRUN THE K
   porcelain:  { hook:'SURVIVE THE FAUCET · ESCAPE THE DRAIN', finish:'THE BATHWORKS ARE BEATEN', flyH:9, flySway:3.2, water:'slick' },
   harbor:     { hook:'TIME THE LOCKS · RIDE THE KING TIDE', finish:'HARBOR CONTROL GRANTS CLEARANCE', flyH:10, flySway:5.5, water:'tide' },
 })[LVL.id];
+const COURSE_CHAPTER_CUES=({
+  spillway:[['RANGER REACH',.07],['CEDAR GORGE',.34],['FLOODWORKS',.70]],
+  millrace:[['LOG YARD',.07],['WORKING MILL',.33],['BOILER RUN',.69]],
+  undergrove:[['LANTERN HOLLOW',.07],['ANCIENT ROOTS',.30],['FIREFLY DEEP',.69]],
+  canopy:[['BIRDHOUSE HEIGHTS',.08],['ROPEBRIDGE DROP',.42],['HERON CROWN',.71]],
+  porcelain:[['TOWEL-RACK RAPIDS',.07],['WHALE-TOY BEND',.28],['BUBBLE-WAND LIFT',.71]],
+  harbor:[['TUGBOAT YARD',.07],['MOORING BASIN',.34],['SIGNAL QUAY',.69]],
+})[LVL.id]||[];
 const CTRL = LVL.ctrl;
 const ROUTE_CHARACTER={
   spillway:{type:'centripetal',tension:.35,label:'BALANCED RAPIDS'},
@@ -2156,6 +2164,7 @@ function step(dt) {
       const cut=_zone.chute&&CHUTES.find(c=>(!c.lapMin||d.lap>=c.lapMin)&&si>=c.i0&&si<=c.i1);
       if(cut&&!d._inNamedCut){d._inNamedCut=true;(G.shortcutHits||(G.shortcutHits=new Set())).add(`${d.lap}:${cut.name}`);eventToast(`SHORTCUT FOUND · ${cut.name.toUpperCase()}`);}
       if(!cut)d._inNamedCut=false;
+      if(d.lap===0){d._chapterSeen||(d._chapterSeen=new Set());for(const [name,at] of COURSE_CHAPTER_CUES){const mark=Math.round(at*NSAMP);if(!d._chapterSeen.has(name)&&wrapDS(si,mark)>=0&&wrapDS(siPrev,mark)<0){d._chapterSeen.add(name);eventToast(`COURSE SECTOR · ${name}`);}}}
     }
     // hold everyone behind the gates until GO
     if (!racing && t01 < 0.06) _tmpA.multiplyScalar(0.15);
@@ -2566,7 +2575,7 @@ window.SPILLWAY = {
     top: G.results.slice(0, 5).map(d => ({ name: d.name, time: +d.finishTime.toFixed(2) })) }),
   ducks, G,
   testPlace:(si,speed=9,lat=0)=>{const d=ducks[0],i=wrapI(si);d.si=i;d.p.copy(S.pos[i]).addScaledVector(S.side[i],lat);d.y=waterHeightAt(i);d.v.copy(S.tan[i]).multiplyScalar(speed);d.vy=0;d.air=false;d.airT=0;d.finished=false;d.progress=i;return {falls:_fI0,state:window.SPILLWAY.state()};},
-  courseIdentity:()=>({id:LVL.id,route:ROUTE_STYLE.label,splits:COURSE_SPLITS.map(s=>({name:s.name,lanes:s.lanes.map(l=>l.name)})),splitChutes:CHUTES.filter(c=>c.split).length,islands:ISLANDS.length,bathFloaters:LVL.id==='porcelain'?BATH_FLOATERS.length:0,harborLandmarks:LVL.id==='harbor'?(window._harborLandmarks?.length||0):0,harborProps:LVL.id==='harbor'?(window._harborProps?.length||0):0}),
+  courseIdentity:()=>({id:LVL.id,route:ROUTE_STYLE.label,splits:COURSE_SPLITS.map(s=>({name:s.name,lanes:s.lanes.map(l=>l.name)})),splitChutes:CHUTES.filter(c=>c.split).length,islands:ISLANDS.length,chapters:COURSE_CHAPTERS.map(c=>c.kind),dressing:COURSE_DRESSING.length,wildlife:COURSE_LIFE.map(l=>l.kind),bathFloaters:LVL.id==='porcelain'?BATH_FLOATERS.length:0,harborLandmarks:LVL.id==='harbor'?(window._harborLandmarks?.length||0):0,harborProps:LVL.id==='harbor'?(window._harborProps?.length||0):0}),
   dbg: () => ({ cam: camera.position.toArray().map(v => +v.toFixed(1)), fov: +camera.fov.toFixed(1),
     quat: camera.quaternion.toArray().map(v => +v.toFixed(3)), up: camera.up.toArray() }),
   three: () => ({ renderer, scene, camera, sun, skyMesh, waterMat }),
@@ -2587,7 +2596,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 // White tile plus pale fog was clipping Porcelain's toys and channel edges.
 // Harbor keeps a little more punch for its darker industrial palette.
-renderer.toneMappingExposure = LVL.id === 'porcelain' ? .76 : LVL.id === 'harbor' ? .88 : LVL.id === 'canopy' ? .90 : 1.0;
+renderer.toneMappingExposure = LVL.id === 'porcelain' ? .76 : LVL.id === 'harbor' ? .88 : LVL.id === 'canopy' ? .84 : 1.0;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
@@ -2898,11 +2907,12 @@ scene.add(waterReflectCam);
         float rainSeed=n21(rainId),rainLife=fract(uT*.72+rainSeed),rainRad=rainLife*.34;
         float rr=abs(length(rainCell-.5)-rainRad),rainRing=smoothstep(.018,.004,rr)*(1.-rainLife)*step(.78,n21(rainId+19.7));
         c+=vec3(.38,.52,.54)*rainRing*uRain*detail*.58;
-        if(uBiome>1.5&&uBiome<2.5)c+=uSurgeCol*pow(noise(vec2(vUv.x*18.,flow*7.)),8.)*.28;
-        if(uBiome>.5&&uBiome<1.5)c+=vec3(.10,.07,.025)*sin(flow*2.+vUv.x*8.)*.035;
-        if(uBiome>2.5&&uBiome<3.5)c*=.94+.06*sin(vUv.x*24.+flow*.8);
-        if(uBiome>3.5)c+=vec3(.12,.16,.17)*pow(noise(vec2(vUv.x*26.,flow*11.)),10.)*detail;
-        if(uBiome>4.5){c=mix(c,vec3(.015,.20,.25),.18);c+=vec3(.85,.32,.06)*pow(noise(vec2(vUv.x*34.+flow,flow*13.)),14.)*.18*uEvent;}
+        if(uBiome<.5){float snowmelt=smoothstep(.84,.96,noise(vec2(vUv.x*38.,flow*3.2)));c+=vec3(.16,.22,.21)*snowmelt*detail*.34;}
+        if(uBiome>.5&&uBiome<1.5){float oil=.5+.5*sin(flow*2.+vUv.x*8.);c+=mix(vec3(.025,.075,.055),vec3(.12,.055,.018),oil)*.055*detail;}
+        if(uBiome>1.5&&uBiome<2.5){float glowRoot=pow(noise(vec2(vUv.x*18.,flow*7.)),8.);c+=uSurgeCol*glowRoot*.32;c+=vec3(.12,.03,.18)*pow(noise(vec2(vUv.x*9.+17.,flow*4.)),10.)*.14;}
+        if(uBiome>2.5&&uBiome<3.5){float leafShade=.92+.08*sin(vUv.x*24.+flow*.8);c*=leafShade;c+=vec3(.17,.12,.025)*pow(noise(vec2(vUv.x*46.,flow*5.)),15.)*detail*.36;}
+        if(uBiome>3.5&&uBiome<4.5){float bathGlint=pow(noise(vec2(vUv.x*26.,flow*11.)),10.)*detail;c+=vec3(.12,.16,.17)*bathGlint;float film=.5+.5*sin(depth*16.+flow*.55);c+=mix(vec3(.035,.012,.06),vec3(.01,.045,.055),film)*detail;}
+        if(uBiome>4.5){c=mix(c,vec3(.015,.20,.25),.18);float harborLamp=pow(noise(vec2(vUv.x*34.+flow,flow*13.)),14.);c+=vec3(.85,.32,.06)*harborLamp*.12*(.28+.72*uEvent);}
         c+=uSurgeCol*uEvent*.08*(.5+.5*sin(flow*7.-uT*5.));
         // shore: crisp bright waterline rim + breathing lace, then alpha-fade into the sand
         float shore = min(vUv.x, 1. - vUv.x);
@@ -3850,7 +3860,7 @@ if (LVL.id === 'millrace') {
     // terrain so the vault seals shut (no floating rim, no side gaps, no clipping)
     {
       const i0 = Math.round(d0 * NSAMP), i1 = Math.round(d1 * NSAMP);
-      const pos2 = [], idx2 = [];
+      const pos2 = [], uv2 = [], idx2 = [];
       const COLS = [-1.6, -1.15, -0.7, -0.35, 0, 0.35, 0.7, 1.15, 1.6];
       const archAt = (cx2) => 10.2 - Math.pow(Math.abs(cx2) / 1.6, 1.7) * 13.5;   // +10.2 centre → -3.3 buried edge
       let row = 0;
@@ -3859,10 +3869,12 @@ if (LVL.id === 'millrace') {
         // mouths flare slightly upward so the entrance reads as an open arch
         const dEnd = Math.min(i - i0, i1 - i) / 30;
         const flare = (1 - Math.min(1, dEnd)) * 1.6;
-        for (const cx2 of COLS) {
+        for (let cc2=0;cc2<COLS.length;cc2++) {
+          const cx2=COLS[cc2];
           const p = S.pos[i].clone().addScaledVector(S.side[i], cx2 * wSpan2 * 0.62);
           const arch = archAt(cx2) + flare;
           pos2.push(p.x, waterHeightAt(i) + arch, p.z);
+          uv2.push(cc2/(COLS.length-1),(i-i0)/Math.max(1,i1-i0)*5.0);
         }
         if (i + 4 <= i1) {
           const k = row * COLS.length;
@@ -3873,17 +3885,24 @@ if (LVL.id === 'millrace') {
       }
       const cg = new THREE.BufferGeometry();
       cg.setAttribute('position', new THREE.Float32BufferAttribute(pos2, 3));
+      cg.setAttribute('uv', new THREE.Float32BufferAttribute(uv2, 2));
       cg.setIndex(idx2); cg.computeVertexNormals();
       // two-faced vault: dark rock INSIDE, mossy hillside OUTSIDE — from beyond the
       // cave it reads as terrain swallowing the river, not a floating grey slab
-      const ceilIn = new THREE.Mesh(cg, new THREE.MeshStandardMaterial({ color: 0x596361, map: ROCKTEX, emissive:0x101d1b, emissiveIntensity:.72, roughness:.96, side: THREE.FrontSide, flatShading: true }));
-      const ceilOut = new THREE.Mesh(cg, new THREE.MeshLambertMaterial({ color: 0x59634c, map: ROCKTEX, side: THREE.BackSide, flatShading: true }));
+      const ceilIn = new THREE.Mesh(cg, new THREE.MeshStandardMaterial({ color: 0x687471, map: ROCKTEX, bumpMap:ROCKTEX, bumpScale:.46, emissive:0x243c38, emissiveIntensity:1.12, roughness:.96, side: THREE.FrontSide, flatShading: true }));
+      const ceilOut = new THREE.Mesh(cg, new THREE.MeshStandardMaterial({ color: 0x667054, map: ROCKTEX, bumpMap:ROCKTEX, bumpScale:.32, emissive:0x243329, emissiveIntensity:.74, roughness:.98, side: THREE.BackSide, flatShading: true }));
       scene.add(ceilIn, ceilOut);
       // Low practical cave lights reveal the arch form without making the
       // underground course read like daylight or a flat black ceiling.
       for(let li=1;li<=3;li++){
-        const i=Math.round(i0+(i1-i0)*li/4),p=S.pos[i],light=new THREE.PointLight(li%2?0x68d9d5:0xb985ef,1.05,24,2);
+        const i=Math.round(i0+(i1-i0)*li/4),p=S.pos[i],light=new THREE.PointLight(li%2?0x68d9d5:0xb985ef,1.28,27,2);
         light.position.set(p.x,waterHeightAt(i)+4.2,p.z);scene.add(light);
+      }
+      // Broad luminous root seams break up the cave roof at racing-camera scale;
+      // the tiny glowworms remain as close detail rather than carrying the whole ceiling.
+      for(let gr=1;gr<=8;gr++){
+        const i=Math.round(i0+(i1-i0)*gr/9),lat=Math.sin(gr*1.7)*S.w[i]*.42,p=S.pos[i].clone().addScaledVector(S.side[i],lat),rootGlow=new THREE.Mesh(new THREE.CylinderGeometry(.075,.13,5.8,7),new THREE.MeshBasicMaterial({color:gr%3?0x63e6d5:0xb685ee}));
+        rootGlow.position.set(p.x,waterHeightAt(i)+8.25,p.z);rootGlow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),S.tan[i]);rootGlow.rotation.y+=Math.sin(gr)*.28;scene.add(rootGlow);
       }
       // stalactites: centre-channel only, tips clamped well above the camera line
       for (let s2 = 0; s2 < 10; s2++) {
@@ -3901,7 +3920,7 @@ if (LVL.id === 'millrace') {
       }
       // glowworm constellations cling to the vault — the cave's own starfield
       const nGw = 60;
-      const gwIM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.07, 5, 4),
+      const gwIM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.10, 6, 4),
         new THREE.MeshBasicMaterial({ color: 0xffffff }), nGw);
       const gwM = new THREE.Matrix4(), gwQ = new THREE.Quaternion(), gwS = new THREE.Vector3(1, 1, 1), gwC = new THREE.Color();
       for (let gw = 0; gw < nGw; gw++) {
@@ -4123,7 +4142,7 @@ if (LVL.id === 'millrace') {
   const lam = c => new THREE.MeshLambertMaterial({color:c});
   const metal = c => new THREE.MeshStandardMaterial({color:c,roughness:.48,metalness:.55});
   // Flood-control walls and sodium lamps frame the municipal channel.
-  for(let n=0;n<18;n++){
+  for(let n=0;n<12;n++){
     const i=Math.round((.02+n*.046)*NSAMP),sgn=n%2?1:-1,ob=6.5,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,ob,sgn);
     const wall=new THREE.Mesh(rbox(6,1.8,.55,.16,3),lam(n%3?0x66aeb3:0xe98261));wall.position.set(p.x,gy+.85,p.z);wall.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z)-Math.PI/2;scene.add(wall);
     if(n%3===0){const post=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,4.2,6),metal(0x27343a));post.position.set(p.x,gy+2.1,p.z);const lamp=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),new THREE.MeshBasicMaterial({color:0xffb23e}));lamp.position.set(p.x,gy+4.25,p.z);scene.add(post,lamp);}
@@ -4381,6 +4400,75 @@ if(!IS_BATHWORLD&&LVL.id!=='spillway'&&LVL.id!=='canopy'){
   }
 }
 
+// ---------- authored course chapters: large, readable silhouettes that make each
+// third of a lap feel like a different place. Every anchor is resolved from the
+// bank surface and kept beyond the racing water, so these never become invisible
+// walls or camera-blocking route furniture.
+const COURSE_CHAPTERS=[];
+{
+  const chapterAt=(t2,sgn=1,ob=5)=>{const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob));return{i,p,y:waterHeightAt(i)+bankH(i,ob,sgn),yaw:Math.atan2(S.tan[i].x,S.tan[i].z)};};
+  const chapterAccent={spillway:'#ffd23f',millrace:'#d69a3a',undergrove:'#79f0c2',canopy:'#ffc04a',porcelain:'#55cfee',harbor:'#ff6b21'}[LVL.id];
+  const placePlaque=(label,t2,sgn)=>{const a=chapterAt(t2,sgn,1.6),c=document.createElement('canvas');c.width=512;c.height=112;const x=c.getContext('2d');x.fillStyle='#071b2b';x.fillRect(0,0,c.width,c.height);x.strokeStyle=chapterAccent;x.lineWidth=12;x.strokeRect(6,6,c.width-12,c.height-12);x.fillStyle='#fff8e7';x.font="900 48px 'Barlow Condensed', Impact, sans-serif";x.textAlign='center';x.textBaseline='middle';x.fillText(label,256,57,455);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;const pg=new THREE.Group(),board=new THREE.Mesh(new THREE.PlaneGeometry(5.6,1.22),new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide})),postM=new THREE.MeshStandardMaterial({color:0x26343a,roughness:.7,metalness:.28});board.position.y=2.65;pg.add(board);for(const xx of [-2.15,2.15]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.08,.12,2.6,7),postM);post.position.set(xx,1.3,.08);pg.add(post);}pg.position.set(a.p.x,a.y,a.p.z);pg.rotation.y=a.yaw;pg.userData.groundY=a.y;scene.add(pg);return pg;};
+  const addChapter=(kind,t2,sgn,ob,g,animate=null)=>{const a=chapterAt(t2,sgn,ob),label=COURSE_CHAPTER_CUES[COURSE_CHAPTERS.length]?.[0]||kind.replaceAll('-',' ').toUpperCase();g.position.set(a.p.x,a.y,a.p.z);g.rotation.y=a.yaw;g.userData.courseChapter=kind;g.userData.groundY=a.y;scene.add(g);const plaque=placePlaque(label,t2,sgn);COURSE_CHAPTERS.push({kind,g,plaque,animate,phase:t2*19});return g;};
+  const addWaterChapter=(kind,t2,sgn,inset,g,animate=null)=>{const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]-inset)),y=waterHeightAt(i),label=COURSE_CHAPTER_CUES[COURSE_CHAPTERS.length]?.[0]||kind.replaceAll('-',' ').toUpperCase();g.position.set(p.x,y,p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);g.userData.courseChapter=kind;g.userData.groundY=y;scene.add(g);const plaque=placePlaque(label,t2,sgn);COURSE_CHAPTERS.push({kind,g,plaque,animate,phase:t2*19,baseY:y});return g;};
+  const std=(c,r=.72,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+  const glow=c=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.82,depthWrite:false});
+  const trunk=std(0x60452e,.94),darkWood=std(0x3b2c23,.9),leaf=std(0x3e7d32,.86),rope=std(0x9b774c,.96);
+  const signpost=(col=0xffd23f)=>{const g=new THREE.Group(),post=new THREE.Mesh(new THREE.CylinderGeometry(.1,.15,3,7),darkWood),board=new THREE.Mesh(rbox(3,.9,.24,.12,2),std(col,.72));post.position.y=1.5;board.position.y=2.65;g.add(post,board);return g;};
+
+  if(LVL.id==='spillway'){
+    // Ranger station at the opening, a timber lookout over the gorge, and a
+    // monumental flood-control wheel before the final climb.
+    {const g=new THREE.Group(),hut=new THREE.Mesh(rbox(7,4.2,5,.28,4),std(0x9b633f,.9)),roof=new THREE.Mesh(new THREE.ConeGeometry(5.2,2.2,4),std(0x294b36,.92));hut.position.y=2.1;roof.position.y=5;roof.rotation.y=Math.PI/4;g.add(hut,roof,signpost());addChapter('ranger-station',.08,1,5,g);}
+    {const g=new THREE.Group();for(const x of [-2,2]){const leg=new THREE.Mesh(new THREE.CylinderGeometry(.18,.3,10,7),trunk);leg.position.set(x,5,0);g.add(leg);}const deck=new THREE.Mesh(rbox(5,.5,4,.12,3),darkWood);deck.position.y=9.2;const roof=new THREE.Mesh(new THREE.ConeGeometry(3.5,1.8,4),std(0x31553a));roof.position.y=12.1;roof.rotation.y=Math.PI/4;g.add(deck,roof);addChapter('gorge-lookout',.39,-1,5,g);}
+    {const g=new THREE.Group(),wheelParts=[],wheel=new THREE.Mesh(new THREE.TorusGeometry(3.3,.35,9,28),std(0x5d6767,.48,.42));wheel.position.y=4;wheel.rotation.y=Math.PI/2;g.add(wheel);wheelParts.push(wheel);for(const x of [-3.7,3.7]){const support=new THREE.Mesh(new THREE.CylinderGeometry(.34,.62,4.2,8),std(0x555b58,.8));support.position.set(x,2.1,0);g.add(support);}for(let k=0;k<8;k++){const spoke=new THREE.Mesh(new THREE.BoxGeometry(.18,6.2,.16),std(0xd0b05a,.5,.25));spoke.position.y=4;spoke.rotation.z=k*Math.PI/4;g.add(spoke);wheelParts.push(spoke);}addChapter('flood-wheel',.78,1,4.5,g,{wheelParts});}
+  }else if(LVL.id==='millrace'){
+    {const g=new THREE.Group();for(let row=0;row<3;row++)for(let q=0;q<5-row;q++){const log=new THREE.Mesh(new THREE.CylinderGeometry(.42,.48,6.5,9),std(0x936037,.94));log.rotation.z=Math.PI/2;log.position.set((q-(4-row)/2)*1.15,.5+row*.78,0);g.add(log);}addChapter('log-yard',.10,1,3.8,g);}
+    {const g=new THREE.Group(),wheelParts=[],house=new THREE.Mesh(rbox(9,5,6,.25,4),std(0x6d5542,.92)),roof=new THREE.Mesh(new THREE.ConeGeometry(6.2,2.4,4),std(0x3e4847,.72,.18)),wheel=new THREE.Mesh(new THREE.TorusGeometry(3.1,.38,8,24),std(0x684830,.9));house.position.y=2.5;roof.position.y=6;roof.rotation.y=Math.PI/4;wheel.position.set(5.1,2.7,0);wheel.rotation.y=Math.PI/2;g.add(house,roof,wheel);wheelParts.push(wheel);for(let k=0;k<10;k++){const paddle=new THREE.Mesh(new THREE.BoxGeometry(.42,5.5,.28),std(0x855a36,.88));paddle.position.copy(wheel.position);paddle.rotation.z=k*Math.PI/10;g.add(paddle);wheelParts.push(paddle);}addChapter('working-mill',.36,-1,5.5,g,{wheelParts});}
+    {const g=new THREE.Group();for(let q=0;q<4;q++){const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.75,.75,8+q*1.2,12),std(q%2?0xa45a35:0x53616a,.45,.46));pipe.position.set((q-1.5)*1.7,(8+q*1.2)/2,0);g.add(pipe);}const steam=new THREE.Mesh(new THREE.SphereGeometry(1.2,10,7),new THREE.MeshBasicMaterial({color:0xe8eee8,transparent:true,opacity:.28,depthWrite:false}));steam.position.set(2.55,12.5,0);g.add(steam);addChapter('boiler-yard',.72,1,4.5,g,{steam});}
+  }else if(LVL.id==='undergrove'){
+    {const g=new THREE.Group();for(let q=0;q<7;q++){const h=1.3+q*.22,stem=new THREE.Mesh(new THREE.CylinderGeometry(.12,.2,h,7),std(0xd8c9a8,.8)),cap=new THREE.Mesh(new THREE.SphereGeometry(.55+(q%3)*.2,9,5,0,Math.PI*2,0,Math.PI*.52),glow(q%2?0x72ffe1:0xb28cff));stem.position.set((q-3)*.85,h*.5,0);cap.position.set((q-3)*.85,h+.15,0);g.add(stem,cap);}addChapter('lantern-mushrooms',.08,-1,3,g,{caps:g.children.filter((_,i)=>i%2)});}
+    {const g=new THREE.Group();for(const s of [-1,1]){const root=new THREE.Mesh(new THREE.CylinderGeometry(.45,1.15,13,8),trunk);root.position.set(s*3,5.6,0);root.rotation.z=s*.26;g.add(root);}const arch=new THREE.Mesh(new THREE.TorusGeometry(4.6,.7,8,24,Math.PI),trunk);arch.position.y=10;arch.rotation.z=Math.PI;g.add(arch);for(let q=0;q<8;q++){const lantern=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),glow(0x7fffe4));lantern.position.set((q-3.5)*.95,9.2+Math.cos(q)*1.5,.4);g.add(lantern);}addChapter('ancient-root-gate',.32,1,5,g);}
+    {const g=new THREE.Group(),stump=new THREE.Mesh(new THREE.CylinderGeometry(3.1,4.4,3.8,10),std(0x49331f,.96));stump.position.y=1.8;g.add(stump);for(let q=0;q<14;q++){const firefly=new THREE.Mesh(new THREE.SphereGeometry(.1,6,4),glow(q%3?0x82ffc5:0xd3ff72));firefly.userData.a=q/14*Math.PI*2;firefly.position.set(Math.cos(firefly.userData.a)*4,3+q%4,Math.sin(firefly.userData.a)*3);g.add(firefly);}addChapter('firefly-stump',.73,-1,4.5,g,{fireflies:g.children.slice(1)});}
+  }else if(LVL.id==='canopy'){
+    {const g=new THREE.Group(),house=new THREE.Mesh(new THREE.CylinderGeometry(1.7,1.9,3.7,9),std(0xc48b4e,.88)),hole=new THREE.Mesh(new THREE.CircleGeometry(.65,18),std(0x1d2922));house.position.y=5;hole.position.set(0,5.25,1.86);const roof=new THREE.Mesh(new THREE.ConeGeometry(2.5,2.2,9),std(0x4e7e39));roof.position.y=8;g.add(house,hole,roof);for(const x of [-2.8,2.8]){const limb=new THREE.Mesh(new THREE.CylinderGeometry(.25,.5,10,7),trunk);limb.position.set(x,4,0);limb.rotation.z=x*.08;g.add(limb);}addChapter('giant-birdhouse',.11,1,4.5,g);}
+    {const g=new THREE.Group();for(let q=0;q<9;q++){const plank=new THREE.Mesh(rbox(1.2,.18,3.2,.08,2),std(q%2?0x8d643e:0xa97845,.9));plank.position.set((q-4)*1.25,5+Math.cos((q-4)*.35)*.8,0);plank.rotation.z=Math.sin(q*.7)*.06;g.add(plank);}for(const x of [-5.4,5.4]){const support=new THREE.Mesh(new THREE.CylinderGeometry(.35,.7,10,8),trunk);support.position.set(x,5,0);g.add(support);}for(const z of [-1.6,1.6]){const cable=new THREE.Mesh(new THREE.TorusGeometry(6,.08,5,24,Math.PI),rope);cable.position.set(0,7,z);cable.rotation.z=Math.PI;g.add(cable);}addChapter('rope-bridge',.45,-1,5,g,{planks:g.children.slice(0,9)});}
+    {const g=new THREE.Group(),nest=new THREE.Mesh(new THREE.TorusGeometry(3,.7,8,20),std(0x7d6039,.96));nest.rotation.x=Math.PI/2;nest.position.y=1;g.add(nest);for(const x of [-1.25,0,1.25]){const egg=new THREE.Mesh(new THREE.SphereGeometry(.8,12,9),std(0x9ed7dd,.48));egg.scale.y=1.35;egg.position.set(x,1.6,0);g.add(egg);}addChapter('heron-nest',.75,1,4,g);}
+  }else if(LVL.id==='porcelain'){
+    {const g=new THREE.Group(),rail=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,12,12),std(0xd9e9ec,.28,.62));rail.rotation.z=Math.PI/2;rail.position.y=6;g.add(rail);for(const x of [-5.4,5.4]){const mount=new THREE.Mesh(new THREE.CylinderGeometry(.5,.7,.55,12),std(0xe9f2f3,.24,.55));mount.rotation.x=Math.PI/2;mount.position.set(x,6,0);g.add(mount);}const towel=new THREE.Mesh(new THREE.PlaneGeometry(8,6,12,4),std(0x5bc7c8,.86));towel.position.set(0,3.1,.15);g.add(towel);addChapter('towel-rail',.10,1,6,g);}
+    {const g=new THREE.Group(),whale=new THREE.Mesh(new THREE.SphereGeometry(2.4,16,10),std(0x5a9bd5,.38));whale.scale.set(1.55,.8,1);whale.position.y=1.15;const eye=new THREE.Mesh(new THREE.SphereGeometry(.16,8,6),std(0x152a35));eye.position.set(1.9,1.6,1.25);const tail=new THREE.Mesh(new THREE.ConeGeometry(1.15,2,4),std(0x5a9bd5,.38));tail.position.set(-3.5,1.15,0);tail.rotation.z=-Math.PI/2;const spout=new THREE.Mesh(new THREE.TorusGeometry(1.2,.12,7,18,Math.PI),glow(0xa9f3ff));spout.position.y=4.15;spout.rotation.z=Math.PI/2;g.add(whale,eye,tail,spout);addWaterChapter('whale-toy',.31,-1,.9,g,{whale,spout});}
+    {const g=new THREE.Group(),wand=new THREE.Mesh(new THREE.TorusGeometry(2.2,.22,10,28),std(0xf07aa7,.42));wand.position.y=5.5;const handle=new THREE.Mesh(new THREE.CylinderGeometry(.18,.25,7,9),std(0x7ac7ee,.45));handle.position.y=1.6;g.add(wand,handle);for(let q=0;q<7;q++){const bubble=new THREE.Mesh(new THREE.SphereGeometry(.35+q*.09,10,7),new THREE.MeshPhysicalMaterial({color:0xdffcff,transparent:true,opacity:.3,roughness:.04,transmission:.3,depthWrite:false}));bubble.position.set(Math.sin(q*2)*2.8,7+q*1.25,Math.cos(q)*1.2);g.add(bubble);}addChapter('bubble-wand',.76,1,4.5,g,{bubbles:g.children.slice(2)});}
+  }else if(LVL.id==='harbor'){
+    {const g=new THREE.Group(),hull=new THREE.Mesh(rbox(10,2.2,4.4,.45,5),std(0x204a57,.54,.25)),cab=new THREE.Mesh(rbox(4,3.5,3.2,.25,4),std(0xf1ead7,.65)),stack=new THREE.Mesh(new THREE.CylinderGeometry(.45,.55,3,10),std(0xe85f3d,.46,.35));hull.position.y=1.1;cab.position.set(1.3,3.3,0);stack.position.set(-.5,5.5,0);g.add(hull,cab,stack);addChapter('tug-yard',.11,1,6,g,{hull});}
+    {const g=new THREE.Group();for(let q=0;q<7;q++){const pile=new THREE.Mesh(new THREE.CylinderGeometry(.22,.28,7+(q%3),8),std(0x4c382a,.94));pile.position.set((q-3)*1.25,(7+(q%3))/2,Math.sin(q)*1.4);g.add(pile);}for(let q=0;q<4;q++){const buoy=new THREE.Mesh(new THREE.SphereGeometry(.55,10,7),std(q%2?0xf2eee1:0xe85f3d,.5));buoy.position.set((q-1.5)*1.5,5.5+q%2,.4);g.add(buoy);}addChapter('mooring-forest',.38,-1,4,g);}
+    {const g=new THREE.Group(),mast=new THREE.Mesh(new THREE.CylinderGeometry(.18,.3,15,9),std(0x41545a,.38,.48));mast.position.y=7.5;g.add(mast);for(let q=0;q<7;q++){const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.3,.75),new THREE.MeshBasicMaterial({color:q%2?0xff6b21:0xf1e3bf,side:THREE.DoubleSide}));flag.position.set(.8,12-q*1.2,0);g.add(flag);}const bell=new THREE.Mesh(new THREE.CylinderGeometry(.55,.9,1.3,10),std(0xd5a83c,.35,.58));bell.position.set(0,13.2,0);g.add(bell);addChapter('signal-mast',.73,1,4.5,g,{flags:g.children.slice(1,8),bell});}
+  }
+}
+
+// Repeating course-language details connect the large chapter landmarks. They
+// are grounded beyond the water edge and carry no gameplay collision.
+const COURSE_DRESSING=[];
+{
+  const count=MOBILE_GPU?4:8,paint=c=>new THREE.MeshStandardMaterial({color:c,roughness:.78,metalness:.08});
+  for(let q=0;q<count;q++){
+    const t2=(.145+q*.107)%1,i=Math.round(t2*NSAMP),sgn=q%2?1:-1,ob=2.8+(q%3)*.65,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,ob,sgn),g=new THREE.Group();
+    if(LVL.id==='spillway'){
+      const post=new THREE.Mesh(new THREE.CylinderGeometry(.09,.15,2.5,7),paint(0x5d432c)),mark=new THREE.Mesh(new THREE.ConeGeometry(.38,.9,3),paint(q%2?0xffd23f:0xe4572e));post.position.y=1.25;mark.position.y=2.65;mark.rotation.z=Math.PI;g.add(post,mark);
+    }else if(LVL.id==='millrace'){
+      const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.18,.23,2.2,8),paint(q%2?0x9c5a36:0x556269)),valve=new THREE.Mesh(new THREE.TorusGeometry(.52,.12,7,14),new THREE.MeshStandardMaterial({color:0xd5a43d,roughness:.42,metalness:.48}));pipe.position.y=1.1;valve.position.y=2.25;valve.rotation.y=Math.PI/2;g.add(pipe,valve);
+    }else if(LVL.id==='undergrove'){
+      for(let k=0;k<3;k++){const shard=new THREE.Mesh(new THREE.ConeGeometry(.22+k*.06,1.2+k*.42,5),new THREE.MeshStandardMaterial({color:k%2?0x75ffe2:0xa887ff,emissive:k%2?0x16483f:0x28194d,emissiveIntensity:.72,roughness:.3}));shard.position.set((k-1)*.34,(1.2+k*.42)/2,Math.sin(k)*.18);shard.rotation.z=(k-1)*.15;g.add(shard);}
+    }else if(LVL.id==='canopy'){
+      const nest=new THREE.Mesh(new THREE.TorusGeometry(.72,.18,7,16),paint(0x765535));nest.rotation.x=Math.PI/2;nest.position.y=.45;g.add(nest);for(const x of [-.26,.26]){const egg=new THREE.Mesh(new THREE.SphereGeometry(.2,8,6),paint(q%2?0xa9d8df:0xf4dfad));egg.scale.y=1.25;egg.position.set(x,.72,0);g.add(egg);}
+    }else if(LVL.id==='porcelain'){
+      const bottle=new THREE.Mesh(rbox(.9,1.8,.7,.16,3),paint(q%2?0x79c9bd:0xf08bb2)),cap=new THREE.Mesh(new THREE.CylinderGeometry(.24,.3,.35,9),paint(q%2?0xf9f2d5:0x72aee8));bottle.position.y=.9;cap.position.y=1.98;g.add(bottle,cap);
+    }else if(LVL.id==='harbor'){
+      const crate=new THREE.Mesh(rbox(1.65,1.15,1.3,.14,3),paint(q%3===0?0xe05f3e:q%3===1?0x2d8792:0xd3a33e));crate.position.y=.58;g.add(crate);for(const x of [-.48,.48]){const strap=new THREE.Mesh(new THREE.BoxGeometry(.12,1.18,1.34),new THREE.MeshStandardMaterial({color:0x27373c,roughness:.48,metalness:.36}));strap.position.set(x,.59,0);g.add(strap);}
+    }
+    g.position.set(p.x,gy,p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z)+(q%3-1)*.16;g.userData.groundY=gy;scene.add(g);COURSE_DRESSING.push(g);
+  }
+}
+
 // ---------- course hero events: one unmistakable transformation landmark per world
 window._heroEvent=null;
 if(LVL.id!=='spillway'){
@@ -4564,11 +4652,28 @@ const TRACK_FANS=[], FISH_SHADOWS=[];
     TRACK_FANS.push({grp,baseY:grp.position.y,ph:rand()*6});
   }
   const fishG=new THREE.CapsuleGeometry(.08,.38,3,6);fishG.rotateX(Math.PI/2);
-  for(let n=0;n<18;n++){
+  const shadowN=LVL.id==='porcelain'?0:LVL.id==='harbor'?12:18;
+  for(let n=0;n<shadowN;n++){
     const i=Math.round(((.08+n*.051)%1)*NSAMP), mat=new THREE.MeshBasicMaterial({color:n%3===0?0xe4a844:0x244e5d,transparent:true,opacity:.34,depthWrite:false});
     const mesh=new THREE.Mesh(fishG,mat);scene.add(mesh);
     FISH_SHADOWS.push({mesh,i,lat:randRange(-S.w[i]*.62,S.w[i]*.62),ph:rand()*6,speed:randRange(.45,.9)});
   }
+}
+
+// Small course-specific wildlife vignettes add life without becoming hazards.
+// They stay at the waterline, use no collision bodies, and are sparse on mobile.
+const COURSE_LIFE=[];
+{
+  const lifeN=MOBILE_GPU?2:3,lifeAt=(t2,sgn,inset=1.1)=>{const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]-inset));return{i,p,y:waterHeightAt(i),yaw:Math.atan2(S.tan[i].x,S.tan[i].z)};};
+  const addLife=(kind,t2,sgn,g,extra={})=>{const a=lifeAt(t2,sgn);g.position.set(a.p.x,a.y+.24,a.p.z);g.rotation.y=a.yaw+(sgn<0?Math.PI:0);scene.add(g);COURSE_LIFE.push({kind,g,baseY:g.position.y,ph:t2*23,...extra});};
+  const mat=c=>new THREE.MeshLambertMaterial({color:c});
+  const swimmer=(kind,col,accent,t2,sgn)=>{const g=new THREE.Group(),body=new THREE.Mesh(new THREE.CapsuleGeometry(.22,.72,3,8),mat(col)),head=new THREE.Mesh(new THREE.SphereGeometry(.25,9,7),mat(col));body.rotation.x=Math.PI/2;head.position.set(0,.2,.55);g.add(body,head);if(kind==='beaver'){const tail=new THREE.Mesh(new THREE.SphereGeometry(.28,8,5),mat(0x4f3828));tail.scale.set(.7,.18,1.5);tail.position.set(0,.04,-.7);g.add(tail);}else if(kind==='seal'){const nose=new THREE.Mesh(new THREE.SphereGeometry(.08,7,5),mat(accent));nose.position.set(0,.23,.8);g.add(nose);}else{const paw=new THREE.Mesh(new THREE.SphereGeometry(.11,7,5),mat(accent));paw.position.set(.24,.05,.25);g.add(paw);}g.scale.setScalar(1.28);addLife(kind,t2,sgn,g,{head,wakeT:randRange(.4,1.4)});};
+  if(LVL.id==='spillway')for(let q=0;q<lifeN;q++)swimmer('otter',0x79533a,0x3e2e25,[.18,.61,.87][q],q%2?1:-1);
+  else if(LVL.id==='millrace')for(let q=0;q<lifeN;q++)swimmer('beaver',0x6d4a32,0x36281f,[.14,.66,.84][q],q%2?-1:1);
+  else if(LVL.id==='undergrove')for(let q=0;q<lifeN+1;q++){const g=new THREE.Group(),body=new THREE.Mesh(new THREE.CapsuleGeometry(.08,.32,2,5),mat(0x252238));body.rotation.x=Math.PI/2;g.add(body);for(const x of [-1,1]){const wing=new THREE.Mesh(new THREE.PlaneGeometry(.52,.24),new THREE.MeshBasicMaterial({color:0x57486f,side:THREE.DoubleSide}));wing.position.x=x*.3;wing.rotation.y=x*.32;g.add(wing);}g.scale.setScalar(1.4);addLife('bat',[.16,.24,.43,.51][q],q%2?1:-1,g,{wings:g.children.slice(1),home:null});g.position.y+=4+q*.55;COURSE_LIFE[COURSE_LIFE.length-1].baseY=g.position.y;COURSE_LIFE[COURSE_LIFE.length-1].home=g.position.clone();}
+  else if(LVL.id==='canopy')for(let q=0;q<lifeN;q++){const g=new THREE.Group(),body=new THREE.Mesh(new THREE.SphereGeometry(.28,9,7),mat([0xe4a844,0x4b94b8,0xd76a52][q])),beak=new THREE.Mesh(new THREE.ConeGeometry(.09,.28,5),mat(0xffc04a));beak.rotation.x=Math.PI/2;beak.position.set(0,.03,.38);g.add(body,beak);for(const x of [-1,1]){const wing=new THREE.Mesh(new THREE.PlaneGeometry(.42,.2),mat(q%2?0x315f68:0x6d452d));wing.position.x=x*.3;g.add(wing);}g.scale.setScalar(1.32);addLife('bird',[.19,.48,.79][q],q%2?1:-1,g,{wings:g.children.slice(2)});g.position.y+=2.8;COURSE_LIFE[COURSE_LIFE.length-1].baseY=g.position.y;}
+  else if(LVL.id==='porcelain')for(let q=0;q<lifeN;q++){const g=new THREE.Group(),body=new THREE.Mesh(new THREE.SphereGeometry(.35,10,7),mat([0x72cc68,0xf08bb2,0x6cb8e8][q])),eyeM=mat(0xffffff);body.scale.set(1.2,.6,1);g.add(body);for(const x of [-.16,.16]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.1,7,5),eyeM);eye.position.set(x,.28,.22);g.add(eye);}g.scale.setScalar(1.38);addLife('squirter',[.20,.57,.86][q],q%2?-1:1,g);}
+  else if(LVL.id==='harbor')for(let q=0;q<lifeN;q++)swimmer('seal',0x66787e,0x17252a,[.17,.62,.82][q],q%2?1:-1);
 }
 
 // Shortcut marshals and moving gates make alternate lines physical landmarks.
@@ -4581,6 +4686,21 @@ const SHORTCUT_GATES=[], COURSE_CREW=[];
     const poleG=new THREE.CylinderGeometry(.1,.13,2.2,7),bar=new THREE.Mesh(new THREE.BoxGeometry(c.halfW*1.8,.18,.16),mat);
     for(const x of [-c.halfW,c.halfW]){const pole=new THREE.Mesh(poleG,mat);pole.position.set(x,1,0);g.add(pole);}
     bar.position.y=1.7;bar.position.x=-c.halfW*.9;bar.geometry.translate(c.halfW*.9,0,0);g.add(bar);
+    // Each shortcut gate speaks the visual language of its course. These crests
+    // sit above duck height and are decorative only.
+    if(LVL.id==='spillway'){
+      const crest=new THREE.Mesh(new THREE.ConeGeometry(.42,1.15,7),new THREE.MeshLambertMaterial({color:0x315a36}));crest.position.set(0,2.35,0);g.add(crest);
+    }else if(LVL.id==='millrace'){
+      const gear=new THREE.Mesh(new THREE.TorusGeometry(.48,.16,7,12),new THREE.MeshStandardMaterial({color:0xe0aa42,roughness:.42,metalness:.46}));gear.position.set(0,2.35,0);g.add(gear);g.userData.gear=gear;
+    }else if(LVL.id==='undergrove'){
+      const cap=new THREE.Mesh(new THREE.SphereGeometry(.5,9,5,0,Math.PI*2,0,Math.PI*.5),new THREE.MeshBasicMaterial({color:0x8dffb8}));cap.position.set(0,2.25,0);g.add(cap);g.userData.cap=cap;
+    }else if(LVL.id==='canopy'){
+      for(const x of [-.32,.32]){const leafMark=new THREE.Mesh(new THREE.CircleGeometry(.34,7),new THREE.MeshLambertMaterial({color:x<0?0xffd45a:0x69aa42,side:THREE.DoubleSide}));leafMark.position.set(x,2.35,.02);leafMark.rotation.z=x*1.4;g.add(leafMark);}
+    }else if(LVL.id==='porcelain'){
+      const duckMark=new THREE.Group(),head=new THREE.Mesh(new THREE.SphereGeometry(.35,10,7),new THREE.MeshLambertMaterial({color:0xffd23f})),beak=new THREE.Mesh(new THREE.ConeGeometry(.14,.34,5),new THREE.MeshLambertMaterial({color:0xff8c1a}));beak.rotation.x=Math.PI/2;beak.position.set(0,0,.38);duckMark.add(head,beak);duckMark.position.set(0,2.35,0);g.add(duckMark);
+    }else if(LVL.id==='harbor'){
+      const lamp=new THREE.Mesh(new THREE.SphereGeometry(.3,9,6),new THREE.MeshBasicMaterial({color:0xffb23e}));lamp.position.set(0,2.35,0);g.add(lamp);g.userData.lamp=lamp;
+    }
     if(LVL.id==='undergrove'){const veil=new THREE.Mesh(new THREE.PlaneGeometry(c.halfW*2.2,2.2),new THREE.MeshBasicMaterial({color:0xb8fff1,transparent:true,opacity:.18,side:THREE.DoubleSide,depthWrite:false}));veil.position.y=.8;g.add(veil);g.userData.veil=veil;}
     g.position.set(p.x,waterHeightAt(i)+.08,p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(g);
     SHORTCUT_GATES.push({g,bar,c,i,open:0});
@@ -4596,7 +4716,7 @@ const EVENT_BEACONS=[];
 }
 
 // ---------- drifting motes: pollen / dust / petals / fireflies at dusk
-const MOTES = { n: 240 };
+const MOTES = { n: MOBILE_GPU ? 110 : LVL.id==='undergrove' ? 300 : 240 };
 {
   const mp = new Float32Array(MOTES.n * 3);
   MOTES.vel = [];
@@ -4613,7 +4733,8 @@ const MOTES = { n: 240 };
   const mgd = mx.createRadialGradient(16, 16, 1, 16, 16, 15);
   mgd.addColorStop(0, 'rgba(255,255,255,1)'); mgd.addColorStop(1, 'rgba(255,255,255,0)');
   mx.fillStyle = mgd; mx.fillRect(0, 0, 32, 32);
-  MOTES.mat = new THREE.PointsMaterial({ color: 0xffe9b0, size: 0.13, transparent: true, opacity: 0.55,
+  const moteStyle=({spillway:[0xffe9b0,.13,.55],millrace:[0xc69b63,.11,.42],undergrove:[0x7fffe4,.17,.68],canopy:[0xffd66f,.18,.54],porcelain:[0xe8ffff,.16,.46],harbor:[0xd9eff1,.105,.38]})[LVL.id]||[0xffe9b0,.13,.55];
+  MOTES.mat = new THREE.PointsMaterial({ color: moteStyle[0], size: moteStyle[1], transparent: true, opacity: moteStyle[2],
     map: new THREE.CanvasTexture(mc), blending: THREE.AdditiveBlending, depthWrite: false });
   MOTES.mesh = new THREE.Points(mg, MOTES.mat);
   MOTES.mesh.frustumCulled = false;
@@ -4714,7 +4835,8 @@ let surgeMesh;
   for (const is2 of ISLANDS) {
     const len = is2.a.distanceTo(is2.b);
     const isNeon=IS_NEON_WATERPARK,isSponge=LVL.id==='porcelain'&&!isNeon,isPirate=IS_PIRATE_TOYBOX,isHarbor=LVL.id==='harbor';
-    const mound = new THREE.Mesh(new THREE.CapsuleGeometry(is2.halfW, len, 4, 10), lam(isSponge ? 0xf2d64b : isNeon?0x32245f:isPirate?0xc8944d:isHarbor?0x69777d:0x6da05b));
+    const naturalIslandCol=LVL.id==='spillway'?0x747f7c:LVL.id==='millrace'?0x4e5d61:LVL.id==='undergrove'?0x29372d:LVL.id==='canopy'?0x725036:0x6da05b;
+    const mound = new THREE.Mesh(new THREE.CapsuleGeometry(is2.halfW, len, 4, 10), lam(isSponge ? 0xf2d64b : isNeon?0x32245f:isPirate?0xc8944d:isHarbor?0x69777d:naturalIslandCol));
     mound.position.copy(is2.a).lerp(is2.b, 0.5);
     mound.position.y = waterHeightAt(is2.mid) - is2.halfW * 0.45;
     mound.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), is2.b.clone().sub(is2.a).normalize());
@@ -4729,6 +4851,11 @@ let surgeMesh;
         pore.position.y = waterHeightAt(is2.mid) + is2.halfW * randRange(0.05, 0.3);
         scene.add(pore);
       }
+      if(is2.mid/NSAMP>.62){
+        const chrome=new THREE.MeshStandardMaterial({color:0xdce9eb,roughness:.24,metalness:.7});
+        for(let q=0;q<6;q++){const link=new THREE.Mesh(new THREE.TorusGeometry(.34,.1,7,14),chrome);link.position.copy(is2.a).lerp(is2.b,.22+q*.11);link.position.y=waterHeightAt(is2.mid)+is2.halfW*.52+Math.sin(q*.8)*.12;link.rotation.set(Math.PI/2,q%2?Math.PI/2:0,0);scene.add(link);}
+        const plug=new THREE.Mesh(new THREE.CylinderGeometry(is2.halfW*.48,is2.halfW*.62,.55,14),new THREE.MeshStandardMaterial({color:0x4a6f76,roughness:.38}));plug.position.copy(is2.b).lerp(is2.a,.12);plug.position.y=waterHeightAt(is2.mid)+is2.halfW*.38;scene.add(plug);
+      }
     } else if(isNeon){
       const rail=new THREE.Mesh(new THREE.BoxGeometry(is2.halfW*.32,.26,Math.max(2,len*.78)),new THREE.MeshBasicMaterial({color:0xff45d7}));rail.position.copy(mound.position);rail.position.y=waterHeightAt(is2.mid)+is2.halfW*.42;rail.rotation.y=Math.atan2(is2.b.x-is2.a.x,is2.b.z-is2.a.z);scene.add(rail);
     } else if(isPirate){
@@ -4736,13 +4863,21 @@ let surgeMesh;
       const coin=new THREE.Mesh(new THREE.TorusGeometry(is2.halfW*.3,is2.halfW*.08,6,14),new THREE.MeshStandardMaterial({color:0xf6bd38,metalness:.6,roughness:.25}));coin.position.copy(chest.position);coin.position.y+=is2.halfW*.55;coin.rotation.x=Math.PI/2;scene.add(coin);
     } else if(isHarbor){
       for(const q of [-.35,.35]){const bollard=new THREE.Mesh(new THREE.CylinderGeometry(.18,.26,1.2,7),lam(0xf0b33b));bollard.position.copy(is2.a).lerp(is2.b,.5+q);bollard.position.y=waterHeightAt(is2.mid)+.5;scene.add(bollard);}
+      if(is2.mid/NSAMP<.4){for(const q of [-.24,.24]){const lockDoor=new THREE.Mesh(rbox(is2.halfW*.7,is2.halfW*1.15,.36,.1,2),new THREE.MeshStandardMaterial({color:0x3f7b83,roughness:.48,metalness:.28}));lockDoor.position.copy(is2.a).lerp(is2.b,.5+q);lockDoor.position.y=waterHeightAt(is2.mid)+is2.halfW*.45;scene.add(lockDoor);}const lamp=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),new THREE.MeshBasicMaterial({color:0xffb23e}));lamp.position.copy(mound.position);lamp.position.y=waterHeightAt(is2.mid)+is2.halfW*1.15;scene.add(lamp);}
+      else for(const q of [-.3,0,.3]){const block=new THREE.Mesh(new THREE.DodecahedronGeometry(is2.halfW*.34,0),lam(q?0x758286:0x929da0));block.position.copy(is2.a).lerp(is2.b,.5+q);block.position.y=waterHeightAt(is2.mid)+is2.halfW*.18;block.rotation.set(q*2,q*3,.4);scene.add(block);}
+    } else if(LVL.id==='millrace'){
+      const shed=new THREE.Mesh(rbox(is2.halfW*1.25,is2.halfW*.8,Math.max(2.4,len*.42),.18,3),lam(0x596267));shed.position.copy(mound.position);shed.position.y=waterHeightAt(is2.mid)+is2.halfW*.3;scene.add(shed);
+      const gear=new THREE.Mesh(new THREE.TorusGeometry(is2.halfW*.48,is2.halfW*.12,7,14),new THREE.MeshStandardMaterial({color:0xd49a3d,roughness:.45,metalness:.45}));gear.position.copy(shed.position);gear.position.y+=is2.halfW*.55;gear.rotation.y=Math.PI/2;scene.add(gear);
+      for(const q of [-.3,.3]){const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.12,.16,is2.halfW*1.5,7),lam(0x9b5b36));pipe.position.copy(is2.a).lerp(is2.b,.5+q);pipe.position.y=waterHeightAt(is2.mid)+is2.halfW*.6;scene.add(pipe);}
+    } else if(LVL.id==='undergrove'){
+      for(const q of [-.34,0,.34]){const root=new THREE.Mesh(new THREE.CylinderGeometry(.12+Math.abs(q)*.2,.35,is2.halfW*2.2,7),lam(0x4b351f));root.position.copy(is2.a).lerp(is2.b,.5+q);root.position.y=waterHeightAt(is2.mid)+is2.halfW*.65;root.rotation.z=q*.85;scene.add(root);}
+      for(const q of [-.3,.05,.34]){const stem=new THREE.Mesh(new THREE.CylinderGeometry(.06,.1,.55,6),lam(0xd8cfb1)),cap=new THREE.Mesh(new THREE.SphereGeometry(.27,7,4,0,Math.PI*2,0,Math.PI*.5),new THREE.MeshBasicMaterial({color:q<0?0x75ffe2:0xab82ff}));stem.position.copy(is2.a).lerp(is2.b,.5+q);stem.position.y=waterHeightAt(is2.mid)+is2.halfW*.5;cap.position.copy(stem.position);cap.position.y+=.32;scene.add(stem,cap);}
+    } else if(LVL.id==='canopy'){
+      const bough=new THREE.Mesh(new THREE.CylinderGeometry(is2.halfW*.28,is2.halfW*.42,Math.max(3,len*.82),9),lam(0x6b4b2d));bough.position.copy(mound.position);bough.position.y=waterHeightAt(is2.mid)+is2.halfW*.35;bough.quaternion.copy(mound.quaternion);scene.add(bough);
+      for(const q of [-.34,0,.34]){const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(is2.halfW*.42,1),lam(q?0x5c963c:0xa1b944));crown.position.copy(is2.a).lerp(is2.b,.5+q);crown.position.y=waterHeightAt(is2.mid)+is2.halfW*.8;scene.add(crown);}
     } else {
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(is2.halfW * 0.45, 0), lam(0x8f949a));
-      rock.position.copy(mound.position); rock.position.y = waterHeightAt(is2.mid) + is2.halfW * 0.32;
-      scene.add(rock);
-      const tuft = new THREE.Mesh(new THREE.ConeGeometry(is2.halfW * 0.5, is2.halfW * 1.3, 6), lam(0x3f7a3c));
-      tuft.position.copy(rock.position); tuft.position.y += is2.halfW * 0.8;
-      scene.add(tuft);
+      for(const q of [-.32,0,.32]){const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(is2.halfW*(q? .32:.48),0),lam(q?0x777f82:0x94999b));rock.position.copy(is2.a).lerp(is2.b,.5+q);rock.position.y=waterHeightAt(is2.mid)+is2.halfW*.25;rock.rotation.set(q*.4,q*2,q*.2);scene.add(rock);}
+      const pine=new THREE.Group(),stem=new THREE.Mesh(new THREE.CylinderGeometry(.1,.16,is2.halfW*1.2,7),lam(0x60442e)),crown=new THREE.Mesh(new THREE.ConeGeometry(is2.halfW*.52,is2.halfW*1.7,7),lam(0x315f39));stem.position.y=is2.halfW*.6;crown.position.y=is2.halfW*1.45;pine.add(stem,crown);pine.position.copy(mound.position);pine.position.y=waterHeightAt(is2.mid)+is2.halfW*.2;scene.add(pine);
     }
   }
   // pike: dark lurker that darts
@@ -5601,6 +5736,9 @@ function updateCamera(dt) {
   if (LVL.id==='millrace'&&!birdActive&&!front&&t01>.165&&t01<.375) {
     target.x=anchor.x;target.z=anchor.z;target.y=d.y+15;
   }
+  if (LVL.id==='millrace'&&!birdActive&&!front&&t01>.035&&t01<.145) {
+    target.x=anchor.x-S.tan[si].x*2;target.z=anchor.z-S.tan[si].z*2;target.y=d.y+13;
+  }
   // Harbor's tight quayside turn immediately precedes a steep pump lift. A
   // normal long chase arm crosses the raised outside bank here, so tuck the
   // camera into the channel until the duck reaches the climb's open sightline.
@@ -5901,6 +6039,12 @@ function drawMap() {
       mapCtx.stroke();
     }
   }
+  // Three authored course chapters are marked as small diamonds. This makes
+  // each route read as a journey rather than an anonymous loop, without
+  // competing with duck positions during a crowded race.
+  mapCtx.fillStyle=LVL.id==='porcelain'?'#5bc7c8':LVL.id==='harbor'?'#ff7a2f':LVL.id==='undergrove'?'#8dffb8':LVL.id==='canopy'?'#ffc04a':LVL.id==='millrace'?'#d69a3a':'#ffd23f';
+  mapCtx.strokeStyle='#0e2a33';mapCtx.lineWidth=1;
+  for(const [,at] of COURSE_CHAPTER_CUES){const mp=mapPts[Math.min(mapPts.length-1,Math.round(at*(mapPts.length-1)))];mapCtx.save();mapCtx.translate(mp[0],mp[1]);mapCtx.rotate(Math.PI/4);mapCtx.fillRect(-2.5,-2.5,5,5);mapCtx.strokeRect(-2.5,-2.5,5,5);mapCtx.restore();}
   // start/finish tick
   mapCtx.save();
   mapCtx.translate(mapPts[0][0], mapPts[0][1]);
@@ -6685,6 +6829,10 @@ function drawCourseThumbs() {
     const [sx2, sy2] = px(pts[0]);
     x2.fillStyle = '#d94f30'; x2.strokeStyle = '#fff8e7'; x2.lineWidth = 1.5;
     x2.beginPath(); x2.arc(sx2, sy2, 3.2, 0, 7); x2.fill(); x2.stroke();
+    // Course crest: a tiny garage-style badge makes the selection cards read as
+    // six authored destinations even before the player studies their route maps.
+    const crest={spillway:['▲','#ffd23f'],millrace:['⚙','#d69a3a'],undergrove:['✦','#79f0c2'],canopy:['♣','#ffc04a'],porcelain:['●','#55cfee'],harbor:['⚓','#ff6b21']}[card.dataset.lvl];
+    if(crest){x2.fillStyle='rgba(7,27,43,.9)';x2.beginPath();x2.arc(W2-11,11,8.5,0,Math.PI*2);x2.fill();x2.strokeStyle='#fff8e7';x2.lineWidth=1;x2.stroke();x2.fillStyle=crest[1];x2.font='900 12px sans-serif';x2.textAlign='center';x2.textBaseline='middle';x2.fillText(crest[0],W2-11,11.5);}
   });
 }
 drawCourseThumbs();
@@ -7140,6 +7288,18 @@ function frame(now) {
   {
     const t = now / 1000;
     for(const f of BATH_FLOATERS){const bob=Math.sin(t*(f.kind==='bubble'?1.8:1.15)+f.phase);f.obj.position.y=f.baseY+(f.kind==='bubble'?.18:.08)+bob*(f.kind==='bubble'?.12:.055);f.obj.rotation.z=Math.sin(t*.7+f.phase)*(f.kind==='bubble'?.04:.025);if(f.kind!=='bubble'){f.obj.rotation.y+=dt*(f.kind==='duck'?.08:.035);f.wakeT=(f.wakeT||rand())-dt;if(f.wakeT<=0&&f.obj.position.distanceTo(ducks[0].p)<75){spawnWave(f.obj.position.x,f.baseY+.04,f.obj.position.z);f.wakeT=randRange(.8,1.5);}}}
+    for(const c of COURSE_CHAPTERS){const a=c.animate;if(!a)continue;const energy=G.courseEventT>0?2.15:G.transformed?1.4:1;
+      if(a.wheelParts)for(const part of a.wheelParts)part.rotation.z-=dt*.55*energy;
+      if(a.steam){a.steam.position.y=12.5+Math.sin(t*.8*energy+c.phase)*.8;a.steam.scale.setScalar(1+.14*Math.sin(t*.62*energy+c.phase));}
+      if(a.caps)for(let k=0;k<a.caps.length;k++)a.caps[k].material.opacity=.58+.28*Math.sin(t*1.7*energy+c.phase+k);
+      if(a.fireflies)for(let k=0;k<a.fireflies.length;k++){const f=a.fireflies[k],ang=f.userData.a+t*.18*energy;f.position.x=Math.cos(ang)*4;f.position.z=Math.sin(ang)*3;f.position.y=3+k%4+Math.sin(t*2*energy+k)*.35;}
+      if(a.planks)for(let k=0;k<a.planks.length;k++)a.planks[k].rotation.z=Math.sin(t*.8*energy+k*.65)*.025*energy;
+      if(a.whale){c.g.position.y=c.baseY+Math.sin(t*.9*energy+c.phase)*.08*energy;a.whale.rotation.z=Math.sin(t*.8*energy)*.035*energy;a.spout.rotation.y=t*.35*energy;}
+      if(a.bubbles)for(let k=0;k<a.bubbles.length;k++)a.bubbles[k].position.y=7+((t*.45*energy+k*1.25)%8);
+      if(a.hull)a.hull.rotation.z=Math.sin(t*.55)*.018;
+      if(a.flags)for(let k=0;k<a.flags.length;k++)a.flags[k].rotation.y=Math.sin(t*2.2+k*.5)*.18;
+      if(a.bell)a.bell.rotation.z=Math.sin(t*1.4)*.12;
+    }
     for(const r of ROCKS){if(r.hitT>0&&r.mesh){r.hitT=Math.max(0,r.hitT-dt);const kick=Math.sin(r.hitT*22)*r.hitT;r.mesh.rotation.z=kick*.22;r.mesh.rotation.y=(r.baseRot||0)+kick*.3;if(r.foam)r.foam.scale.setScalar(1+Math.abs(kick)*.18);}}
     if(LVL.id==='harbor'){
       for(const g of (window._harborGulls||[])){const a=t*g.spd+g.ph;g.bird.position.x=g.home.x+Math.cos(a)*g.r;g.bird.position.z=g.home.z+Math.sin(a)*g.r;g.bird.position.y=g.home.y+Math.sin(a*2.4)*.8;g.bird.rotation.y=-a;g.bird.scale.y=.65+Math.sin(a*5)*.3;}
@@ -7280,6 +7440,9 @@ function frame(now) {
       const cycleOpen=Math.sin(t*1.35+sg.i*.071)>-.3;
       const want=available&&((ahead>0&&ahead<95&&cycleOpen)||G.courseEventT>0)?1:0;sg.open+=(want-sg.open)*Math.min(1,dt*4.5);
       sg.bar.rotation.z=-sg.open*Math.PI*.52;
+      if(sg.g.userData.gear)sg.g.userData.gear.rotation.z+=dt*1.4;
+      if(sg.g.userData.cap)sg.g.userData.cap.scale.setScalar(.92+.1*Math.sin(t*2+sg.i));
+      if(sg.g.userData.lamp)sg.g.userData.lamp.scale.setScalar(.9+.18*Math.sin(t*4+sg.i));
       if(sg.g.userData.veil)sg.g.userData.veil.material.opacity=.2*(1-sg.open);
     }
     for(const cr of COURSE_CREW){cr.flag.rotation.y=Math.sin(t*2+cr.ph)*.12;cr.cloth.rotation.y=Math.sin(t*7+cr.ph)*.35;cr.flag.position.y+=Math.sin(t*5+cr.ph)*.002;}
@@ -7344,6 +7507,20 @@ function frame(now) {
       const lat=fs.lat+Math.sin(t*.7+fs.ph)*1.1;
       fs.mesh.position.set(p.x+side.x*lat,waterHeightAt(ii)-.36,p.z+side.z*lat);
       fs.mesh.rotation.y=Math.atan2(S.tan[ii].x,S.tan[ii].z);
+    }
+    for(const life of COURSE_LIFE){
+      const energy=G.courseEventT>0?1.7:1;
+      if(life.kind==='bat'&&life.home){
+        const a=t*.55*energy+life.ph;
+        life.g.position.set(life.home.x+Math.sin(a)*2.2,life.baseY+Math.sin(a*2.1)*.6,life.home.z+Math.cos(a)*1.4);
+        life.g.rotation.y=-a;
+      }else{
+        life.g.position.y=life.baseY+Math.sin(t*1.4*energy+life.ph)*.08;
+        life.g.rotation.z=Math.sin(t*1.8*energy+life.ph)*.035;
+        if(life.head)life.head.rotation.x=Math.sin(t*1.2+life.ph)*.12;
+      }
+      if(life.wakeT!==undefined){life.wakeT-=dt;if(life.wakeT<=0&&life.g.position.distanceTo(ducks[0].p)<70){spawnWave(life.g.position.x,life.baseY+.02,life.g.position.z);life.wakeT=randRange(1.1,2.1);}}
+      if(life.wings)for(let w=0;w<life.wings.length;w++)life.wings[w].rotation.z=(w?1:-1)*(.3+Math.sin(t*5.2*energy+life.ph)*.24);
     }
     // storm rain follows the camera
     const raining = (WEATHERS[G.weather] || {}).rain && G.mode !== 'title';
