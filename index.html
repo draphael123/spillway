@@ -556,6 +556,7 @@
 <canvas id="c"></canvas>
 <div id="bootIntro" role="dialog" aria-modal="true" aria-label="Spillway title screen"><div class="introDuck" aria-hidden="true"></div><div class="introLockup"><div class="introKicker">SPILLWAY RACE CONTROL PRESENTS</div><div class="introLogo">SPILLWAY</div><div class="introTag">THE CURRENT IS UNDEFEATED</div><button id="introStart" type="button">PRESS ANYTHING TO START</button><div class="introLoad" aria-hidden="true"></div></div></div>
 <script>if(sessionStorage.getItem('spillway-intro-seen')){document.body.classList.remove('introActive');document.getElementById('bootIntro').hidden=true}</script>
+<script>{const intro=document.getElementById('bootIntro'),prompt=document.getElementById('introStart');window._spillwayIntroRequested=false;const queueIntro=()=>{if(intro.hidden)return;window._spillwayIntroRequested=true;prompt.textContent='LOADING RACE CONTROL…';prompt.setAttribute('aria-busy','true');};intro.addEventListener('pointerdown',queueIntro,{passive:true});document.addEventListener('keydown',queueIntro,true);}</script>
 
 <div class="hud" id="hudTop" style="display:none">
   <div class="pill" id="lapPill" style="display:none">1/1<small>LAP</small></div>
@@ -6099,6 +6100,7 @@ function dismissIntro(e){
 el('bootIntro').addEventListener('pointerdown',dismissIntro);
 el('introStart').addEventListener('click',dismissIntro);
 document.addEventListener('keydown',e=>{if(introActive)dismissIntro(e);},true);
+if(window._spillwayIntroRequested)dismissIntro();
 if(matchMedia('(prefers-reduced-motion: reduce)').matches)setTimeout(()=>{if(introActive)el('introStart').focus();},50);else setTimeout(()=>{if(introActive)el('introStart').focus();},2200);
 
 addEventListener('keydown', e => {
