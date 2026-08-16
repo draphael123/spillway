@@ -2321,11 +2321,13 @@ function step(dt) {
 
     // ---- rocks: hard collision
     for(const sg of SHORTCUT_GATES){
+      if(d.air)break;
       if(sg.open>.35||Math.abs(wrapDS(sg.i,si))>9)continue;
       const dx=d.p.x-sg.g.position.x,dz=d.p.z-sg.g.position.z;
       if(Math.hypot(dx,dz)<sg.c.halfW+1&&(d._gateHitT||0)<=0){d._gateHitT=.45;d.v.x-=S.tan[si].x*4;d.v.z-=S.tan[si].z*4;d.spinV+=(rand()-.5)*8;d.hitT=.35;if(d.idx===0){impactBeat('GATE SHUT!',3);SFX.thud(3);}}
     }
     for (const r of ROCKS) {
+      if (d.air) break;
       if (Math.abs(wrapDS(r.i, si)) > 60) continue;
       const dx = d.p.x - r.pos.x, dz = d.p.z - r.pos.z;
       const dist = Math.hypot(dx, dz), min = r.r + DUCK_R * 0.8;
@@ -2348,6 +2350,7 @@ function step(dt) {
 
     // ---- floating logs: capsule collision, slide along them
     for (const L of LOGS) {
+      if (d.air) break;
       if (Math.abs(wrapDS(L.i, si)) > 40) continue;
       const abx = L.b.x - L.a.x, abz = L.b.z - L.a.z;
       const tt = Math.max(0, Math.min(1, ((d.p.x - L.a.x) * abx + (d.p.z - L.a.z) * abz) / (abx * abx + abz * abz)));
@@ -2367,7 +2370,7 @@ function step(dt) {
     }
 
     // ---- the sawblade: violent knock if you drift into its arc
-    if (MDYN.saw && Math.abs(wrapDS(MDYN.saw.i, si)) < 30) {
+    if (!d.air && MDYN.saw && Math.abs(wrapDS(MDYN.saw.i, si)) < 30) {
       const sp3 = S.pos[MDYN.saw.i].clone().addScaledVector(S.side[MDYN.saw.i], MDYN.saw.lat);
       const dx = d.p.x - sp3.x, dz = d.p.z - sp3.z;
       const dist = Math.hypot(dx, dz);
@@ -2382,7 +2385,7 @@ function step(dt) {
     }
 
     // ---- banks: stay in the channel
-    {
+    if (!d.air) {
       const side = S.side[si];
       const latX = d.p.x - S.pos[si].x, latZ = d.p.z - S.pos[si].z;
       const lat = latX * side.x + latZ * side.z;
@@ -2495,9 +2498,10 @@ window.SPILLWAY = {
   sim: (seconds) => { const n = Math.round(seconds / FIXED); for (let i = 0; i < n; i++) step(FIXED); return window.SPILLWAY.state(); },
   start: () => { startRace(); G.countdown = 0; G.mode = 'race'; G.raceT = 0; },
   state: () => ({ mode: G.mode, t: G.raceT, finished: G.finishedCount, laps: G.laps, weather: G.weather,
-    player: { place: placeOf(ducks[0]), si: ducks[0].si, t01: ducks[0].si / NSAMP, lap: ducks[0].lap, inFlume: ducks[0].inFlume, finished: ducks[0].finished, time: ducks[0].finishTime, flow: +(ducks[0].flow || 0).toFixed(2), bursting: (ducks[0].burstT || 0) > 0 },
+    player: { place: placeOf(ducks[0]), si: ducks[0].si, t01: ducks[0].si / NSAMP, lap: ducks[0].lap, inFlume: ducks[0].inFlume, air:ducks[0].air, y:+ducks[0].y.toFixed(2), vy:+(ducks[0].vy||0).toFixed(2), lat:+((ducks[0].p.x-S.pos[ducks[0].si].x)*S.side[ducks[0].si].x+(ducks[0].p.z-S.pos[ducks[0].si].z)*S.side[ducks[0].si].z).toFixed(2), finished: ducks[0].finished, time: ducks[0].finishTime, flow: +(ducks[0].flow || 0).toFixed(2), bursting: (ducks[0].burstT || 0) > 0 },
     top: G.results.slice(0, 5).map(d => ({ name: d.name, time: +d.finishTime.toFixed(2) })) }),
   ducks, G,
+  testPlace:(si,speed=9,lat=0)=>{const d=ducks[0],i=wrapI(si);d.si=i;d.p.copy(S.pos[i]).addScaledVector(S.side[i],lat);d.y=waterHeightAt(i);d.v.copy(S.tan[i]).multiplyScalar(speed);d.vy=0;d.air=false;d.airT=0;d.finished=false;d.progress=i;return {falls:_fI0,state:window.SPILLWAY.state()};},
   courseIdentity:()=>({id:LVL.id,route:ROUTE_STYLE.label,splits:COURSE_SPLITS.map(s=>({name:s.name,lanes:s.lanes.map(l=>l.name)})),splitChutes:CHUTES.filter(c=>c.split).length,islands:ISLANDS.length,bathFloaters:LVL.id==='porcelain'?BATH_FLOATERS.length:0,harborLandmarks:LVL.id==='harbor'?(window._harborLandmarks?.length||0):0}),
   dbg: () => ({ cam: camera.position.toArray().map(v => +v.toFixed(1)), fov: +camera.fov.toFixed(1),
     quat: camera.quaternion.toArray().map(v => +v.toFixed(3)), up: camera.up.toArray() }),
@@ -3370,7 +3374,9 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
       0.18*zw[0] + 0.10*zw[1] + 0.40*zw[2] + 0.25*zw[3],
       0.44 + rand() * 0.08));
   }
-  if (IS_BATHWORLD) { mountains.count = 0; caps.count = 0; }
+  // Spillway's close chase camera turns these broad low-poly cones into giant
+  // screen-filling wedges. Its layered horizon meshes already provide the skyline.
+  if (LVL.id === 'spillway' || IS_BATHWORLD) { mountains.count = 0; caps.count = 0; }
   scene.add(caps);
   if (LVL.id !== 'spillway') { cacti.count = 0; slabs.count = 0; spires.count = 0; mTrunks.count = 0; mCrowns.count = 0; }
   if (IS_BATHWORLD) { trunks.count = 0; tiers.forEach(t => t.count = 0); bushes.count = 0; flowers.count = 0; boulders.count = 0; tufts.count = 0; }
