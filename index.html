@@ -1015,7 +1015,7 @@ const COURSE_PLAN={
   undergrove:{x:[0,24,58,86,112,136,110,72,28,-12,-32,-10,28,68,108,146,126,92,58,30,12],z:[0,-22,-44,-72,-108,-146,-180,-206,-224,-210,-174,-140,-116,-104,-116,-92,-56,-26,-8,10,16]},
   canopy:{x:[0,-22,-40,-18,18,54,24,-10,12,58,104,142,126,88,54,92,136,150,118,78,38,8,34,70,104,72,30],z:[0,-28,-62,-96,-118,-142,-170,-202,-234,-258,-252,-226,-192,-170,-188,-214,-184,-146,-114,-88,-68,-42,-18,2,18,28,14]},
   porcelain:{x:[0,-26,-38,-18,18,62,104,140,156,142,112,76,46,30,38,64,94,116,98,66,34,8,-10],z:[0,-22,-58,-98,-132,-158,-168,-146,-108,-68,-38,-30,-46,-78,-112,-132,-116,-82,-52,-24,-8,10,12]},
-  harbor:{x:[0,-30,-30,6,6,48,88,128,156,156,122,84,84,122,98,52],z:[0,-12,-72,-72,-132,-160,-160,-132,-132,-68,-68,-34,2,20,38,24]}
+  harbor:{x:[0,-30,-30,6,6,48,88,128,156,156,122,84,84,132,118,54],z:[0,-12,-72,-72,-132,-160,-160,-132,-132,-68,-68,-34,2,18,56,62]}
 };
 for(const [id,shape] of Object.entries(COURSE_PLAN)){LEVELS[id].ctrl.forEach((p,i)=>{p.x=shape.x[i];p.z=shape.z[i];});}
 try{
@@ -2502,7 +2502,7 @@ window.SPILLWAY = {
     top: G.results.slice(0, 5).map(d => ({ name: d.name, time: +d.finishTime.toFixed(2) })) }),
   ducks, G,
   testPlace:(si,speed=9,lat=0)=>{const d=ducks[0],i=wrapI(si);d.si=i;d.p.copy(S.pos[i]).addScaledVector(S.side[i],lat);d.y=waterHeightAt(i);d.v.copy(S.tan[i]).multiplyScalar(speed);d.vy=0;d.air=false;d.airT=0;d.finished=false;d.progress=i;return {falls:_fI0,state:window.SPILLWAY.state()};},
-  courseIdentity:()=>({id:LVL.id,route:ROUTE_STYLE.label,splits:COURSE_SPLITS.map(s=>({name:s.name,lanes:s.lanes.map(l=>l.name)})),splitChutes:CHUTES.filter(c=>c.split).length,islands:ISLANDS.length,bathFloaters:LVL.id==='porcelain'?BATH_FLOATERS.length:0,harborLandmarks:LVL.id==='harbor'?(window._harborLandmarks?.length||0):0}),
+  courseIdentity:()=>({id:LVL.id,route:ROUTE_STYLE.label,splits:COURSE_SPLITS.map(s=>({name:s.name,lanes:s.lanes.map(l=>l.name)})),splitChutes:CHUTES.filter(c=>c.split).length,islands:ISLANDS.length,bathFloaters:LVL.id==='porcelain'?BATH_FLOATERS.length:0,harborLandmarks:LVL.id==='harbor'?(window._harborLandmarks?.length||0):0,harborProps:LVL.id==='harbor'?(window._harborProps?.length||0):0}),
   dbg: () => ({ cam: camera.position.toArray().map(v => +v.toFixed(1)), fov: +camera.fov.toFixed(1),
     quat: camera.quaternion.toArray().map(v => +v.toFixed(3)), up: camera.up.toArray() }),
   three: () => ({ renderer, scene, camera, sun, skyMesh, waterMat }),
@@ -3207,8 +3207,8 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   }
   // reeds — dense in the reed patches (in the water), sparse along waterlines.
   // The bathworks grows SUDS instead: flattened white foam blobs in the same slots.
-  const isSuds = IS_BATHWORLD;
-  const nR = 260;
+  const isSuds = LVL.id === 'porcelain';
+  const nR = LVL.id === 'harbor' ? 0 : 260;
   const reedsIM = new THREE.InstancedMesh(
     isSuds ? new THREE.SphereGeometry(0.3, 6, 5) : new THREE.ConeGeometry(0.07, 1.5, 4),
     new THREE.MeshLambertMaterial({ color: isSuds ? 0xf6faf9 : 0x9aa84e }), nR);
@@ -3433,6 +3433,16 @@ let whirlMesh;
       collar.position.set(r.pos.x, waterHeightAt(r.i) + 0.06, r.pos.z);
       r.mesh=bar;r.foam=collar;r.baseRot=bar.rotation.y;
       scene.add(bar, collar);
+    } else if (LVL.id === 'harbor') {
+      // Harbor hazards read as charted channel markers, never leftover river rocks.
+      const marker = new THREE.Group();
+      const hull = new THREE.Mesh(new THREE.CylinderGeometry(r.r * .38, r.r * .56, r.r * 1.15, 10),
+        new THREE.MeshStandardMaterial({ color: soapIx++ % 2 ? 0xe85f3d : 0x2d8792, roughness: .5, metalness: .18 }));
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(r.r * .42, r.r * .78, 10),
+        new THREE.MeshLambertMaterial({ color: 0xf3eee1 }));
+      hull.position.y = r.r * .34; cap.position.y = r.r * 1.25; marker.add(hull, cap);
+      marker.position.set(r.pos.x, waterHeightAt(r.i) - r.r * .1, r.pos.z);
+      scene.add(marker); r.mesh = marker;
     } else {
       const mesh = new THREE.Mesh(g, mat);
       mesh.position.set(r.pos.x, waterHeightAt(r.i) - 0.2, r.pos.z);
@@ -3510,7 +3520,8 @@ let whirlMesh;
     for (const L of LOGS) {
       if (L.dyn) continue;   // machinery draws its own meshes
       const mesh = new THREE.Mesh(new THREE.CylinderGeometry(L.r, L.r, L.len, 8),
-        LVL.id === 'porcelain' ? new THREE.MeshLambertMaterial({ color: noodleCols[nIx++ % noodleCols.length] }) : logM);
+        LVL.id === 'porcelain' ? new THREE.MeshLambertMaterial({ color: noodleCols[nIx++ % noodleCols.length] }) :
+        LVL.id === 'harbor' ? new THREE.MeshStandardMaterial({ color: nIx++ % 2 ? 0xf3eee1 : 0xe85f3d, roughness: .58, metalness: .08 }) : logM);
       mesh.position.set(L.c.x, waterHeightAt(L.i) + 0.05, L.c.z);
       mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), L.dir);
       scene.add(mesh);
@@ -3586,9 +3597,10 @@ const ARROWS = [];
   }
 }
 
-// ---------- shared Bathworld skyline: both bathroom courses live inside the same giant tub.
+// ---------- Porcelain skyline. Harbor keeps the clean tiled material language,
+// but not giant bathroom wall panels that can intersect its tighter route.
 const NEON_DYN=[],PIRATE_DYN=[];
-if (IS_BATHWORLD) {
+if (LVL.id === 'porcelain') {
   const tileMat = new THREE.MeshStandardMaterial({ color: 0xe7eeee, map: TILETEX, bumpMap: TILETEX, bumpScale: 0.08, roughness: 0.56 });
   const chromeMat = new THREE.MeshStandardMaterial({ color: 0xcbd6da, roughness: 0.18, metalness: 0.82 });
   // A tiled bathroom wall follows the outer course silhouette instead of leaving an empty skybox horizon.
@@ -4072,6 +4084,20 @@ if (LVL.id === 'millrace') {
   }
   for(const [t2,sgn,col] of [[.10,-1,0xe85f3d],[.64,1,0x2d8792],[.82,-1,0xf0b33b]]){const i=Math.round(t2*NSAMP),p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]-.9)),g=new THREE.Group(),hull=new THREE.Mesh(rbox(3.8,.65,1.45,.25,3),lam(col)),cab=new THREE.Mesh(rbox(1.3,1.15,1.05,.16,3),lam(0xf3eee1)),ring=new THREE.Mesh(new THREE.TorusGeometry(.38,.1,7,12),lam(0xfff3cf));hull.position.y=.2;cab.position.set(.65,1,0);ring.position.set(-.8,.95,.74);ring.rotation.x=Math.PI/2;g.add(hull,cab,ring);g.position.set(p.x,waterHeightAt(i)+.28,p.z);g.rotation.y=Math.atan2(S.tan[i].x,S.tan[i].z);scene.add(g);_harborLandmarks.push({kind:'fishingBoat',g});}
   for(const [t2,sgn] of [[.18,1],[.31,-1],[.67,1]]){const a=harborBank(t2,sgn,2),rack=new THREE.Group();for(let q=-2;q<=2;q++){const float=new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),lam(q%2?0xfff3cf:0xe85f3d));float.position.set(q*.6,1.1+Math.abs(q)*.08,0);rack.add(float);}const net=new THREE.Mesh(new THREE.PlaneGeometry(3.3,1.7,5,3),new THREE.MeshBasicMaterial({color:0x7aa1a2,wireframe:true,transparent:true,opacity:.7,side:THREE.DoubleSide}));net.position.y=.55;rack.add(net);rack.position.set(a.p.x,a.gy+.2,a.p.z);rack.rotation.y=a.yaw;scene.add(rack);_harborLandmarks.push({kind:'netRack',g:rack});}
+  // Close-range working-harbor dressing: each cluster is grounded from the same
+  // bank sample it decorates, so it cannot float or grow through the race lane.
+  window._harborProps=[];
+  for(const [t2,sgn] of [[.13,1],[.24,-1],[.46,1],[.71,-1],[.88,1]]){
+    const a=harborBank(t2,sgn,1.55),g=new THREE.Group();
+    for(const x of [-1.05,1.05]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.23,.32,1.15,8),metal(0x293b40)),cap=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.18,8),metal(0x293b40));post.position.set(x,.58,0);cap.position.set(x,1.12,0);g.add(post,cap);}
+    const rope=new THREE.Mesh(new THREE.TorusGeometry(.72,.13,7,18),new THREE.MeshStandardMaterial({color:0xcaa66a,roughness:.95}));rope.rotation.x=Math.PI/2;rope.position.set(0,.18,.2);g.add(rope);
+    const pot=new THREE.Mesh(new THREE.CylinderGeometry(.48,.62,.7,8),new THREE.MeshBasicMaterial({color:0x516467,wireframe:true}));pot.position.set(0,.38,-.75);g.add(pot);
+    g.position.set(a.p.x,a.gy,a.p.z);g.rotation.y=a.yaw;scene.add(g);_harborProps.push({kind:'mooringCluster',g});
+  }
+  for(const [t2,sgn] of [[.075,-1],[.285,1],[.625,-1],[.805,1]]){
+    const a=harborBank(t2,sgn,1.75),g=new THREE.Group(),board=new THREE.Mesh(rbox(2.8,2.4,.32,.14,3),lam(0x355d68)),ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.16,8,18),lam(0xf3eee1)),bands=[];
+    board.position.y=1.2;ring.position.set(0,1.25,.2);for(const ang of [0,Math.PI/2]){const band=new THREE.Mesh(new THREE.BoxGeometry(1.5,.18,.12),lam(0xe85f3d));band.position.set(0,1.25,.3);band.rotation.z=ang;bands.push(band);}g.add(board,ring,...bands);g.position.set(a.p.x,a.gy,a.p.z);g.rotation.y=a.yaw;scene.add(g);_harborProps.push({kind:'lifeRing',g});
+  }
   window._harborGulls=[];
   const wingG=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.65,0,0),new THREE.Vector3(0,.12,0),new THREE.Vector3(.65,0,0)]);
   for(let n=0;n<11;n++){
@@ -5471,6 +5497,14 @@ function updateCamera(dt) {
   if(reveal>0&&!front&&!birdActive){target.addScaledVector(S.tan[si],-3.5*reveal);target.y+=3.2*reveal;}
   // over the falls, pull the camera up and back so you see the drop (not under a cave roof)
   const t01 = si / NSAMP;
+  // Harbor's tight quayside turn immediately precedes a steep pump lift. A
+  // normal long chase arm crosses the raised outside bank here, so tuck the
+  // camera into the channel until the duck reaches the climb's open sightline.
+  if (LVL.id === 'harbor' && !birdActive && !front && t01 > .79 && t01 < .89) {
+    target.x = anchor.x;
+    target.z = anchor.z;
+    target.y = d.y + 12;
+  }
   if (!birdActive&&t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4 * (1 - caveF); target.add(S.tan[si].clone().multiplyScalar(-4 * (1 - caveF * 0.6))); }
   // Pull in front of substantial scenery instead of letting an authored landmark fill the screen.
   G._camOccT=(G._camOccT||0)-dt;
