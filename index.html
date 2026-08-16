@@ -1393,10 +1393,14 @@ function addIsland(t0, t1, latC, halfW) {
   const mid = Math.round((i0 + i1) / 2);
   const a = S.pos[i0].clone().addScaledVector(S.side[i0], latC);
   const b = S.pos[i1].clone().addScaledVector(S.side[i1], latC);
-  const dir = b.clone().sub(a); dir.y = 0;
-  const len = dir.length(); dir.normalize();
-  LOGS.push({ i: mid, c: a.clone().lerp(b, 0.5), dir, len, r: halfW, dyn: true,
-    latC, latHalf: halfW + 0.5, a, b, island: true });
+  // Collision follows the authored river curve in short capsules. A single
+  // endpoint chord cut across tight bends (most visibly the Porcelain drain)
+  // and could seal both lanes even though the rendered water stayed open.
+  const pieces=Math.max(1,Math.ceil((i1-i0)/24));
+  for(let q=0;q<pieces;q++){
+    const ia=Math.round(i0+(i1-i0)*q/pieces),ib=Math.round(i0+(i1-i0)*(q+1)/pieces),pa=S.pos[ia].clone().addScaledVector(S.side[ia],latC),pb=S.pos[ib].clone().addScaledVector(S.side[ib],latC),pd=pb.clone().sub(pa);pd.y=0;const plen=pd.length();pd.normalize();
+    LOGS.push({i:Math.round((ia+ib)/2),c:pa.clone().lerp(pb,.5),dir:pd,len:plen,r:halfW,dyn:true,latC,latHalf:halfW+.5,a:pa,b:pb,island:true});
+  }
   ISLANDS.push({ i0, i1, mid, latC, halfW, a, b });
 }
 if (LVL.id === 'spillway') {
@@ -1407,10 +1411,9 @@ if (LVL.id === 'spillway') {
 // Undergrove and Canopy use the single named split divider generated below.
 // Porcelain's two named splits supply the sponge dividers.
 // Harbor's named splits create their own lock wall and breakwater below.
-// Offset the divider toward the safe-side shoulder. A perfectly centered
-// capsule made every neutral approach a guaranteed collision; this preserves
-// two genuinely different lanes while leaving a readable default entrance.
-for(const split of COURSE_SPLITS)addIsland(split.t0+.012,split.t1-.012,split.offset*.55,Math.max(1.65,split.offset-split.lanes[0].halfW-.55));
+// The centered divider creates two real branches; neutral current guidance
+// above selects the safe one while player steering can commit to the fast one.
+for(const split of COURSE_SPLITS)addIsland(split.t0+.012,split.t1-.012,0,Math.max(1.65,split.offset-split.lanes[0].halfW-.55));
 for(const f of CUSTOM_FEATURES.filter(f=>f.kind==='split')){const t=f.point/CTRL.length;addIsland(t,Math.min(.985,t+.075),0,Math.max(1.8,S.w[Math.round(t*NSAMP)]*.24));}
 
 // critters: a lunging pike, a snapping turtle, cosmetic frogs
@@ -1580,7 +1583,9 @@ function waterVelAt(p, si, out) {
   for(const split of COURSE_SPLITS){
     const ahead=wrapDS(split.i0,si);
     if(ahead>=0&&ahead<95&&Math.abs(lat)<split.offset*.82){
-      const target=split.lanes[0].latC,approach=1-ahead/95,guide=(target-lat)*(.34+1.05*approach);
+      // Neutral racers are fed into the lower-risk lane. The faster branch is
+      // still available through deliberate steering and its timed gate.
+      const target=split.lanes.reduce((a,b)=>a.risk<b.risk?a:b).latC*.76,approach=1-ahead/95,guide=(target-lat)*(.34+1.05*approach);
       out.x+=side.x*guide;out.z+=side.z*guide;
     }
   }
@@ -2469,6 +2474,11 @@ function step(dt) {
         d.p.x -= side.x * sgn * over; d.p.z -= side.z * sgn * over;
         const vn = d.v.x * side.x * sgn + d.v.z * side.z * sgn;
         if (vn > 0) { d.v.x -= side.x * sgn * vn * 1.3; d.v.z -= side.z * sgn * vn * 1.3; }
+        // Preserve a minimum downstream component after a wall glance. A hard
+        // lateral reflection at tight drain/switchback bends could leave the
+        // duck moving sideways along the exact boundary forever.
+        const fwdV=d.v.x*S.tan[si].x+d.v.z*S.tan[si].z;
+        if(fwdV<3){d.v.x+=S.tan[si].x*(3-fwdV);d.v.z+=S.tan[si].z*(3-fwdV);}
       }
     }
 
@@ -3031,12 +3041,16 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
   // Canopy's narrow, stacked treetop channels need a compact shoulder. The
   // generic 17-unit valley skirt folded across nearby bends and appeared as
   // giant walls in the chase camera.
-  const OFFS = LVL.id === 'spillway' ? [0.15, 1.1, 3.5, 7, 12]
+  const OFFS = LVL.id === 'spillway' ? [0.15, 0.9, 2, 4.5]
     : LVL.id === 'canopy' ? [0.15, 0.9, 1.8]
     // Harbor's compact switchbacks pass close to one another. A nine-unit
     // porcelain skirt from a neighbouring leg could hang over the current
     // channel, so keep its tiled shoulders compact like a real flume wall.
     : LVL.id === 'harbor' ? [0.15, 0.9, 1.8, 3.2]
+    // Millrace doubles tightly back on itself. Its former 17-unit valley
+    // skirt crossed adjacent channels and became the giant floating slabs
+    // seen from the race camera.
+    : LVL.id === 'millrace' ? [0.15, 0.9, 2, 4.2]
     : [0.15, 1.1, 3.5, 7, 12, 17];
   const pos = [], col = [], uvArr = [], idx = [];
   const cTmp = new THREE.Color();
@@ -3192,6 +3206,11 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const p = S.pos[i].clone().addScaledVector(S.side[i], sgn * (S.w[i] + ob));
     BLOBS.push({ x: p.x, y: groundAt(i, ob, sgn), z: p.z, r });
   };
+  const sceneryClear = (i, ob, sgn, margin=2.5) => {
+    const p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob));
+    const ni=nearestSample(p,i),di=Math.min(Math.abs(ni-i),NSAMP-Math.abs(ni-i));
+    return di<42||p.distanceTo(S.pos[ni])>S.w[ni]+margin;
+  };
 
   // pines — forest & gorge, rebuilt as proper three-tier trees with a sculpted silhouette
   const nT = 190;
@@ -3212,10 +3231,10 @@ function bankH(i, ob, sgn) {   // ob = lateral distance beyond the waterline
     const sgn = (k % 2) * 2 - 1;
     // Keep tall scenery outside both the racing line and the chase-camera corridor.
     // The old 3.5-unit minimum let large crowns fill the view on narrow bends.
-    const ob = randRange(6.5, 18);
+    const ob = randRange(9.5, 20);
     // course identity: Millrace has logged a third of its pines; Canopy has NO ground
     // pines at all (you're AT treetop height — its own crown billows fill the banks)
-    if ((LVL.id === 'millrace' && k % 3 === 0) || LVL.id === 'canopy' || IS_BATHWORLD) {
+    if ((LVL.id === 'millrace' && k % 3 === 0) || LVL.id === 'canopy' || IS_BATHWORLD || !sceneryClear(i,ob,sgn,3.8)) {
       q.identity(); m.compose(_tmpA.set(0, -300, 0), q, sc.set(0.001, 0.001, 0.001));
       trunks.setMatrixAt(k, m);
       for (let tr = 0; tr < 3; tr++) tiers[tr].setMatrixAt(k, m);
@@ -4382,14 +4401,8 @@ if (LVL.id === 'millrace') {
     stripe.position.copy(buoy.position);
     scene.add(buoy, stripe);
   }
-  // Authored horizon: continuous watershed ridges replace the old field of disconnected cone peaks.
-  for(const [obR,hR,colR] of [[38,13,0x607979],[52,19,0x789092]]){
-    for(const sgn of [-1,1]){
-      const ps=[],ix=[];let row=0;
-      for(let i=0;i<=NSAMP;i+=20){const ii=wrapI(i),p=S.pos[ii].clone().addScaledVector(S.side[ii],sgn*(S.w[ii]+obR)),gy=waterHeightAt(ii)+bankH(ii,Math.min(26,obR),sgn),crest=gy+hR+vnoise(ii*.025+obR,sgn*17)*7;ps.push(p.x,gy-7,p.z,p.x,crest,p.z);if(row){const k=(row-1)*2;ix.push(k,k+2,k+1,k+1,k+2,k+3);}row++;}
-      const gR=new THREE.BufferGeometry();gR.setAttribute('position',new THREE.Float32BufferAttribute(ps,3));gR.setIndex(ix);gR.computeVertexNormals();const ridge=new THREE.Mesh(gR,new THREE.MeshLambertMaterial({color:colR,side:THREE.DoubleSide,flatShading:true}));ridge.receiveShadow=true;scene.add(ridge);
-    }
-  }
+  // The looping river supplies its own layered skyline. Course-following ridge
+  // ribbons crossed nearby bends and became giant floating polygons overhead.
   // Upper flood-control station: a memorable destination silhouette above the magic climb.
   {
     const i=Math.round(.885*NSAMP),sgn=1,ob=17,p=S.pos[i].clone().addScaledVector(S.side[i],sgn*(S.w[i]+ob)),gy=waterHeightAt(i)+bankH(i,16,sgn),yaw=Math.atan2(S.tan[i].x,S.tan[i].z),g=new THREE.Group();
@@ -4421,9 +4434,9 @@ if (LVL.id === 'millrace') {
 // placeholder peaks. Their lower skirts sink into the bank mesh, so the silhouette
 // remains continuous even across steep climbs and wide bends.
 // Canopy's vertical route folds close to itself; generic continuous horizon
-// ribbons intersected those stacked views. Its colossal trees already supply
-// the skyline, so keep the synthetic ridges for Millrace and Undergrove only.
-if(!IS_BATHWORLD&&LVL.id!=='spillway'&&LVL.id!=='canopy'){
+// ribbons intersected those stacked views. Millrace's hairpins overlap in plan
+// view too, so only Undergrove keeps synthetic distant ridge ribbons.
+if(!IS_BATHWORLD&&LVL.id!=='spillway'&&LVL.id!=='millrace'&&LVL.id!=='canopy'){
   const hc={millrace:[0x4d6665,0x718586],undergrove:[0x1d2b29,0x384844],canopy:[0x527d58,0x82a071]}[LVL.id]||[0x557476,0x789395];
   for(let layer=0;layer<2;layer++)for(const sgn of [-1,1]){
     const obR=42+layer*18,ps=[],ix=[];let row=0;
@@ -4713,6 +4726,9 @@ const SHORTCUT_GATES=[], COURSE_CREW=[];
 {
   const gateCol={spillway:0xe4572e,millrace:0x536471,undergrove:0x79e66b,canopy:0xffb52e,porcelain:0x55c8de,harbor:0xff6b21}[LVL.id];
   for(const c of CHUTES){
+    // Safe split lanes must stay open. Only actual shortcuts get a timed
+    // physical gate; previously both branches could close simultaneously.
+    if(!c.shortcut)continue;
     const i=c.i0,p=S.pos[i].clone().addScaledVector(S.side[i],c.latC),g=new THREE.Group();
     const mat=new THREE.MeshStandardMaterial({color:gateCol,roughness:.55,metalness:LVL.id==='millrace'?0.55:.08});
     const poleG=new THREE.CylinderGeometry(.1,.13,2.2,7),bar=new THREE.Mesh(new THREE.BoxGeometry(c.halfW*1.8,.18,.16),mat);
@@ -4866,24 +4882,23 @@ let surgeMesh;
   // island mounds: grassy capsule humps with a tuft — or squishy yellow SPONGES in the bathworks
   for (const is2 of ISLANDS) {
     const len = is2.a.distanceTo(is2.b);
-    const isNeon=IS_NEON_WATERPARK,isSponge=LVL.id==='porcelain'&&!isNeon,isPirate=IS_PIRATE_TOYBOX,isHarbor=LVL.id==='harbor';
+    const isNeon=IS_NEON_WATERPARK,isSponge=LVL.id==='porcelain'&&!isNeon,isPirate=IS_PIRATE_TOYBOX,isHarbor=LVL.id==='harbor',isDrainChain=isSponge&&is2.mid/NSAMP>.62;
     const naturalIslandCol=LVL.id==='spillway'?0x747f7c:LVL.id==='millrace'?0x4e5d61:LVL.id==='undergrove'?0x29372d:LVL.id==='canopy'?0x725036:0x6da05b;
-    // CapsuleGeometry's length is only its straight middle section; passing the
-    // full endpoint distance added another diameter and made dividers overshoot
-    // their authored fork, sometimes all the way into the camera. Subtract the
-    // rounded caps so the rendered divider matches the collision segment.
-    const capsuleMid=Math.max(.45,len-is2.halfW*2);
-    const mound = new THREE.Mesh(new THREE.CapsuleGeometry(is2.halfW, capsuleMid, 4, 10), new THREE.MeshStandardMaterial({color:isSponge ? 0xf2d64b : isNeon?0x463577:isPirate?0xc8944d:isHarbor?0x87979a:naturalIslandCol,roughness:isSponge?.88:.76,metalness:isHarbor?.12:0}));
+    // Build the visible divider from short capsules along the sampled river
+    // curve. One endpoint-to-endpoint mesh became a giant chord through bends.
+    const moundMat=new THREE.MeshStandardMaterial({color:isSponge ? 0xf2d64b : isNeon?0x463577:isPirate?0xc8944d:isHarbor?0x87979a:naturalIslandCol,roughness:isSponge?.88:.76,metalness:isHarbor?.12:0});
+    const mound = new THREE.Object3D();
     mound.position.copy(is2.a).lerp(is2.b, 0.5);
     mound.position.y = waterHeightAt(is2.mid) - is2.halfW * 0.45;
     mound.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), is2.b.clone().sub(is2.a).normalize());
-    // A low, tapered-looking divider instead of the old full-height capsule
-    // slab. Collision still defines the route choice, but the silhouette now
-    // reads as grounded scenery rather than a wall dropped into the river.
-    mound.scale.set(0.78, 1, 0.42);
     scene.add(mound);
+    const moundPieces=Math.max(1,Math.ceil((is2.i1-is2.i0)/24));
+    for(let q=0;q<(isDrainChain?0:moundPieces);q++){
+      const ia=Math.round(is2.i0+(is2.i1-is2.i0)*q/moundPieces),ib=Math.round(is2.i0+(is2.i1-is2.i0)*(q+1)/moundPieces),pa=S.pos[ia].clone().addScaledVector(S.side[ia],is2.latC),pb=S.pos[ib].clone().addScaledVector(S.side[ib],is2.latC),axis=pb.clone().sub(pa),pieceLen=axis.length(),piece=new THREE.Mesh(new THREE.CapsuleGeometry(is2.halfW,Math.max(.35,pieceLen-is2.halfW*2),4,10),moundMat);
+      piece.position.copy(pa).lerp(pb,.5);piece.position.y=waterHeightAt(Math.round((ia+ib)/2))-is2.halfW*.45;piece.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis.normalize());piece.scale.set(.78,1,.42);scene.add(piece);
+    }
     if (isSponge) {
-      for (let po = 0; po < 7; po++) {   // sponge pores
+      for (let po = 0; po < (isDrainChain?0:7); po++) {   // sponge pores
         const pore = new THREE.Mesh(new THREE.SphereGeometry(is2.halfW * randRange(0.09, 0.16), 5, 4), lam(0xc9a82c));
         const tt2 = rand();
         pore.position.copy(is2.a).lerp(is2.b, tt2);
@@ -4891,10 +4906,10 @@ let surgeMesh;
         pore.position.y = waterHeightAt(is2.mid) + is2.halfW * randRange(0.05, 0.3);
         scene.add(pore);
       }
-      if(is2.mid/NSAMP>.62){
+      if(isDrainChain){
         const chrome=new THREE.MeshStandardMaterial({color:0xdce9eb,roughness:.24,metalness:.7});
-        for(let q=0;q<6;q++){const link=new THREE.Mesh(new THREE.TorusGeometry(.34,.1,7,14),chrome);link.position.copy(is2.a).lerp(is2.b,.22+q*.11);link.position.y=waterHeightAt(is2.mid)+is2.halfW*.52+Math.sin(q*.8)*.12;link.rotation.set(Math.PI/2,q%2?Math.PI/2:0,0);scene.add(link);}
-        const plug=new THREE.Mesh(new THREE.CylinderGeometry(is2.halfW*.48,is2.halfW*.62,.55,14),new THREE.MeshStandardMaterial({color:0x4a6f76,roughness:.38}));plug.position.copy(is2.b).lerp(is2.a,.12);plug.position.y=waterHeightAt(is2.mid)+is2.halfW*.38;scene.add(plug);
+        for(let q=0;q<10;q++){const ii=Math.round(is2.i0+(is2.i1-is2.i0)*(.07+q*.095)),link=new THREE.Mesh(new THREE.TorusGeometry(is2.halfW*.34,.12,8,18),chrome);link.position.copy(S.pos[ii]).addScaledVector(S.side[ii],is2.latC);link.position.y=waterHeightAt(ii)+.28;link.rotation.set(Math.PI/2,q%2?Math.PI*.28:-Math.PI*.28,Math.atan2(S.tan[ii].x,S.tan[ii].z));scene.add(link);}
+        const pi=Math.round(is2.i1-5),plug=new THREE.Mesh(new THREE.CylinderGeometry(is2.halfW*.48,is2.halfW*.62,.55,14),new THREE.MeshStandardMaterial({color:0x4a6f76,roughness:.38}));plug.position.copy(S.pos[pi]).addScaledVector(S.side[pi],is2.latC);plug.position.y=waterHeightAt(pi)+.38;scene.add(plug);
       }
     } else if(isNeon){
       const rail=new THREE.Mesh(new THREE.BoxGeometry(is2.halfW*.32,.26,Math.max(2,len*.78)),new THREE.MeshBasicMaterial({color:0xff45d7}));rail.position.copy(mound.position);rail.position.y=waterHeightAt(is2.mid)+is2.halfW*.42;rail.rotation.y=Math.atan2(is2.b.x-is2.a.x,is2.b.z-is2.a.z);scene.add(rail);
@@ -5765,6 +5780,7 @@ function updateCamera(dt) {
   if(reveal>0&&!front&&!birdActive){target.addScaledVector(S.tan[si],-3.5*reveal);target.y+=3.2*reveal;}
   // over the falls, pull the camera up and back so you see the drop (not under a cave roof)
   const t01 = si / NSAMP;
+  let authoredLookout=false;
   // Tight self-near sectors on the two original forest layouts can place a
   // normal chase arm inside a neighboring hillside. Brief lookout shots keep
   // the channel visible while preserving the course's intended geometry.
@@ -5775,9 +5791,11 @@ function updateCamera(dt) {
   }
   if (LVL.id==='millrace'&&!birdActive&&!front&&t01>.165&&t01<.375) {
     target.x=anchor.x;target.z=anchor.z;target.y=d.y+15;
+    authoredLookout=true;
   }
   if (LVL.id==='millrace'&&!birdActive&&!front&&t01>.035&&t01<.145) {
-    target.x=anchor.x-S.tan[si].x*2;target.z=anchor.z-S.tan[si].z*2;target.y=d.y+13;
+    target.x=anchor.x;target.z=anchor.z;target.y=d.y+15;
+    authoredLookout=true;
   }
   // Harbor's tight quayside turn immediately precedes a steep pump lift. A
   // normal long chase arm crosses the raised outside bank here, so tuck the
@@ -5791,6 +5809,21 @@ function updateCamera(dt) {
   // the long chase arm. Use a compact crane-camera angle through those bends.
   if (LVL.id === 'harbor' && !birdActive && !front && ((t01>.075&&t01<.155)||(t01>.47&&t01<.59))) {
     target.x=anchor.x-S.tan[si].x*2.8;target.z=anchor.z-S.tan[si].z*2.8;target.y=d.y+9;
+  }
+  // Compact overlook shots keep the camera inside the water corridor through
+  // the two steep forest switchback complexes instead of placing it behind a
+  // nearby tree, bridge support, or raised bank.
+  if (LVL.id === 'millrace' && !birdActive && !front && t01>.065&&t01<.155) {
+    target.x=anchor.x;target.z=anchor.z;target.y=d.y+15;
+    authoredLookout=true;
+  }
+  if (LVL.id === 'spillway' && !birdActive && !front && t01>.29&&t01<.445) {
+    target.x=anchor.x-S.tan[si].x*3;target.z=anchor.z-S.tan[si].z*3;target.y=d.y+9;
+    authoredLookout=true;
+  }
+  if (LVL.id === 'spillway' && !birdActive && !front && t01>.26&&t01<.335) {
+    target.x=anchor.x;target.z=anchor.z;target.y=d.y+14;
+    authoredLookout=true;
   }
   // Canopy's upper and lower boughs pass close in plan view at two crossover
   // sectors. Lift into a lookout angle so the chase arm never cuts through the
@@ -5807,7 +5840,8 @@ function updateCamera(dt) {
   if (!birdActive&&t01 > FALLS_T0 - 0.03 && t01 < FALLS_T1 + 0.02) { target.y += 4 * (1 - caveF); target.add(S.tan[si].clone().multiplyScalar(-4 * (1 - caveF * 0.6))); }
   // Pull in front of substantial scenery instead of letting an authored landmark fill the screen.
   G._camOccT=(G._camOccT||0)-dt;
-  if(!birdActive&&G._camOccT<=0&&CAM_BLOCKERS.length){G._camOccT=.09;camRayOrigin.set(anchor.x,d.y+1.1,anchor.z);camRayDir.copy(target).sub(camRayOrigin);const rayLen=camRayDir.length();camRayDir.normalize();camRay.set(camRayOrigin,camRayDir);camRay.near=2.2;camRay.far=rayLen;const hit=camRay.intersectObjects(CAM_BLOCKERS,false)[0];if(hit&&hit.distance<rayLen-.35){const safe=Math.max(2.6,hit.distance-.7);G._camOccPos=camRayOrigin.clone().addScaledVector(camRayDir,safe);}else G._camOccPos=null;}
+  if(authoredLookout)G._camOccPos=null;
+  if(!birdActive&&!authoredLookout&&G._camOccT<=0&&CAM_BLOCKERS.length){G._camOccT=.09;camRayOrigin.set(anchor.x,d.y+1.1,anchor.z);camRayDir.copy(target).sub(camRayOrigin);const rayLen=camRayDir.length();camRayDir.normalize();camRay.set(camRayOrigin,camRayDir);camRay.near=2.2;camRay.far=rayLen;const hit=camRay.intersectObjects(CAM_BLOCKERS,false)[0];if(hit&&hit.distance<rayLen-.35){const safe=Math.max(2.6,hit.distance-.7);G._camOccPos=camRayOrigin.clone().addScaledVector(camRayDir,safe);}else G._camOccPos=null;}
   if(birdActive)G._camOccPos=null;
   if(G._camOccPos)target.lerp(G._camOccPos,.88);
   const k = 1 - Math.pow(0.0004, dt);
