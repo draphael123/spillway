@@ -5594,7 +5594,9 @@ function updateCamera(dt) {
   // normal chase arm inside a neighboring hillside. Brief lookout shots keep
   // the channel visible while preserving the course's intended geometry.
   if (LVL.id==='spillway'&&!birdActive&&!front&&t01>.275&&t01<.37) {
-    target.x=anchor.x;target.z=anchor.z;target.y=d.y+16;
+    target.x=anchor.x-S.tan[si].x*3-S.side[si].x*7;
+    target.z=anchor.z-S.tan[si].z*3-S.side[si].z*7;
+    target.y=d.y+7;
   }
   if (LVL.id==='millrace'&&!birdActive&&!front&&t01>.165&&t01<.375) {
     target.x=anchor.x;target.z=anchor.z;target.y=d.y+15;
